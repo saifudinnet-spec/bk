@@ -240,13 +240,13 @@ export const GuidedAssessment = ({
       case 2:
         return `Kira-kira sudah berapa lama kamu merasakan kondisi ini? Informasi durasi penting agar konselor memahami perjalanan kondisimu.`;
       case 3:
-        return `Seberapa besar kondisi ini memengaruhi fokus kuliah atau kegiatan harianmu? Pilih skala 1 (Sangat Ringan) sampai 5 (Sangat Mengganggu) ya.`;
+        return `Seberapa besar kondisi ini memengaruhi fokus kuliah atau kegiatan harianmu? Pilih skala 1 (Sangat Ringan) sampai 5 (Sangat Mengganggu).`;
       case 4:
-        return `Apakah ada cara atau upaya mandiri yang pernah kamu coba sebelumnya? Ceritakan apa saja, konselor siap mendengarkan tanpa menghakimi.`;
+        return `Apakah ada cara atau upaya mandiri yang pernah kamu coba sebelumnya? Ceritakan apa saja, konselor siap mendengarkan.`;
       case 5:
         return `Tuliskan hal utama atau harapan yang paling ingin kamu sampaikan langsung ke konselor. Ceritamu aman dan dijamin kerahasiaannya.`;
       case 6:
-        return `Semua jawabanmu sudah lengkap! Periksa kembali rangkuman di samping. Jika sudah sesuai, kita lanjut ke pemilihan jadwal konseling ya.`;
+        return `Semua jawabanmu sudah lengkap! Periksa kembali rangkuman di samping. Jika sudah sesuai, kita lanjut ke pemilihan jadwal konseling.`;
       default:
         return `Saya Nara, asisten virtual Anda di Ruang BK.`;
     }

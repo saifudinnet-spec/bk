@@ -97,7 +97,7 @@ class NaraVoiceRecording extends Model
                 'category' => 'Pengajuan Konseling',
                 'title' => 'Pertanyaan 3: Tingkat Dampak Harian',
                 'context_hint' => 'Panduan saat mahasiswa menilai skala dampak 1 sampai 5.',
-                'text' => 'Seberapa besar kondisi ini memengaruhi fokus kuliah atau kegiatan harianmu? Pilih skala 1 sampai 5 ya.',
+                'text' => 'Seberapa besar kondisi ini memengaruhi fokus kuliah atau kegiatan harianmu? Pilih skala 1 (Sangat Ringan) sampai 5 (Sangat Mengganggu).',
                 'order' => 4,
             ],
             [
@@ -105,7 +105,7 @@ class NaraVoiceRecording extends Model
                 'category' => 'Pengajuan Konseling',
                 'title' => 'Pertanyaan 4: Upaya Mandiri Sebelumnya',
                 'context_hint' => 'Panduan saat mahasiswa menceritakan apa yang sudah pernah dicoba.',
-                'text' => 'Apakah ada cara atau upaya mandiri yang pernah kamu coba sebelumnya? Ceritakan apa saja, konselor siap mendengarkan tanpa menghakimi.',
+                'text' => 'Apakah ada cara atau upaya mandiri yang pernah kamu coba sebelumnya? Ceritakan apa saja, konselor siap mendengarkan.',
                 'order' => 5,
             ],
             [
@@ -121,7 +121,7 @@ class NaraVoiceRecording extends Model
                 'category' => 'Pengajuan Konseling',
                 'title' => 'Langkah 6: Rangkuman & Konfirmasi',
                 'context_hint' => 'Dibacakan saat seluruh pertanyaan selesai dijawab sebelum memilih jadwal.',
-                'text' => 'Semua jawabanmu sudah lengkap! Periksa kembali rangkuman di samping. Jika sudah sesuai, kita lanjut ke pemilihan jadwal konseling ya.',
+                'text' => 'Semua jawabanmu sudah lengkap! Periksa kembali rangkuman di samping. Jika sudah sesuai, kita lanjut ke pemilihan jadwal konseling.',
                 'order' => 7,
             ],
 
