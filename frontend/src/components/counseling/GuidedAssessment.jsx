@@ -269,15 +269,15 @@ export const GuidedAssessment = ({
     <div className="w-full">
       <div className="flex flex-col lg:flex-row items-start gap-3 lg:gap-4.5 w-full">
         {/* Main Interactive Form Card (Left / Center) */}
-        <div className="flex-1 min-w-0 w-full space-y-2">
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-5 space-y-3 relative overflow-hidden w-full">
+        <div className="flex-1 min-w-0 w-full">
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-5 md:p-6 relative overflow-hidden w-full min-h-[430px] sm:min-h-[450px] flex flex-col justify-between">
             {/* Top Step & Progress Bar (Visible in Questions step 1-5) */}
             {step >= 1 && step <= 5 && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
+              <div className="space-y-1.5 pb-2">
+                <div className="flex items-center justify-between text-xs sm:text-[13px]">
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-slate-900">Pertanyaan {step} dari 5</span>
-                    <span className="text-[11px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                    <span className="text-[11px] sm:text-xs text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
                       {step === 1 && 'Kendala Utama'}
                       {step === 2 && 'Durasi'}
                       {step === 3 && 'Tingkat Gangguan'}
@@ -289,7 +289,7 @@ export const GuidedAssessment = ({
                 </div>
 
                 {/* Modern Progress Bar */}
-                <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
                     initial={{ width: `${(step - 1) * 20}%` }}
@@ -305,7 +305,7 @@ export const GuidedAssessment = ({
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 font-medium"
+                className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 font-medium mb-2"
               >
                 <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                 <span>{errorMsg}</span>
@@ -322,47 +322,49 @@ export const GuidedAssessment = ({
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.25 }}
-                  className="space-y-3.5"
+                  className="flex-1 flex flex-col justify-between space-y-3.5"
                 >
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/60">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Asesmen Awal Konseling</span>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/60">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Asesmen Awal Konseling</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                        Ceritakan Kondisi Anda Secara Singkat
+                      </h2>
+                      <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+                        Jawaban Anda akan langsung diteruskan kepada konselor agar sesi konseling dapat disiapkan dengan tepat.
+                      </p>
                     </div>
-                    <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                      Ceritakan Kondisi Anda Secara Singkat
-                    </h2>
-                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                      Jawaban Anda akan langsung diteruskan kepada konselor agar sesi konseling dapat disiapkan dengan tepat.
-                    </p>
-                  </div>
 
-                  {/* Context Summary */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Topik Bimbingan</span>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block truncate">{activeTopicTitle}</span>
+                    {/* Context Summary */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                        <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Topik Bimbingan</span>
+                        <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block truncate">{activeTopicTitle}</span>
+                      </div>
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                        <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Konselor Pendamping</span>
+                        <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block truncate">{selectedCounselor?.name}</span>
+                      </div>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Konselor Pendamping</span>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block truncate">{selectedCounselor?.name}</span>
-                    </div>
-                  </div>
 
-                  <div className="p-2.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-xs text-slate-600 flex items-center gap-2.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <p className="leading-snug">
-                      Informasi ini bersifat <strong>rahasia</strong> dan hanya digunakan untuk kepentingan bimbingan konseling profesional.
-                    </p>
+                    <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-xs text-slate-600 flex items-center gap-2.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <p className="leading-snug">
+                        Informasi ini bersifat <strong>rahasia</strong> dan hanya digunakan untuk kepentingan bimbingan konseling profesional.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 mt-auto">
                     {onCancel && (
                       <button
                         type="button"
                         onClick={onCancel}
-                        className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all"
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm font-bold transition-all min-h-[40px]"
                       >
                         Nanti Saja
                       </button>
@@ -370,10 +372,10 @@ export const GuidedAssessment = ({
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white text-xs font-black shadow-soft-xs flex items-center justify-center gap-2 transition-all ml-auto hover:scale-[1.01]"
+                      className="px-6 sm:px-7 py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white text-xs sm:text-sm font-black shadow-soft-xs flex items-center justify-center gap-2 transition-all ml-auto hover:scale-[1.01] min-h-[40px]"
                     >
                       <span>Mulai Asesmen</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>
@@ -388,122 +390,124 @@ export const GuidedAssessment = ({
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.25 }}
-                  className="space-y-3"
+                  className="flex-1 flex flex-col justify-between space-y-3"
                 >
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug tracking-tight">
-                      Apa kendala utama yang sedang Anda alami saat ini?
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                      Pilihlah salah satu poin yang paling mewakili situasi Anda terkait topik <strong>{activeTopicTitle}</strong>:
-                    </p>
-                  </div>
+                  <div className="space-y-2.5">
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug tracking-tight">
+                        Apa kendala utama yang sedang Anda alami saat ini?
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        Pilihlah salah satu poin yang paling mewakili situasi Anda terkait topik <strong>{activeTopicTitle}</strong>:
+                      </p>
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 items-stretch">
-                    {issueOptions.map((opt, idx) => {
-                      const isSelected = mainIssue === opt;
-                      return (
-                        <div
-                          key={idx}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            setMainIssue(opt);
-                            setErrorMsg('');
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 items-stretch">
+                      {issueOptions.map((opt, idx) => {
+                        const isSelected = mainIssue === opt;
+                        return (
+                          <div
+                            key={idx}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
                               setMainIssue(opt);
                               setErrorMsg('');
-                            }
-                          }}
-                          className={`p-2.5 sm:p-3 rounded-2xl border text-xs sm:text-[13px] cursor-pointer transition-all flex items-center justify-between gap-2.5 min-h-[46px] sm:min-h-[48px] ${
-                            isSelected
-                              ? 'bg-emerald-50/95 border-emerald-500 ring-2 ring-emerald-500/20 text-emerald-950 font-bold shadow-soft-2xs'
-                              : 'bg-white border-slate-200/90 hover:border-emerald-200 hover:bg-slate-50/80 text-slate-700 font-medium hover:shadow-2xs'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div
-                              className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
-                                isSelected
-                                  ? 'bg-emerald-600 border-emerald-600 text-white'
-                                  : 'border-slate-300 bg-white'
-                              }`}
-                            >
-                              {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                setMainIssue(opt);
+                                setErrorMsg('');
+                              }
+                            }}
+                            className={`p-2.5 sm:p-3 rounded-2xl border text-xs sm:text-[13px] cursor-pointer transition-all flex items-center justify-between gap-2.5 min-h-[46px] sm:min-h-[48px] ${
+                              isSelected
+                                ? 'bg-emerald-50/95 border-emerald-500 ring-2 ring-emerald-500/20 text-emerald-950 font-bold shadow-soft-2xs'
+                                : 'bg-white border-slate-200/90 hover:border-emerald-200 hover:bg-slate-50/80 text-slate-700 font-medium hover:shadow-2xs'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div
+                                className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                                  isSelected
+                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                    : 'border-slate-300 bg-white'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                              </div>
+                              <span className="leading-snug text-left flex-1">{opt}</span>
                             </div>
-                            <span className="leading-snug text-left flex-1">{opt}</span>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
 
-                    {/* Option Lainnya */}
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        setMainIssue('Lainnya');
-                        setErrorMsg('');
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
+                      {/* Option Lainnya */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
                           setMainIssue('Lainnya');
                           setErrorMsg('');
-                        }
-                      }}
-                      className={`p-2.5 sm:p-3 rounded-2xl border text-xs sm:text-[13px] cursor-pointer transition-all sm:col-span-2 min-h-[46px] sm:min-h-[48px] ${
-                        mainIssue === 'Lainnya'
-                          ? 'bg-emerald-50/95 border-emerald-500 ring-2 ring-emerald-500/20 text-emerald-950 font-bold shadow-soft-2xs'
-                          : 'bg-white border-slate-200/90 hover:border-emerald-200 hover:bg-slate-50/80 text-slate-700 font-medium hover:shadow-2xs'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
-                            mainIssue === 'Lainnya'
-                              ? 'bg-emerald-600 border-emerald-600 text-white'
-                              : 'border-slate-300 bg-white'
-                          }`}
-                        >
-                          {mainIssue === 'Lainnya' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            setMainIssue('Lainnya');
+                            setErrorMsg('');
+                          }
+                        }}
+                        className={`p-2.5 sm:p-3 rounded-2xl border text-xs sm:text-[13px] cursor-pointer transition-all sm:col-span-2 min-h-[46px] sm:min-h-[48px] ${
+                          mainIssue === 'Lainnya'
+                            ? 'bg-emerald-50/95 border-emerald-500 ring-2 ring-emerald-500/20 text-emerald-950 font-bold shadow-soft-2xs'
+                            : 'bg-white border-slate-200/90 hover:border-emerald-200 hover:bg-slate-50/80 text-slate-700 font-medium hover:shadow-2xs'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                              mainIssue === 'Lainnya'
+                                ? 'bg-emerald-600 border-emerald-600 text-white'
+                                : 'border-slate-300 bg-white'
+                            }`}
+                          >
+                            {mainIssue === 'Lainnya' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                          </div>
+                          <span className="font-medium">Lainnya (Tuliskan kendala spesifik)</span>
                         </div>
-                        <span className="font-medium">Lainnya (Tuliskan kendala spesifik)</span>
-                      </div>
 
-                      {mainIssue === 'Lainnya' && (
-                        <div className="mt-2 pl-6.5">
-                          <input
-                            type="text"
-                            value={customMainIssue}
-                            onChange={(e) => setCustomMainIssue(e.target.value)}
-                            placeholder="Tuliskan kendala spesifik Anda..."
-                            className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-normal shadow-2xs"
-                            autoFocus
-                          />
-                        </div>
-                      )}
+                        {mainIssue === 'Lainnya' && (
+                          <div className="mt-2 pl-6.5">
+                            <input
+                              type="text"
+                              value={customMainIssue}
+                              onChange={(e) => setCustomMainIssue(e.target.value)}
+                              placeholder="Tuliskan kendala spesifik Anda..."
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-normal shadow-2xs"
+                              autoFocus
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   {/* Navigation */}
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
                     <button
                       type="button"
                       onClick={handlePrev}
-                      className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs min-h-[38px]"
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-2xs min-h-[40px]"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-4 h-4" />
                       <span>Kembali</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-soft-xs hover:scale-[1.01] min-h-[38px]"
+                      className="px-6 sm:px-7 py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-soft-xs hover:scale-[1.01] min-h-[40px]"
                     >
                       <span>Lanjut</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>
@@ -518,61 +522,63 @@ export const GuidedAssessment = ({
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.25 }}
-                  className="space-y-3"
+                  className="flex-1 flex flex-col justify-between space-y-3"
                 >
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug tracking-tight">
-                      Sudah berapa lama kondisi ini mulai Anda rasakan?
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                      Perkiraan durasi membantu konselor memahami perjalanan kondisi keluhan ini:
-                    </p>
-                  </div>
+                  <div className="space-y-3">
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug tracking-tight">
+                        Sudah berapa lama kondisi ini mulai Anda rasakan?
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        Perkiraan durasi membantu konselor memahami perjalanan kondisi keluhan ini:
+                      </p>
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 items-stretch">
-                    {durationOptions.map((dur) => {
-                      const isSelected = duration === dur;
-                      return (
-                        <button
-                          key={dur}
-                          type="button"
-                          onClick={() => setDuration(dur)}
-                          className={`p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-[13px] font-bold text-left transition-all flex items-center justify-between gap-2.5 min-h-[46px] sm:min-h-[48px] ${
-                            isSelected
-                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs scale-[1.01]'
-                              : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:border-emerald-200'
-                          }`}
-                        >
-                          <span>{dur}</span>
-                          <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                              isSelected ? 'bg-white text-emerald-800 border-white' : 'border-slate-300'
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 items-stretch pt-1">
+                      {durationOptions.map((dur) => {
+                        const isSelected = duration === dur;
+                        return (
+                          <button
+                            key={dur}
+                            type="button"
+                            onClick={() => setDuration(dur)}
+                            className={`p-3.5 sm:p-4 rounded-2xl border text-xs sm:text-sm font-bold text-left transition-all flex items-center justify-between gap-3 min-h-[54px] sm:min-h-[58px] ${
+                              isSelected
+                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs scale-[1.01]'
+                                : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:border-emerald-200'
                             }`}
                           >
-                            {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </div>
-                        </button>
-                      );
-                    })}
+                            <span>{dur}</span>
+                            <div
+                              className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                                isSelected ? 'bg-white text-emerald-800 border-white' : 'border-slate-300'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Navigation */}
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
                     <button
                       type="button"
                       onClick={handlePrev}
-                      className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs min-h-[38px]"
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-2xs min-h-[40px]"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-4 h-4" />
                       <span>Kembali</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="px-6 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-soft-xs hover:scale-[1.01] min-h-[38px]"
+                      className="px-6 sm:px-7 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-soft-xs hover:scale-[1.01] min-h-[40px]"
                     >
                       <span>Lanjut</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>
@@ -587,69 +593,71 @@ export const GuidedAssessment = ({
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.25 }}
-                  className="space-y-2"
+                  className="flex-1 flex flex-col justify-between space-y-3"
                 >
-                  <div className="space-y-0.5">
-                    <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
-                      Seberapa besar kondisi ini mengganggu aktivitas Anda?
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium leading-tight">
-                      Pilih skala 1 (Sangat Ringan) hingga 5 (Sangat Mengganggu):
-                    </p>
-                  </div>
-
-                  {/* Rating Numbers Segmented Bar */}
-                  <div className="grid grid-cols-5 gap-1 sm:gap-1.5">
-                    {impactLevels.map((lvl) => {
-                      const isSelected = impactLevel === lvl.val;
-                      return (
-                        <button
-                          key={lvl.val}
-                          type="button"
-                          onClick={() => setImpactLevel(lvl.val)}
-                          className={`py-1 px-1 sm:py-1.5 sm:px-2 rounded-xl border text-center transition-all ${
-                            isSelected
-                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs ring-2 ring-emerald-600/30'
-                              : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="text-sm sm:text-base font-black block leading-tight">{lvl.val}</span>
-                          <span className="text-[9px] block leading-tight mt-0.5 opacity-90 hidden sm:block">
-                            {lvl.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Highlight Selected Level Meaning */}
-                  <div className="p-2 rounded-xl bg-emerald-50/80 border border-emerald-100 text-xs flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                      {impactLevel}
+                  <div className="space-y-3">
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug tracking-tight">
+                        Seberapa besar kondisi ini mengganggu aktivitas Anda?
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        Pilih skala 1 (Sangat Ringan) hingga 5 (Sangat Mengganggu):
+                      </p>
                     </div>
-                    <div>
-                      <span className="font-bold text-slate-900 block text-xs">{currentImpactObj.label}</span>
-                      <span className="text-[10.5px] text-slate-600 block leading-tight">{currentImpactObj.desc}</span>
+
+                    {/* Rating Numbers Segmented Bar - Comfortable, Proportional & Readable */}
+                    <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5 pt-1">
+                      {impactLevels.map((lvl) => {
+                        const isSelected = impactLevel === lvl.val;
+                        return (
+                          <button
+                            key={lvl.val}
+                            type="button"
+                            onClick={() => setImpactLevel(lvl.val)}
+                            className={`py-3 sm:py-3.5 px-1.5 sm:px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center min-h-[68px] sm:min-h-[76px] cursor-pointer ${
+                              isSelected
+                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-sm ring-4 ring-emerald-600/20 scale-[1.02]'
+                                : 'bg-white border-slate-200/90 text-slate-700 hover:bg-emerald-50/40 hover:border-emerald-200 hover:scale-[1.01]'
+                            }`}
+                          >
+                            <span className="text-xl sm:text-2xl font-black block leading-none">{lvl.val}</span>
+                            <span className="text-[10px] sm:text-xs font-semibold block leading-tight mt-1.5 text-center opacity-90">
+                              {lvl.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Highlight Selected Level Meaning Card */}
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 text-xs sm:text-sm flex items-center gap-3 shadow-2xs">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-soft-xs">
+                        {impactLevel}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-extrabold text-slate-900 block text-xs sm:text-sm">{currentImpactObj.label}</span>
+                        <span className="text-[11px] sm:text-xs text-slate-600 block mt-0.5 leading-relaxed">{currentImpactObj.desc}</span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Navigation */}
-                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
                     <button
                       type="button"
                       onClick={handlePrev}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all flex items-center gap-1"
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-2xs min-h-[40px]"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-4 h-4" />
                       <span>Kembali</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="px-5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-soft-xs"
+                      className="px-6 sm:px-7 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-soft-xs hover:scale-[1.01] min-h-[40px]"
                     >
                       <span>Lanjut</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>
@@ -664,68 +672,70 @@ export const GuidedAssessment = ({
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.25 }}
-                  className="space-y-2"
+                  className="flex-1 flex flex-col justify-between space-y-3"
                 >
-                  <div className="space-y-0.5">
-                    <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
-                      Apa yang sudah Anda lakukan selama ini untuk mengatasinya?
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium leading-tight">
-                      Upaya mandiri atau bantuan yang sudah dicoba (opsional):
-                    </p>
-                  </div>
+                  <div className="space-y-3">
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug tracking-tight">
+                        Apa yang sudah Anda lakukan selama ini untuk mengatasinya?
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        Upaya mandiri atau bantuan yang sudah dicoba (opsional):
+                      </p>
+                    </div>
 
-                  {/* Quick Suggestion Chips */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 block">Pilih ide cepat:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {suggestionChips.map((chip, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            if (!previousEfforts) {
-                              setPreviousEfforts(chip);
-                            } else if (!previousEfforts.includes(chip)) {
-                              setPreviousEfforts((prev) => `${prev}, ${chip}`);
-                            }
-                          }}
-                          className="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-800 border border-slate-200/80 hover:border-emerald-200 text-[10px] sm:text-[11px] font-medium transition-all"
-                        >
-                          + {chip}
-                        </button>
-                      ))}
+                    {/* Quick Suggestion Chips */}
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-slate-400 block">Pilih ide cepat:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {suggestionChips.map((chip, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              if (!previousEfforts) {
+                                setPreviousEfforts(chip);
+                              } else if (!previousEfforts.includes(chip)) {
+                                setPreviousEfforts((prev) => `${prev}, ${chip}`);
+                              }
+                            }}
+                            className="px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-200 text-[11px] sm:text-xs font-semibold transition-all"
+                          >
+                            + {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Textarea with proportional rows */}
+                    <div>
+                      <textarea
+                        rows={3}
+                        value={previousEfforts}
+                        onChange={(e) => setPreviousEfforts(e.target.value)}
+                        placeholder="Tuliskan upaya atau hal yang pernah Anda lakukan..."
+                        className="w-full p-3 rounded-2xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed shadow-2xs"
+                      />
                     </div>
                   </div>
 
-                  {/* Textarea */}
-                  <div>
-                    <textarea
-                      rows={2}
-                      value={previousEfforts}
-                      onChange={(e) => setPreviousEfforts(e.target.value)}
-                      placeholder="Tuliskan upaya atau hal yang pernah Anda lakukan..."
-                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed"
-                    />
-                  </div>
-
                   {/* Navigation */}
-                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
                     <button
                       type="button"
                       onClick={handlePrev}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all flex items-center gap-1"
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-2xs min-h-[40px]"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-4 h-4" />
                       <span>Kembali</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="px-5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-soft-xs"
+                      className="px-6 sm:px-7 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-soft-xs hover:scale-[1.01] min-h-[40px]"
                     >
                       <span>Lanjut</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>
@@ -740,54 +750,56 @@ export const GuidedAssessment = ({
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.25 }}
-                  className="space-y-2"
+                  className="flex-1 flex flex-col justify-between space-y-3"
                 >
-                  <div className="space-y-0.5">
-                    <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
-                      Ceritakan hal yang paling ingin Anda sampaikan kepada konselor:
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium leading-tight">
-                      Bisa berupa latar keluhan, kekhawatiran, atau harapan dari sesi konseling ini.
-                    </p>
-                  </div>
+                  <div className="space-y-3">
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug tracking-tight">
+                        Ceritakan hal yang paling ingin Anda sampaikan kepada konselor:
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        Bisa berupa latar keluhan, kekhawatiran, atau harapan dari sesi konseling ini.
+                      </p>
+                    </div>
 
-                  <div className="space-y-1">
-                    <textarea
-                      rows={2}
-                      required
-                      value={story}
-                      onChange={(e) => {
-                        setStory(e.target.value);
-                        setErrorMsg('');
-                      }}
-                      placeholder="Tuliskan hal yang ingin Anda ceritakan... (minimal 10 karakter)"
-                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed"
-                    />
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
-                      <span>Minimal 10 karakter</span>
-                      <span className={story.length >= 10 ? 'text-emerald-700 font-bold' : ''}>
-                        {story.length} karakter
-                      </span>
+                    <div className="space-y-1.5">
+                      <textarea
+                        rows={4}
+                        required
+                        value={story}
+                        onChange={(e) => {
+                          setStory(e.target.value);
+                          setErrorMsg('');
+                        }}
+                        placeholder="Tuliskan hal yang ingin Anda ceritakan... (minimal 10 karakter)"
+                        className="w-full p-3 sm:p-3.5 rounded-2xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed shadow-2xs min-h-[100px]"
+                      />
+                      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                        <span>Minimal 10 karakter</span>
+                        <span className={story.length >= 10 ? 'text-emerald-700 font-bold' : ''}>
+                          {story.length} karakter
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Navigation */}
-                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
                     <button
                       type="button"
                       onClick={handlePrev}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all flex items-center gap-1"
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-2xs min-h-[40px]"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-4 h-4" />
                       <span>Kembali</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="px-5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-soft-xs"
+                      className="px-6 sm:px-7 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-soft-xs hover:scale-[1.01] min-h-[40px]"
                     >
                       <span>Lihat Ringkasan</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>
@@ -802,80 +814,82 @@ export const GuidedAssessment = ({
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.25 }}
-                  className="space-y-2.5"
+                  className="flex-1 flex flex-col justify-between space-y-3"
                 >
-                  <div className="space-y-0.5">
-                    <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200/60">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>Ringkasan Asesmen Selesai</span>
-                    </div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900">
-                      Periksa Ringkasan Jawaban Anda
-                    </h3>
-                    <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
-                      Pastikan informasi sudah sesuai sebelum memilih metode & jadwal konseling.
-                    </p>
-                  </div>
-
-                  {/* Structured Summary Card */}
-                  <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2 text-xs">
-                    <div className="grid grid-cols-2 gap-2 pb-1.5 border-b border-slate-200">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Topik</span>
-                        <span className="text-xs font-bold text-slate-900 block truncate">{activeTopicTitle}</span>
+                  <div className="space-y-2.5">
+                    <div className="space-y-0.5">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/60">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Ringkasan Asesmen Selesai</span>
                       </div>
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Konselor</span>
-                        <span className="text-xs font-bold text-slate-900 block truncate">{selectedCounselor?.name}</span>
-                      </div>
+                      <h3 className="text-base sm:text-lg font-black text-slate-900">
+                        Periksa Ringkasan Jawaban Anda
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Pastikan informasi sudah sesuai sebelum memilih metode & jadwal konseling.
+                      </p>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Kendala Utama</span>
-                        <p className="font-semibold text-slate-900 text-xs mt-0.5">
-                          {mainIssue === 'Lainnya' ? customMainIssue : mainIssue}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
+                    {/* Structured Summary Card */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2 text-xs sm:text-[13px]">
+                      <div className="grid grid-cols-2 gap-2 pb-2 border-b border-slate-200">
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Durasi</span>
-                          <span className="font-semibold text-slate-900 text-xs block">{duration}</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Topik</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 block truncate">{activeTopicTitle}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Tingkat Gangguan</span>
-                          <div className="inline-flex items-center gap-1 mt-0.5">
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                              Skala {impactLevel}/5
-                            </span>
-                            <span className="text-slate-600 text-[10px]">({currentImpactObj.label})</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Konselor</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 block truncate">{selectedCounselor?.name}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Kendala Utama</span>
+                          <p className="font-semibold text-slate-900 text-xs sm:text-[13px] mt-0.5">
+                            {mainIssue === 'Lainnya' ? customMainIssue : mainIssue}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Durasi</span>
+                            <span className="font-semibold text-slate-900 text-xs sm:text-[13px] block">{duration}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Tingkat Gangguan</span>
+                            <div className="inline-flex items-center gap-1.5 mt-0.5">
+                              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-xs">
+                                Skala {impactLevel}/5
+                              </span>
+                              <span className="text-slate-600 text-xs">({currentImpactObj.label})</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {previousEfforts && (
+                        {previousEfforts && (
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Upaya Sebelumnya</span>
+                            <p className="text-slate-700 text-xs sm:text-[13px] leading-snug">{previousEfforts}</p>
+                          </div>
+                        )}
+
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Upaya Sebelumnya</span>
-                          <p className="text-slate-700 text-[11px] leading-snug">{previousEfforts}</p>
-                        </div>
-                      )}
-
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Cerita / Harapan</span>
-                        <div className="p-2 rounded-lg bg-white border border-slate-200 mt-0.5 text-slate-700 text-[11px] leading-snug italic line-clamp-2">
-                          "{story}"
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Cerita / Harapan</span>
+                          <div className="p-2.5 rounded-xl bg-white border border-slate-200 mt-0.5 text-slate-700 text-xs sm:text-[13px] leading-snug italic line-clamp-3">
+                            "{story}"
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 mt-auto">
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all flex items-center gap-1"
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 min-h-[40px]"
                     >
                       <Edit3 className="w-3.5 h-3.5 text-slate-500" />
                       <span>Perbaiki</span>
@@ -884,10 +898,10 @@ export const GuidedAssessment = ({
                     <button
                       type="button"
                       onClick={handleConfirmSummary}
-                      className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white text-xs font-black shadow-soft-xs flex items-center gap-1.5 transition-all"
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white text-xs sm:text-sm font-black shadow-soft-xs flex items-center gap-2 transition-all min-h-[40px]"
                     >
                       <span>Sudah Sesuai (Pilih Metode)</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>

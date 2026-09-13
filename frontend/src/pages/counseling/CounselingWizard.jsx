@@ -284,7 +284,7 @@ export const CounselingWizard = () => {
   }
 
   return (
-    <PageTransition className="space-y-2.5 sm:space-y-3 pb-4">
+    <PageTransition className="space-y-2.5 sm:space-y-3 pb-1 sm:pb-2">
       {/* Compact Unified Wizard Top Bar */}
       <div className="bg-white px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
         <div className="flex items-center justify-between gap-2">
