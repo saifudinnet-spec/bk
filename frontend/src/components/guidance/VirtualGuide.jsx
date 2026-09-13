@@ -21,7 +21,6 @@ import {
   SlidersHorizontal,
   Loader2,
   Mic,
-  Award,
 } from 'lucide-react';
 
 /**
@@ -136,27 +135,37 @@ export const findRecordedAudio = (text = '', dialogueKey = null) => {
 export const NARA_VOICES = [
   {
     id: 'custom_recording',
-    name: 'Suara Rekaman Konselor',
-    badge: '🎙️ Suara Asli Manusia',
+    name: 'Suara Rekaman Konselor / Sistem Bawaan',
+    badge: '⭐ Standar Sistem',
     gender: 'Konselor',
-    color: 'amber',
-    badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 font-extrabold',
-    character: 'Rekaman suara asli manusia dari tim konselor/admin Ruang BK UINSSC (fallback otomatis ke suara alami jika dialog belum direkam).',
-    sampleText: 'Halo! Ini adalah contoh rekaman suara asli langsung dari tim konselor Ruang BK.',
+    color: 'emerald',
+    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-extrabold',
+    character: 'Memutar suara rekaman asli konselor/admin jika sudah diisi di database. Jika belum diisi, otomatis memutar synthesizer lokal bawaan perangkat Anda.',
+    sampleText: 'Halo! Saya Nara, asisten virtual Anda. Yuk luangkan 2-3 menit menjawab pertanyaan ini dengan santai.',
+  },
+  {
+    id: 'browser',
+    name: 'Synthesizer Lokal Browser',
+    badge: '💻 Bawaan Komputer',
+    gender: 'Sistem',
+    color: 'slate',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-300',
+    character: 'Synthesizer lokal bawaan dari perangkat atau sistem operasi Anda (bisa diakses offline).',
+    sampleText: 'Ini adalah uji coba suara sintetis bawaan sistem operasi komputer Anda.',
   },
   {
     id: 'gadis',
-    name: 'Nara Gadis',
-    badge: '⭐ Paling Natural',
+    name: 'Nara Gadis (Neural Studio)',
+    badge: '🌟 Neural Alami',
     gender: 'Wanita',
-    color: 'emerald',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    character: 'Suara perempuan Indonesia neural berintonasi halus, ramah, dan sangat alami layaknya manusia.',
+    color: 'teal',
+    badgeClass: 'bg-teal-100 text-teal-800 border-teal-300',
+    character: 'Suara perempuan Indonesia neural berintonasi halus, ramah, dan sangat alami.',
     sampleText: 'Halo! Saya Nara, asisten virtual Anda. Yuk luangkan dua menit menjawab pertanyaan ini dengan santai.',
   },
   {
     id: 'siti',
-    name: 'Nara Siti',
+    name: 'Nara Siti (Santun & Tenang)',
     badge: '🍃 Lembut & Santun',
     gender: 'Wanita',
     color: 'teal',
@@ -166,23 +175,13 @@ export const NARA_VOICES = [
   },
   {
     id: 'google',
-    name: 'Nara Google',
+    name: 'Nara Google (Jernih & Lancar)',
     badge: '⚡ Artikulasi Jelas',
     gender: 'Wanita',
     color: 'blue',
     badgeClass: 'bg-blue-100 text-blue-800 border-blue-300',
     character: 'Suara jernih khas Google berbahasa Indonesia dengan artikulasi tegas dan tempo teratur.',
     sampleText: 'Yuk pilih salah satu jawaban yang paling mewakili situasimu saat ini.',
-  },
-  {
-    id: 'browser',
-    name: 'Suara Sistem Browser',
-    badge: '💻 Bawaan Komputer',
-    gender: 'Sistem',
-    color: 'slate',
-    badgeClass: 'bg-slate-100 text-slate-700 border-slate-300',
-    character: 'Synthesizer lokal bawaan dari perangkat atau sistem operasi Anda (bisa diakses offline).',
-    sampleText: 'Ini adalah uji coba suara sintetis bawaan sistem operasi komputer Anda.',
   },
 ];
 
@@ -209,7 +208,7 @@ export const stopNaraVoice = () => {
 };
 
 /**
- * Fallback: Browser Web Speech API
+ * Browser Web Speech API Synthesizer (Local SAPI / Browser Engine)
  */
 const speakWithBrowserVoice = (text, { onStart, onEnd, onError } = {}) => {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -251,93 +250,6 @@ const speakWithBrowserVoice = (text, { onStart, onEnd, onError } = {}) => {
 
   window.speechSynthesis.speak(utterance);
   return true;
-};
-
-/**
- * Speak Nara Voice with custom recorded human audio OR high-quality natural Indonesian audio stream
- */
-export const speakNaraVoice = (
-  text,
-  {
-    voiceId = null,
-    rate = null,
-    dialogueKey = null,
-    onStart,
-    onEnd,
-    onError,
-  } = {}
-) => {
-  stopNaraVoice();
-
-  if (!text) {
-    if (onEnd) onEnd();
-    return false;
-  }
-
-  // Clean text
-  const cleanText = text
-    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-    .replace(/[*_~`#💡❓✨🎉🎙️]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (!cleanText) {
-    if (onEnd) onEnd();
-    return false;
-  }
-
-  const selectedVoice = voiceId || localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
-  const selectedRate = rate || localStorage.getItem('bk_nara_voice_rate') || '+0%';
-
-  // 1. Check if user prefers custom human recordings (or default) AND a recording exists for this dialogue
-  if (selectedVoice === 'custom_recording') {
-    const recordedAudio = findRecordedAudio(cleanText, dialogueKey);
-    if (recordedAudio && recordedAudio.audio_url) {
-      try {
-        const audio = new Audio(recordedAudio.audio_url);
-        currentAudioInstance = audio;
-
-        audio.onplay = () => {
-          if (onStart) onStart();
-        };
-
-        audio.onended = () => {
-          currentAudioInstance = null;
-          if (onEnd) onEnd();
-        };
-
-        audio.onerror = (e) => {
-          console.warn('Recorded audio playback error, falling back to neural TTS:', e);
-          currentAudioInstance = null;
-          speakWithNeuralTts(cleanText, 'gadis', selectedRate, { onStart, onEnd, onError });
-        };
-
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn('Audio play interrupted:', err);
-            currentAudioInstance = null;
-            if (onEnd) onEnd();
-          });
-        }
-
-        return true;
-      } catch (err) {
-        console.warn('Error playing recorded audio:', err);
-      }
-    }
-
-    // Fallback if no recording exists yet for this specific sentence: use Nara Gadis neural
-    return speakWithNeuralTts(cleanText, 'gadis', selectedRate, { onStart, onEnd, onError });
-  }
-
-  // 2. If user explicitly chose local browser synthesizer
-  if (selectedVoice === 'browser') {
-    return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
-  }
-
-  // 3. Chosen Neural Voice (gadis, siti, google)
-  return speakWithNeuralTts(cleanText, selectedVoice, selectedRate, { onStart, onEnd, onError });
 };
 
 /**
@@ -388,6 +300,96 @@ const speakWithNeuralTts = (cleanText, voice, rate, { onStart, onEnd, onError } 
 };
 
 /**
+ * Speak Nara Voice:
+ * 1. If admin recording exists -> play admin recording audio
+ * 2. If no admin recording exists -> DEFAULT is local browser synthesizer
+ * 3. If user manually chooses another voice -> use that voice
+ */
+export const speakNaraVoice = (
+  text,
+  {
+    voiceId = null,
+    rate = null,
+    dialogueKey = null,
+    onStart,
+    onEnd,
+    onError,
+  } = {}
+) => {
+  stopNaraVoice();
+
+  if (!text) {
+    if (onEnd) onEnd();
+    return false;
+  }
+
+  // Clean text
+  const cleanText = text
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .replace(/[*_~`#💡❓✨🎉🎙️]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanText) {
+    if (onEnd) onEnd();
+    return false;
+  }
+
+  const selectedVoice = voiceId || localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
+  const selectedRate = rate || localStorage.getItem('bk_nara_voice_rate') || '+0%';
+
+  // 1. Default Mode: Admin Recorded Audio -> Fallback to Local Browser Synthesizer!
+  if (selectedVoice === 'custom_recording') {
+    const recordedAudio = findRecordedAudio(cleanText, dialogueKey);
+    if (recordedAudio && recordedAudio.audio_url) {
+      try {
+        const audio = new Audio(recordedAudio.audio_url);
+        currentAudioInstance = audio;
+
+        audio.onplay = () => {
+          if (onStart) onStart();
+        };
+
+        audio.onended = () => {
+          currentAudioInstance = null;
+          if (onEnd) onEnd();
+        };
+
+        audio.onerror = (e) => {
+          console.warn('Recorded audio playback error, falling back to local browser synthesizer:', e);
+          currentAudioInstance = null;
+          speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
+        };
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('Audio play interrupted:', err);
+            currentAudioInstance = null;
+            if (onEnd) onEnd();
+          });
+        }
+
+        return true;
+      } catch (err) {
+        console.warn('Error playing recorded audio:', err);
+      }
+    }
+
+    // Default Fallback when not yet recorded by admin: Synthesizer lokal bawaan dari perangkat / sistem!
+    return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
+  }
+
+  // 2. Local Browser Synthesizer explicitly chosen
+  if (selectedVoice === 'browser') {
+    return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
+  }
+
+  // 3. Chosen Neural Voice (gadis, siti, google)
+  return speakWithNeuralTts(cleanText, selectedVoice, selectedRate, { onStart, onEnd, onError });
+};
+
+/**
  * Voice Settings Modal Component
  */
 const VoiceSettingsModal = ({
@@ -425,7 +427,7 @@ const VoiceSettingsModal = ({
             </div>
             <div>
               <h3 className="text-base font-extrabold tracking-tight">Karakter Suara Nara</h3>
-              <p className="text-xs text-emerald-100/90 font-medium">Pilih karakter suara wanita yang paling nyaman didengar</p>
+              <p className="text-xs text-emerald-100/90 font-medium">Pilih karakter suara yang paling nyaman didengar</p>
             </div>
           </div>
           <button
@@ -548,7 +550,7 @@ const VoiceSettingsModal = ({
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100">
             <div>
               <div className="text-xs font-bold text-emerald-950">Suara Otomatis</div>
-              <div className="text-[11px] text-slate-500 font-medium">Otomatis bacakan panduan saat berpindah pertanyaan</div>
+              <div className="text-[11px] text-slate-500 font-medium">Nara langsung berbicara tanpa harus ditekan tombolnya</div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -579,7 +581,7 @@ const VoiceSettingsModal = ({
 
 /**
  * Nara – 3D Interactive Virtual Assistant (Clippy-Style)
- * Featuring Custom Human Voice Recordings & Natural Indonesian Female Neural Voice
+ * Featuring Automatic Speech, Custom Human Voice Recordings & Local Synthesizer Default
  */
 export const VirtualGuide = ({
   mode = 'sidebar', // 'sidebar' | 'floating' | 'assistant' | 'avatar' | 'compact'
@@ -606,7 +608,7 @@ export const VirtualGuide = ({
   // Custom Recordings Cache state
   const [hasRecordingsCount, setHasRecordingsCount] = useState(0);
 
-  // Voice Settings State
+  // Voice Settings State (Default: 'custom_recording' with local browser synth fallback)
   const [voiceChoice, setVoiceChoice] = useState(() => {
     try {
       return localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
@@ -623,11 +625,13 @@ export const VirtualGuide = ({
     }
   });
 
+  // Auto Voice defaults to TRUE so Nara talks automatically without being asked
   const [autoVoice, setAutoVoice] = useState(() => {
     try {
-      return localStorage.getItem('bk_nara_autovoice') === 'true';
+      const saved = localStorage.getItem('bk_nara_autovoice');
+      return saved === null ? true : saved === 'true';
     } catch {
-      return false;
+      return true;
     }
   });
 
@@ -758,15 +762,15 @@ export const VirtualGuide = ({
     } catch {}
   };
 
-  // Auto-speak on step / speechText change if autoVoice is enabled
+  // AUTO-SPEAK: Nara directly speaks automatically when dialogue appears or step changes!
   useEffect(() => {
     if (autoVoice && soundEnabled && speechText && !isMinimized && !pokeMessage) {
       const timer = setTimeout(() => {
-        handleSpeak(speechText);
-      }, 400);
+        handleSpeak(speechText, null, dialogueKey);
+      }, 350);
       return () => clearTimeout(timer);
     }
-  }, [speechText, autoVoice, soundEnabled, isMinimized]);
+  }, [speechText, dialogueKey, autoVoice, soundEnabled, isMinimized]);
 
   // Interactive Poke / Click Response
   const handlePoke = () => {
@@ -1022,7 +1026,7 @@ export const VirtualGuide = ({
                 <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100 truncate max-w-[120px]">
                   {currentRecordedAudio && voiceChoice === 'custom_recording'
                     ? 'Suara Asli Konselor'
-                    : activeVoiceMeta.name.replace('Nara ', '')}
+                    : 'Suara Sistem'}
                 </span>
               </div>
             </div>
@@ -1044,7 +1048,7 @@ export const VirtualGuide = ({
                 type="button"
                 onClick={() => setIsVoiceModalOpen(true)}
                 className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title="Pilih karakter suara Nara"
+                title="Pilihan Suara Nara"
               >
                 <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
@@ -1080,72 +1084,47 @@ export const VirtualGuide = ({
             </motion.p>
           </AnimatePresence>
 
-          {/* Nara Voice Player Bar (Dedicated Voice Controls) */}
+          {/* Voice Indicator Bar (Direct speech, manual trigger button removed) */}
           <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-emerald-50/80 text-[11px]">
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleSpeak()}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[11px] transition-all cursor-pointer shadow-2xs ${
-                  isSpeaking
-                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
-                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
-                }`}
-                title={
-                  isSpeaking
-                    ? 'Hentikan suara Nara'
-                    : currentRecordedAudio && voiceChoice === 'custom_recording'
-                    ? 'Putar rekaman suara asli konselor'
-                    : `Putar suara wanita ${activeVoiceMeta.name}`
-                }
-              >
-                {isSpeaking ? (
-                  <>
-                    <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
-                    <span>Hentikan Suara</span>
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="w-3 h-3 text-emerald-600" />
-                    <span>
-                      {currentRecordedAudio && voiceChoice === 'custom_recording'
-                        ? 'Suara Asli 🎙️'
-                        : 'Suara Nara 🎙️'}
-                    </span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsVoiceModalOpen(true)}
-                className="p-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 transition-colors cursor-pointer"
-                title="Ganti karakter suara Nara"
-              >
-                <SlidersHorizontal className="w-3 h-3" />
-              </button>
-            </div>
-
-            {/* Audio Wave Visualizer while speaking / Auto-voice toggle */}
             {isSpeaking ? (
-              <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-50/90 border border-emerald-200/60">
-                <span className="w-0.5 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-0.5 h-3 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-0.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
-                <span className="text-[9px] text-emerald-800 font-bold ml-1">Bicara</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-emerald-50/90 border border-emerald-200/70 shadow-2xs">
+                  <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-0.5 h-3.5 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-0.5 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
+                  <span className="text-[10px] text-emerald-800 font-extrabold ml-1.5">Nara Berbicara...</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSpeak()}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer shadow-2xs transition-all"
+                  title="Hentikan suara"
+                >
+                  <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
+                  <span>Hentikan</span>
+                </button>
               </div>
             ) : (
-              <label className="flex items-center gap-1 text-[10px] text-slate-400 font-medium cursor-pointer hover:text-slate-600 select-none">
-                <input
-                  type="checkbox"
-                  checked={autoVoice}
-                  onChange={(e) => handleToggleAutoVoice(e.target.checked)}
-                  className="w-3 h-3 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
-                />
-                <span>Auto</span>
-              </label>
+              <div className="flex items-center gap-1.5 text-slate-500">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-medium text-slate-600">
+                  {currentRecordedAudio && voiceChoice === 'custom_recording'
+                    ? 'Suara Asli Konselor'
+                    : 'Suara Sistem Otomatis'}
+                </span>
+              </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setIsVoiceModalOpen(true)}
+              className="p-1 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200/70 transition-colors cursor-pointer"
+              title="Pengaturan Suara Nara"
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+            </button>
           </div>
 
           {/* Action Chips */}
@@ -1230,7 +1209,7 @@ export const VirtualGuide = ({
                 <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 ml-1 hidden sm:inline-block">
                   {currentRecordedAudio && voiceChoice === 'custom_recording'
                     ? 'Suara Asli Konselor'
-                    : activeVoiceMeta.name}
+                    : 'Suara Sistem'}
                 </span>
               </span>
             </div>
@@ -1252,7 +1231,7 @@ export const VirtualGuide = ({
                 type="button"
                 onClick={() => setIsVoiceModalOpen(true)}
                 className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title="Pilih karakter suara Nara"
+                title="Pilihan Suara Nara"
               >
                 <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
@@ -1290,73 +1269,48 @@ export const VirtualGuide = ({
             </motion.p>
           </AnimatePresence>
 
-          {/* Voice Player Bar */}
+          {/* Voice Status Bar (Direct speech, manual trigger button removed) */}
           <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleSpeak()}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs transition-all cursor-pointer shadow-2xs ${
-                  isSpeaking
-                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
-                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
-                }`}
-                title={
-                  isSpeaking
-                    ? 'Hentikan suara Nara'
-                    : currentRecordedAudio && voiceChoice === 'custom_recording'
-                    ? 'Dengarkan rekaman suara asli konselor'
-                    : `Dengarkan suara ${activeVoiceMeta.name}`
-                }
-              >
-                {isSpeaking ? (
-                  <>
-                    <Square className="w-3 h-3 fill-rose-600 text-rose-600" />
-                    <span>Hentikan Suara</span>
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>
-                      {currentRecordedAudio && voiceChoice === 'custom_recording'
-                        ? 'Putar Suara Asli 🎙️'
-                        : 'Dengarkan Suara Nara 🎙️'}
-                    </span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsVoiceModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold text-xs transition-colors cursor-pointer"
-                title="Ganti karakter suara Nara"
-              >
-                <SlidersHorizontal className="w-3 h-3" />
-                <span>Pilih Suara</span>
-              </button>
-            </div>
-
-            {/* Audio Wave Visualizer / Auto-voice option */}
             {isSpeaking ? (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50/90 border border-emerald-200/60">
-                <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-0.5 h-4 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                <span className="w-0.5 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
-                <span className="text-[10px] text-emerald-800 font-bold ml-1">Nara Berbicara</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50/90 border border-emerald-200/70 shadow-2xs">
+                  <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-0.5 h-4 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-0.5 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
+                  <span className="text-[10px] text-emerald-800 font-extrabold ml-1.5">Nara Berbicara...</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSpeak()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer shadow-2xs transition-all"
+                  title="Hentikan suara"
+                >
+                  <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
+                  <span>Hentikan</span>
+                </button>
               </div>
             ) : (
-              <label className="flex items-center gap-1.5 text-xs text-slate-400 font-medium cursor-pointer hover:text-slate-600 select-none">
-                <input
-                  type="checkbox"
-                  checked={autoVoice}
-                  onChange={(e) => handleToggleAutoVoice(e.target.checked)}
-                  className="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
-                />
-                <span>Suara Otomatis Setiap Step</span>
-              </label>
+              <div className="flex items-center gap-2 text-slate-500">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-medium text-slate-600">
+                  {currentRecordedAudio && voiceChoice === 'custom_recording'
+                    ? 'Suara Asli Konselor'
+                    : 'Suara Sistem Otomatis'}
+                </span>
+              </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setIsVoiceModalOpen(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold text-xs transition-colors cursor-pointer"
+              title="Pengaturan Suara Nara"
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>Pengaturan Suara</span>
+            </button>
           </div>
 
           {/* Interactive Action Chips */}

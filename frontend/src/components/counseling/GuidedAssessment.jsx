@@ -174,7 +174,7 @@ export const GuidedAssessment = ({
   const stepExplanation = useMemo(() => {
     switch (step) {
       case 0:
-        return `Halo! Saya Nara, asisten virtual Anda. Yuk luangkan 2-3 menit menjawab 5 pertanyaan santai ini agar ${counselorShortName} mengenal situasimu dengan baik.`;
+        return `Halo! Saya Nara, asisten virtual Anda. Yuk luangkan 2-3 menit menjawab 5 pertanyaan santai ini agar konselor mengenal situasimu dengan baik.`;
       case 1:
         return `Pilih satu kendala yang paling menyita energimu saat ini terkait topik ${activeTopicTitle}. Jika belum ada di daftar, kamu bisa pilih opsi 'Lainnya'.`;
       case 2:
@@ -184,13 +184,13 @@ export const GuidedAssessment = ({
       case 4:
         return `Apakah ada cara atau upaya mandiri yang pernah kamu coba sebelumnya? Ceritakan apa saja, konselor siap mendengarkan tanpa menghakimi.`;
       case 5:
-        return `Tuliskan hal utama atau harapan yang paling ingin kamu sampaikan langsung ke ${counselorShortName}. Ceritamu aman dan dijamin kerahasiaannya.`;
+        return `Tuliskan hal utama atau harapan yang paling ingin kamu sampaikan langsung ke konselor. Ceritamu aman dan dijamin kerahasiaannya.`;
       case 6:
         return `Semua jawabanmu sudah lengkap! Periksa kembali rangkuman di samping. Jika sudah sesuai, kita lanjut ke pemilihan jadwal konseling ya.`;
       default:
         return `Saya Nara, asisten virtual Anda di Ruang BK.`;
     }
-  }, [step, activeTopicTitle, counselorShortName]);
+  }, [step, activeTopicTitle]);
 
   // Handle navigation
   const handleNext = () => {
