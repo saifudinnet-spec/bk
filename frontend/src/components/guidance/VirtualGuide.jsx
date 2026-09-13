@@ -392,7 +392,7 @@ export const speakNaraVoice = (
 /**
  * Voice Settings Modal Component
  */
-const VoiceSettingsModal = ({
+export const VoiceSettingsModal = ({
   isOpen,
   onClose,
   activeVoiceId,
@@ -635,10 +635,22 @@ export const VirtualGuide = ({
     }
   });
 
-  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
-  const [testingVoiceId, setTestingVoiceId] = useState(null);
-
   const characterRef = useRef(null);
+
+  // Sync voice settings dynamically if modified in Admin Panel
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        setVoiceChoice(localStorage.getItem('bk_nara_voice_choice') || 'custom_recording');
+        setVoiceRate(localStorage.getItem('bk_nara_voice_rate') || '+0%');
+        const auto = localStorage.getItem('bk_nara_autovoice');
+        setAutoVoice(auto === null ? true : auto === 'true');
+      } catch {}
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Load custom recordings count on mount
   useEffect(() => {
@@ -705,7 +717,6 @@ export const VirtualGuide = ({
     if (isSpeaking) {
       stopNaraVoice();
       setIsSpeaking(false);
-      setTestingVoiceId(null);
       return;
     }
 
@@ -717,50 +728,10 @@ export const VirtualGuide = ({
       rate: voiceRate,
       dialogueKey: overrideKey || (customText ? null : dialogueKey),
       onStart: () => setIsSpeaking(true),
-      onEnd: () => {
-        setIsSpeaking(false);
-        setTestingVoiceId(null);
-      },
-      onError: () => {
-        setIsSpeaking(false);
-        setTestingVoiceId(null);
-      },
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
     });
   }, [soundEnabled, isSpeaking, pokeMessage, speechText, voiceChoice, voiceRate, dialogueKey]);
-
-  // Test voice sample in modal
-  const handleTestVoice = (voice) => {
-    if (testingVoiceId === voice.id && isSpeaking) {
-      stopNaraVoice();
-      setIsSpeaking(false);
-      setTestingVoiceId(null);
-      return;
-    }
-
-    setTestingVoiceId(voice.id);
-    handleSpeak(voice.sampleText, voice.id);
-  };
-
-  const handleSelectVoice = (vId) => {
-    setVoiceChoice(vId);
-    try {
-      localStorage.setItem('bk_nara_voice_choice', vId);
-    } catch {}
-  };
-
-  const handleSelectRate = (rVal) => {
-    setVoiceRate(rVal);
-    try {
-      localStorage.setItem('bk_nara_voice_rate', rVal);
-    } catch {}
-  };
-
-  const handleToggleAutoVoice = (val) => {
-    setAutoVoice(val);
-    try {
-      localStorage.setItem('bk_nara_autovoice', val ? 'true' : 'false');
-    } catch {}
-  };
 
   // AUTO-SPEAK: Nara directly speaks automatically when dialogue appears or step changes!
   useEffect(() => {
@@ -956,24 +927,11 @@ export const VirtualGuide = ({
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          key={expression + (isSpeaking ? '-speaking' : '')}
-          className={`absolute -bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1.5 shadow-soft-sm whitespace-nowrap border z-30 ${
-            isSpeaking
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-300 ring-2 ring-emerald-400/40 animate-pulse'
-              : 'bg-white/95 text-slate-700 border-emerald-200 backdrop-blur-md'
-          }`}
+          key={expression}
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1.5 shadow-soft-sm whitespace-nowrap border z-30 bg-white/95 text-slate-700 border-emerald-200 backdrop-blur-md"
         >
-          {isSpeaking ? (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-              <span>Nara Berbicara...</span>
-            </>
-          ) : (
-            <>
-              <StatusIcon className="w-3 h-3 text-emerald-600" />
-              <span>{statusLabels[expression] || 'Siap Memandu'}</span>
-            </>
-          )}
+          <StatusIcon className="w-3 h-3 text-emerald-600" />
+          <span>{statusLabels[expression] || 'Siap Memandu'}</span>
         </motion.div>
       </motion.div>
 
@@ -997,21 +955,6 @@ export const VirtualGuide = ({
   if (mode === 'sidebar') {
     return (
       <div className={`relative flex flex-col ${className}`}>
-        {/* Voice Settings Modal */}
-        <VoiceSettingsModal
-          isOpen={isVoiceModalOpen}
-          onClose={() => setIsVoiceModalOpen(false)}
-          activeVoiceId={voiceChoice}
-          onSelectVoice={handleSelectVoice}
-          activeRate={voiceRate}
-          onSelectRate={handleSelectRate}
-          autoVoice={autoVoice}
-          onToggleAutoVoice={handleToggleAutoVoice}
-          onTestVoice={handleTestVoice}
-          testingVoiceId={testingVoiceId}
-          hasRecordingsCount={hasRecordingsCount}
-        />
-
         {/* Speech Bubble on Top with pointer pointing down to Nara */}
         <div className="relative p-3.5 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-emerald-100 shadow-soft-sm text-slate-800 space-y-2.5">
           {/* Arrow Pointer Pointing Downwards to Nara's Head */}
@@ -1038,26 +981,17 @@ export const VirtualGuide = ({
                   if (isSpeaking) stopNaraVoice();
                   setSoundEnabled(!soundEnabled);
                 }}
-                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
                 title={soundEnabled ? 'Matikan suara panduan' : 'Nyalakan suara panduan'}
               >
                 {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5 text-rose-500" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsVoiceModalOpen(true)}
-                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title="Pilihan Suara Nara"
-              >
-                <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
 
               {onToggleMinimize && (
                 <button
                   type="button"
                   onClick={onToggleMinimize}
-                  className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
                   title="Minimalkan panduan Nara"
                 >
                   <Minimize2 className="w-3.5 h-3.5" />
@@ -1084,51 +1018,8 @@ export const VirtualGuide = ({
             </motion.p>
           </AnimatePresence>
 
-          {/* Voice Indicator Bar (Direct speech, manual trigger button removed) */}
-          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-emerald-50/80 text-[11px]">
-            {isSpeaking ? (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-emerald-50/90 border border-emerald-200/70 shadow-2xs">
-                  <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-0.5 h-3.5 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span className="w-0.5 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
-                  <span className="text-[10px] text-emerald-800 font-extrabold ml-1.5">Nara Berbicara...</span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleSpeak()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer shadow-2xs transition-all"
-                  title="Hentikan suara"
-                >
-                  <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
-                  <span>Hentikan</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-slate-500">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-medium text-slate-600">
-                  {currentRecordedAudio && voiceChoice === 'custom_recording'
-                    ? 'Suara Asli Konselor'
-                    : 'Suara Sistem Otomatis'}
-                </span>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setIsVoiceModalOpen(true)}
-              className="p-1 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200/70 transition-colors cursor-pointer"
-              title="Pengaturan Suara Nara"
-            >
-              <SlidersHorizontal className="w-3 h-3" />
-            </button>
-          </div>
-
           {/* Action Chips */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-100 text-xs">
             {tipsAvailable && onTipClick && (
               <button
                 type="button"
@@ -1173,21 +1064,6 @@ export const VirtualGuide = ({
   // Horizontal Assistant Experience (Speech Bubble beside Character)
   return (
     <div className={`relative flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 ${className}`}>
-      {/* Voice Settings Modal */}
-      <VoiceSettingsModal
-        isOpen={isVoiceModalOpen}
-        onClose={() => setIsVoiceModalOpen(false)}
-        activeVoiceId={voiceChoice}
-        onSelectVoice={handleSelectVoice}
-        activeRate={voiceRate}
-        onSelectRate={handleSelectRate}
-        autoVoice={autoVoice}
-        onToggleAutoVoice={handleToggleAutoVoice}
-        onTestVoice={handleTestVoice}
-        testingVoiceId={testingVoiceId}
-        hasRecordingsCount={hasRecordingsCount}
-      />
-
       {/* 3D Moving Assistant Character */}
       <div className="shrink-0 flex justify-center">
         {render3DCharacter()}
@@ -1221,26 +1097,17 @@ export const VirtualGuide = ({
                   if (isSpeaking) stopNaraVoice();
                   setSoundEnabled(!soundEnabled);
                 }}
-                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
                 title={soundEnabled ? 'Matikan suara panduan' : 'Nyalakan suara panduan'}
               >
                 {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5 text-rose-500" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsVoiceModalOpen(true)}
-                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title="Pilihan Suara Nara"
-              >
-                <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
 
               {onToggleMinimize && (
                 <button
                   type="button"
                   onClick={onToggleMinimize}
-                  className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
                   title="Minimalkan panduan Nara"
                 >
                   <Minimize2 className="w-3.5 h-3.5" />
@@ -1269,52 +1136,8 @@ export const VirtualGuide = ({
             </motion.p>
           </AnimatePresence>
 
-          {/* Voice Status Bar (Direct speech, manual trigger button removed) */}
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
-            {isSpeaking ? (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50/90 border border-emerald-200/70 shadow-2xs">
-                  <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-0.5 h-4 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span className="w-0.5 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
-                  <span className="text-[10px] text-emerald-800 font-extrabold ml-1.5">Nara Berbicara...</span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleSpeak()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer shadow-2xs transition-all"
-                  title="Hentikan suara"
-                >
-                  <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
-                  <span>Hentikan</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-slate-500">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-xs font-medium text-slate-600">
-                  {currentRecordedAudio && voiceChoice === 'custom_recording'
-                    ? 'Suara Asli Konselor'
-                    : 'Suara Sistem Otomatis'}
-                </span>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setIsVoiceModalOpen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold text-xs transition-colors cursor-pointer"
-              title="Pengaturan Suara Nara"
-            >
-              <SlidersHorizontal className="w-3 h-3" />
-              <span>Pengaturan Suara</span>
-            </button>
-          </div>
-
           {/* Interactive Action Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 text-xs">
+          <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-slate-100 text-xs">
             {tipsAvailable && onTipClick && (
               <button
                 type="button"

@@ -25,9 +25,12 @@ import {
   Filter,
   RefreshCw,
   Loader2,
+  Settings2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
+import { VoiceSettingsModal, speakNaraVoice, stopNaraVoice } from '../guidance/VirtualGuide';
 
 export const NaraVoiceManager = () => {
   const [recordings, setRecordings] = useState([]);
@@ -42,6 +45,69 @@ export const NaraVoiceManager = () => {
   const [statusFilter, setStatusFilter] = useState('all'); // all | recorded | pending
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Admin Voice Configuration Modal State (Settings only accessible by admin)
+  const [isVoiceConfigModalOpen, setIsVoiceConfigModalOpen] = useState(false);
+  const [voiceChoice, setVoiceChoice] = useState(() => {
+    try {
+      return localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
+    } catch {
+      return 'custom_recording';
+    }
+  });
+  const [voiceRate, setVoiceRate] = useState(() => {
+    try {
+      return localStorage.getItem('bk_nara_voice_rate') || '+0%';
+    } catch {
+      return '+0%';
+    }
+  });
+  const [autoVoice, setAutoVoice] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bk_nara_autovoice');
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [testingVoiceId, setTestingVoiceId] = useState(null);
+
+  const handleSelectVoice = (vId) => {
+    setVoiceChoice(vId);
+    try {
+      localStorage.setItem('bk_nara_voice_choice', vId);
+    } catch {}
+    showSuccess('Karakter suara Nara berhasil diperbarui!');
+  };
+
+  const handleSelectRate = (rateVal) => {
+    setVoiceRate(rateVal);
+    try {
+      localStorage.setItem('bk_nara_voice_rate', rateVal);
+    } catch {}
+  };
+
+  const handleToggleAutoVoice = (val) => {
+    setAutoVoice(val);
+    try {
+      localStorage.setItem('bk_nara_autovoice', String(val));
+    } catch {}
+  };
+
+  const handleTestVoice = (voice) => {
+    if (testingVoiceId === voice.id) {
+      stopNaraVoice();
+      setTestingVoiceId(null);
+      return;
+    }
+    setTestingVoiceId(voice.id);
+    speakNaraVoice(voice.sampleText, {
+      voiceId: voice.id,
+      rate: voiceRate,
+      onEnd: () => setTestingVoiceId(null),
+      onError: () => setTestingVoiceId(null),
+    });
+  };
 
   // Recording Modal State
   const [activeScriptToRecord, setActiveScriptToRecord] = useState(null);
@@ -89,6 +155,7 @@ export const NaraVoiceManager = () => {
 
     return () => {
       stopRecordingCleanup();
+      stopNaraVoice();
     };
   }, []);
 
@@ -281,6 +348,17 @@ export const NaraVoiceManager = () => {
             Rekam langsung suara Anda dari mikrofon atau unggah audio studio untuk setiap dialog Nara.
             Suara yang tersimpan di database akan otomatis diputar saat mahasiswa mengisi formulir konseling atau berinteraksi dengan Nara.
           </p>
+
+          <div className="pt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsVoiceConfigModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-xs transition-all shadow-sm cursor-pointer backdrop-blur-xs hover:scale-102 active:scale-98"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-emerald-300" />
+              <span>Pengaturan Karakter & Sintesis Suara Nara</span>
+            </button>
+          </div>
         </div>
 
         {/* Decorative Background Sound Wave */}
@@ -710,6 +788,25 @@ export const NaraVoiceManager = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Voice Settings Modal (Admin Only) */}
+      <VoiceSettingsModal
+        isOpen={isVoiceConfigModalOpen}
+        onClose={() => {
+          stopNaraVoice();
+          setTestingVoiceId(null);
+          setIsVoiceConfigModalOpen(false);
+        }}
+        activeVoiceId={voiceChoice}
+        onSelectVoice={handleSelectVoice}
+        activeRate={voiceRate}
+        onSelectRate={handleSelectRate}
+        autoVoice={autoVoice}
+        onToggleAutoVoice={handleToggleAutoVoice}
+        onTestVoice={handleTestVoice}
+        testingVoiceId={testingVoiceId}
+        hasRecordingsCount={stats.recorded_count || recordings.filter((r) => r.has_audio).length}
+      />
     </div>
   );
 };
