@@ -379,6 +379,14 @@ export const LandingPage = () => {
   return (
     <PageTransition className="min-h-screen bg-[#F6F8FA] flex flex-col justify-between selection:bg-emerald-200 selection:text-emerald-950 font-sans relative">
 
+      {/* 0. Dynamic Announcement Bar from Admin Web Settings */}
+      {content?.web_settings?.announcement_bar_enabled && (
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white py-2 px-4 sm:px-8 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-xs z-50">
+          <Sparkles className="w-3.5 h-3.5 shrink-0 animate-bounce" />
+          <span>{content?.web_settings?.announcement_text || 'Pengumuman Resmi Kampus'}</span>
+        </div>
+      )}
+
       {/* 1. UINSSC Top Institutional Accent Banner */}
       <div className="bg-gradient-to-r from-[#013b29] via-[#046c4e] to-[#013b29] text-white py-2 px-4 sm:px-8 border-b border-emerald-500/30 text-xs font-medium z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between">

@@ -151,6 +151,7 @@ export const AppRoutes = () => {
             </ProtectedRoute>
           }
         >
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<AdminDashboard />} />
           <Route path="audit-logs" element={<AdminDashboard />} />

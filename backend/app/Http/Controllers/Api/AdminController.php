@@ -86,7 +86,8 @@ class AdminController extends Controller
             });
         }
 
-        $users = $query->latest()->paginate(15);
+        $perPage = (int)$request->query('per_page', 100);
+        $users = $query->latest()->paginate($perPage);
 
         return response()->json($users);
     }
@@ -146,8 +147,29 @@ class AdminController extends Controller
         }
 
         return response()->json([
+            // Web CMS Settings
+            'site_title' => SystemSetting::get('site_title', 'Ruang BK - Layanan Bimbingan & Konseling Kampus'),
+            'site_tagline' => SystemSetting::get('site_tagline', 'Ruang Aman untuk Tumbuh dan Bercerita'),
+            'site_meta_description' => SystemSetting::get('site_meta_description', 'Layanan bimbingan dan konseling online & offline terpadu untuk civitas akademika.'),
+            'site_meta_keywords' => SystemSetting::get('site_meta_keywords', 'konseling online, bimbingan mahasiswa, kesehatan mental, konselor kampus'),
+            'contact_email' => SystemSetting::get('contact_email', 'bk@kampus.ac.id'),
+            'contact_whatsapp' => SystemSetting::get('contact_whatsapp', '+62 812-3456-7890'),
+            'campus_address' => SystemSetting::get('campus_address', 'Gedung Pusat Kegiatan Mahasiswa Lt. 2, Kampus Terpadu'),
+            'operating_hours' => SystemSetting::get('operating_hours', 'Senin - Jumat, 08:00 - 16:00 WIB'),
+            'announcement_bar_enabled' => SystemSetting::get('announcement_bar_enabled', 'false') === 'true',
+            'announcement_text' => SystemSetting::get('announcement_text', 'Layanan Konseling Tatap Muka & Online tetap beroperasi penuh.'),
+
+            // BK Online Application Settings
+            'default_session_duration' => (int) SystemSetting::get('default_session_duration', '60'),
+            'max_active_sessions_per_student' => (int) SystemSetting::get('max_active_sessions_per_student', '2'),
+            'cancellation_buffer_hours' => (int) SystemSetting::get('cancellation_buffer_hours', '6'),
+            'auto_approve_counseling' => SystemSetting::get('auto_approve_counseling', 'false') === 'true',
             'tutor_assignment_mode' => SystemSetting::get('tutor_assignment_mode', 'student_select'),
             'crisis_flag_enabled' => SystemSetting::get('crisis_flag_enabled', 'true') === 'true',
+            'crisis_alert_email' => SystemSetting::get('crisis_alert_email', 'crisis-center@kampus.ac.id'),
+            'reminder_notifications_enabled' => SystemSetting::get('reminder_notifications_enabled', 'true') === 'true',
+
+            // Zoom Server-to-Server OAuth
             'zoom_mock_mode' => SystemSetting::get('zoom_mock_mode', env('ZOOM_MOCK_MODE', 'true')) === 'true',
             'zoom_account_id' => SystemSetting::get('zoom_account_id', env('ZOOM_ACCOUNT_ID', '')),
             'zoom_client_id' => SystemSetting::get('zoom_client_id', env('ZOOM_CLIENT_ID', '')),
@@ -166,8 +188,29 @@ class AdminController extends Controller
         $this->ensureAdmin($request);
 
         $request->validate([
+            // Web CMS Settings
+            'site_title' => 'nullable|string|max:255',
+            'site_tagline' => 'nullable|string|max:255',
+            'site_meta_description' => 'nullable|string|max:1000',
+            'site_meta_keywords' => 'nullable|string|max:500',
+            'contact_email' => 'nullable|string|email|max:255',
+            'contact_whatsapp' => 'nullable|string|max:50',
+            'campus_address' => 'nullable|string|max:500',
+            'operating_hours' => 'nullable|string|max:255',
+            'announcement_bar_enabled' => 'nullable|boolean',
+            'announcement_text' => 'nullable|string|max:500',
+
+            // BK Online Application Settings
+            'default_session_duration' => 'nullable|integer|in:30,45,60,90',
+            'max_active_sessions_per_student' => 'nullable|integer|min:1|max:10',
+            'cancellation_buffer_hours' => 'nullable|integer|min:0|max:48',
+            'auto_approve_counseling' => 'nullable|boolean',
             'tutor_assignment_mode' => 'nullable|in:manual,student_select,automatic',
             'crisis_flag_enabled' => 'nullable|boolean',
+            'crisis_alert_email' => 'nullable|string|email|max:255',
+            'reminder_notifications_enabled' => 'nullable|boolean',
+
+            // Zoom Settings
             'zoom_mock_mode' => 'nullable|boolean',
             'zoom_account_id' => 'nullable|string|max:255',
             'zoom_client_id' => 'nullable|string|max:255',
@@ -175,27 +218,34 @@ class AdminController extends Controller
             'zoom_host_email' => 'nullable|string|email|max:255',
         ]);
 
-        if ($request->has('tutor_assignment_mode')) {
-            SystemSetting::set('tutor_assignment_mode', $request->input('tutor_assignment_mode'));
-        }
-        if ($request->has('crisis_flag_enabled')) {
-            SystemSetting::set('crisis_flag_enabled', $request->boolean('crisis_flag_enabled') ? 'true' : 'false');
-        }
-        if ($request->has('zoom_mock_mode')) {
-            SystemSetting::set('zoom_mock_mode', $request->boolean('zoom_mock_mode') ? 'true' : 'false');
-        }
-        if ($request->has('zoom_account_id')) {
-            SystemSetting::set('zoom_account_id', trim($request->input('zoom_account_id') ?? ''));
-        }
-        if ($request->has('zoom_client_id')) {
-            SystemSetting::set('zoom_client_id', trim($request->input('zoom_client_id') ?? ''));
-        }
-        if ($request->filled('zoom_client_secret')) {
-            SystemSetting::set('zoom_client_secret', trim($request->input('zoom_client_secret')));
-        }
-        if ($request->has('zoom_host_email')) {
-            SystemSetting::set('zoom_host_email', trim($request->input('zoom_host_email') ?? ''));
-        }
+        // Web CMS
+        if ($request->has('site_title')) SystemSetting::set('site_title', trim($request->input('site_title') ?? ''));
+        if ($request->has('site_tagline')) SystemSetting::set('site_tagline', trim($request->input('site_tagline') ?? ''));
+        if ($request->has('site_meta_description')) SystemSetting::set('site_meta_description', trim($request->input('site_meta_description') ?? ''));
+        if ($request->has('site_meta_keywords')) SystemSetting::set('site_meta_keywords', trim($request->input('site_meta_keywords') ?? ''));
+        if ($request->has('contact_email')) SystemSetting::set('contact_email', trim($request->input('contact_email') ?? ''));
+        if ($request->has('contact_whatsapp')) SystemSetting::set('contact_whatsapp', trim($request->input('contact_whatsapp') ?? ''));
+        if ($request->has('campus_address')) SystemSetting::set('campus_address', trim($request->input('campus_address') ?? ''));
+        if ($request->has('operating_hours')) SystemSetting::set('operating_hours', trim($request->input('operating_hours') ?? ''));
+        if ($request->has('announcement_bar_enabled')) SystemSetting::set('announcement_bar_enabled', $request->boolean('announcement_bar_enabled') ? 'true' : 'false');
+        if ($request->has('announcement_text')) SystemSetting::set('announcement_text', trim($request->input('announcement_text') ?? ''));
+
+        // BK Online
+        if ($request->has('default_session_duration')) SystemSetting::set('default_session_duration', (string) $request->input('default_session_duration'));
+        if ($request->has('max_active_sessions_per_student')) SystemSetting::set('max_active_sessions_per_student', (string) $request->input('max_active_sessions_per_student'));
+        if ($request->has('cancellation_buffer_hours')) SystemSetting::set('cancellation_buffer_hours', (string) $request->input('cancellation_buffer_hours'));
+        if ($request->has('auto_approve_counseling')) SystemSetting::set('auto_approve_counseling', $request->boolean('auto_approve_counseling') ? 'true' : 'false');
+        if ($request->has('tutor_assignment_mode')) SystemSetting::set('tutor_assignment_mode', $request->input('tutor_assignment_mode'));
+        if ($request->has('crisis_flag_enabled')) SystemSetting::set('crisis_flag_enabled', $request->boolean('crisis_flag_enabled') ? 'true' : 'false');
+        if ($request->has('crisis_alert_email')) SystemSetting::set('crisis_alert_email', trim($request->input('crisis_alert_email') ?? ''));
+        if ($request->has('reminder_notifications_enabled')) SystemSetting::set('reminder_notifications_enabled', $request->boolean('reminder_notifications_enabled') ? 'true' : 'false');
+
+        // Zoom
+        if ($request->has('zoom_mock_mode')) SystemSetting::set('zoom_mock_mode', $request->boolean('zoom_mock_mode') ? 'true' : 'false');
+        if ($request->has('zoom_account_id')) SystemSetting::set('zoom_account_id', trim($request->input('zoom_account_id') ?? ''));
+        if ($request->has('zoom_client_id')) SystemSetting::set('zoom_client_id', trim($request->input('zoom_client_id') ?? ''));
+        if ($request->filled('zoom_client_secret')) SystemSetting::set('zoom_client_secret', trim($request->input('zoom_client_secret')));
+        if ($request->has('zoom_host_email')) SystemSetting::set('zoom_host_email', trim($request->input('zoom_host_email') ?? ''));
 
         AuditLogService::log('update_settings', 'SystemSetting', null, $request->except(['zoom_client_secret']), $request->user()->id);
 

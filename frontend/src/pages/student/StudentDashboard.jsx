@@ -14,7 +14,10 @@ import {
   FileCheck2,
   CheckCircle2,
   Star,
-  AlertCircle
+  AlertCircle,
+  BookOpen,
+  HeartHandshake,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
@@ -94,6 +97,14 @@ export const StudentDashboard = () => {
     navigate('/app/counseling/wizard');
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 4 && hour < 11) return 'Selamat Pagi 🌅';
+    if (hour >= 11 && hour < 15) return 'Selamat Siang ☀️';
+    if (hour >= 15 && hour < 18) return 'Selamat Sore 🌤️';
+    return 'Selamat Malam 🌙';
+  };
+
   if (isLoading) {
     return <DashboardSkeleton />;
   }
@@ -102,36 +113,71 @@ export const StudentDashboard = () => {
 
   return (
     <PageTransition className="space-y-6">
+      {/* 0. Student Dynamic Personalized Welcome Header */}
+      <section className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-emerald-50/80 via-teal-50/60 to-indigo-50/70 border border-emerald-100 shadow-soft-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white font-black text-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20 border-2 border-white">
+            {user?.name?.charAt(0) || 'M'}
+          </div>
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                {getGreeting()}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">
+                {user?.role === 'STUDENT' ? '🎓 Konseli Mahasiswa' : '🌐 Klien Umum'}
+              </span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-black text-darktext tracking-tight">
+              Hai, {user?.name || 'Mahasiswa'}!
+            </h2>
+            <p className="text-xs text-mutedtext">
+              "Setiap langkah kecil yang kamu ambil hari ini adalah kemajuan berharga untuk kesehatan mentalmu."
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <Link
+            to="/app/counseling/wizard"
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 min-h-[42px]"
+          >
+            <MessageSquareHeart className="w-4 h-4" />
+            <span>Ajukan Konseling Baru</span>
+          </Link>
+        </div>
+      </section>
+
       {/* 1. Daily Mood Check-in */}
       <section>
         <MoodPicker initialMood={todayMood} onSaved={(m) => setTodayMood(m)} />
       </section>
 
       {/* 2. Primary Action Hero Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-emerald-700 via-teal-700 to-emerald-800 text-white p-6 sm:p-7 shadow-soft-md">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-emerald-700 via-teal-700 to-indigo-900 text-white p-6 sm:p-7 shadow-soft-md border border-emerald-700/40">
         <div className="relative z-10 max-w-lg">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-emerald-100 text-xs font-semibold backdrop-blur-md mb-3">
             <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-            <span>Pendampingan Terstruktur</span>
+            <span>Pendampingan Terstruktur & Terpercaya</span>
           </span>
 
           <h2 className="text-xl sm:text-2xl font-black leading-snug">
             {hasScreening
-              ? 'Siap Melanjutkan Bimbingan Konseling?'
+              ? 'Siap Melanjutkan Sesi Bimbingan Konseling?'
               : 'Mulai dengan Screening Kebutuhan Mandiri'}
           </h2>
 
           <p className="text-xs sm:text-sm text-emerald-100/90 mt-2 leading-relaxed">
             {hasScreening
-              ? 'Ajukan sesi konseling online dengan konselor terpercaya dan jadwalkan pertemuan Anda.'
-              : 'Kuesioner membantu memetakan kebutuhan emosi, akademik, dan masa depan Anda tanpa penghakiman.'}
+              ? 'Ajukan sesi konseling tatap muka atau video call Zoom dengan konselor terpercaya dan jadwalkan pertemuan Anda.'
+              : 'Kuesioner asesmen mandiri membantu memetakan kebutuhan emosi, akademik, dan karir Anda secara aman & rahasia.'}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
             {hasScreening ? (
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => navigate('/app/counseling/new')}
+                onClick={() => navigate('/app/counseling/wizard')}
                 className="px-6 py-3 bg-white text-emerald-800 hover:bg-emerald-50 rounded-2xl text-xs sm:text-sm font-bold shadow-soft-sm flex items-center gap-2 transition-all min-h-[44px]"
               >
                 <MessageSquareHeart className="w-4 h-4 text-emerald-700" />
@@ -160,7 +206,78 @@ export const StudentDashboard = () => {
         </div>
 
         {/* Decorative circle background */}
-        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
+      </section>
+
+      {/* 2.5 Quick Exploration & Feature Hub (4 Colorful Cards) */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Konseling 1-on-1 */}
+        <Link
+          to="/app/counseling/wizard"
+          className="p-5 rounded-3xl bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/50 border border-emerald-200/70 hover:border-emerald-300 shadow-soft-sm hover:shadow-soft-md hover:-translate-y-0.5 transition-all group"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center mb-3 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+            <MessageSquareHeart className="w-5 h-5" />
+          </div>
+          <h4 className="text-xs font-bold text-darktext group-hover:text-emerald-800 transition-colors flex items-center justify-between">
+            <span>Konseling 1-on-1</span>
+            <ChevronRight className="w-3.5 h-3.5 text-mutedtext group-hover:text-emerald-700 transition-colors" />
+          </h4>
+          <p className="text-[11px] text-mutedtext mt-1 leading-relaxed">
+            Sesi privat tatap muka di kampus atau video call Zoom terintegrasi.
+          </p>
+        </Link>
+
+        {/* Screening Emosi & Kebutuhan */}
+        <Link
+          to="/app/screening"
+          className="p-5 rounded-3xl bg-gradient-to-br from-sky-50/80 via-white to-blue-50/50 border border-sky-200/70 hover:border-sky-300 shadow-soft-sm hover:shadow-soft-md hover:-translate-y-0.5 transition-all group"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center mb-3 shadow-md shadow-sky-500/20 group-hover:scale-105 transition-transform">
+            <ClipboardList className="w-5 h-5" />
+          </div>
+          <h4 className="text-xs font-bold text-darktext group-hover:text-sky-800 transition-colors flex items-center justify-between">
+            <span>Screening Mandiri</span>
+            <ChevronRight className="w-3.5 h-3.5 text-mutedtext group-hover:text-sky-700 transition-colors" />
+          </h4>
+          <p className="text-[11px] text-mutedtext mt-1 leading-relaxed">
+            Kuesioner 20 instrumen untuk memetakan beban emosi & akademik.
+          </p>
+        </Link>
+
+        {/* Action Plan & Jurnal */}
+        <Link
+          to="/app/history"
+          className="p-5 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/50 border border-indigo-200/70 hover:border-indigo-300 shadow-soft-sm hover:shadow-soft-md hover:-translate-y-0.5 transition-all group"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center mb-3 shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+            <FileCheck2 className="w-5 h-5" />
+          </div>
+          <h4 className="text-xs font-bold text-darktext group-hover:text-indigo-800 transition-colors flex items-center justify-between">
+            <span>Rencana Tindak Lanjut</span>
+            <ChevronRight className="w-3.5 h-3.5 text-mutedtext group-hover:text-indigo-700 transition-colors" />
+          </h4>
+          <p className="text-[11px] text-mutedtext mt-1 leading-relaxed">
+            Target kebiasaan positif dan langkah solusi yang disepakati konselor.
+          </p>
+        </Link>
+
+        {/* Edukasi Psikologi */}
+        <Link
+          to="/articles"
+          className="p-5 rounded-3xl bg-gradient-to-br from-amber-50/80 via-white to-orange-50/50 border border-amber-200/70 hover:border-amber-300 shadow-soft-sm hover:shadow-soft-md hover:-translate-y-0.5 transition-all group"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center mb-3 shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <h4 className="text-xs font-bold text-darktext group-hover:text-amber-800 transition-colors flex items-center justify-between">
+            <span>Artikel Edukasi Mental</span>
+            <ChevronRight className="w-3.5 h-3.5 text-mutedtext group-hover:text-amber-700 transition-colors" />
+          </h4>
+          <p className="text-[11px] text-mutedtext mt-1 leading-relaxed">
+            Tips praktis redakan overthinking, burnout, dan stres perkuliahan.
+          </p>
+        </Link>
       </section>
 
       {/* Unreviewed Completed Session Callout */}
@@ -286,34 +403,39 @@ export const StudentDashboard = () => {
       {/* 4. Active Case & Latest Screening Cards Grid */}
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Latest Screening Card */}
-        <div className="p-5 rounded-3xl bg-white border border-softborder shadow-soft-sm flex flex-col justify-between">
+        <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-br from-teal-50/60 via-white to-sky-50/40 border border-teal-200/80 shadow-soft-sm hover:shadow-soft-md transition-all flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
-                  <ClipboardList className="w-4 h-4" />
-                </span>
-                <h4 className="text-sm font-bold text-darktext">Screening Terakhir</h4>
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-md shadow-teal-500/20 flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-darktext">Screening Mandiri</h4>
+                  <span className="text-[11px] text-mutedtext">Pemetaan Kebutuhan & Emosi</span>
+                </div>
               </div>
               {latestScreening && (
-                <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
-                  Tersimpan
+                <span className="text-[10px] font-bold text-teal-800 bg-teal-100/70 px-2.5 py-0.5 rounded-full border border-teal-200 shadow-xs">
+                  🟢 Tersimpan
                 </span>
               )}
             </div>
 
             {latestScreening ? (
               <div className="space-y-2 text-xs mb-4">
-                <p className="font-semibold text-darktext line-clamp-1">
+                <p className="font-bold text-darktext text-sm line-clamp-1">
                   {latestScreening.questionnaire?.title || 'Screening Kebutuhan BK'}
                 </p>
-                <p className="text-mutedtext">
+                <p className="text-mutedtext text-[11px]">
                   Diserahkan pada{' '}
-                  {new Date(latestScreening.submitted_at).toLocaleDateString('id-ID', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  <strong className="text-darktext">
+                    {new Date(latestScreening.submitted_at).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </strong>
                 </p>
 
                 {/* Category preview pills */}
@@ -322,74 +444,83 @@ export const StudentDashboard = () => {
                     {latestScreening.category_scores.slice(0, 3).map((c, i) => (
                       <span
                         key={i}
-                        className="text-[10px] px-2 py-0.5 rounded-lg bg-gray-50 border border-gray-200 text-darktext font-medium"
+                        className="text-[10px] px-2.5 py-1 rounded-xl bg-white border border-teal-100 text-darktext font-semibold shadow-xs"
                       >
-                        {c.category}: <strong>{c.level}</strong>
+                        {c.category}: <strong className="text-teal-700">{c.level}</strong>
                       </span>
                     ))}
                   </div>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-mutedtext leading-relaxed mb-4">
-                Anda belum mengisi screening. Pengisian awal sangat dianjurkan sebelum berkonsultasi.
-              </p>
+              <div className="p-3.5 rounded-2xl bg-white/80 border border-teal-100 text-xs text-mutedtext leading-relaxed mb-4">
+                Anda belum mengisi instrumen screening. Pengisian awal sangat dianjurkan untuk memberikan gambaran komprehensif kepada konselor.
+              </div>
             )}
           </div>
 
           <button
+            type="button"
             onClick={() =>
               latestScreening
                 ? navigate(`/app/screening/result/${latestScreening.id}`)
                 : navigate('/app/screening')
             }
-            className="w-full py-2.5 px-3 rounded-xl bg-teal-50 text-teal-800 hover:bg-teal-100 text-xs font-semibold flex items-center justify-center gap-1 transition-colors min-h-[44px]"
+            className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-xs font-bold shadow-md shadow-teal-600/20 flex items-center justify-center gap-2 transition-all min-h-[44px]"
           >
-            <span>{latestScreening ? 'Lihat Hasil Screening' : 'Mulai Isi Sekarang'}</span>
-            <ChevronRight className="w-4 h-4" />
+            <span>{latestScreening ? 'Lihat Rekomendasi Screening' : 'Mulai Pengisian Kuesioner'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Active Counseling Case Card */}
-        <div className="p-5 rounded-3xl bg-white border border-softborder shadow-soft-sm flex flex-col justify-between">
+        <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-br from-indigo-50/60 via-white to-purple-50/40 border border-indigo-200/80 shadow-soft-sm hover:shadow-soft-md transition-all flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
-                  <FolderHeart className="w-4 h-4" />
-                </span>
-                <h4 className="text-sm font-bold text-darktext">Kasus Konseling</h4>
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/20 flex items-center justify-center">
+                  <FolderHeart className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-darktext">Kasus Konseling Aktif</h4>
+                  <span className="text-[11px] text-mutedtext">Pendampingan & Sesi Temu</span>
+                </div>
               </div>
               {activeCase && <StatusBadge status={activeCase.status} />}
             </div>
 
             {activeCase ? (
               <div className="space-y-1.5 text-xs mb-4">
-                <span className="text-[10px] font-mono text-mutedtext uppercase">
-                  {activeCase.case_number}
-                </span>
-                <p className="font-bold text-darktext">Kategori: {activeCase.category}</p>
-                <p className="text-mutedtext line-clamp-2 leading-relaxed">
-                  {activeCase.initial_reason}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                    {activeCase.case_number}
+                  </span>
+                  <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                    {activeCase.category}
+                  </span>
+                </div>
+                <p className="text-mutedtext line-clamp-2 leading-relaxed bg-white/80 p-2.5 rounded-xl border border-indigo-100 italic">
+                  "{activeCase.initial_reason}"
                 </p>
               </div>
             ) : (
-              <p className="text-xs text-mutedtext leading-relaxed mb-4">
-                Belum ada kasus konseling aktif. Anda dapat mengajukan konsultasi kapan saja.
-              </p>
+              <div className="p-3.5 rounded-2xl bg-white/80 border border-indigo-100 text-xs text-mutedtext leading-relaxed mb-4">
+                Belum ada kasus konseling aktif. Ceritakan keresahan atau kendala perkuliahanmu bersama konselor terpercaya.
+              </div>
             )}
           </div>
 
           <button
+            type="button"
             onClick={() =>
               activeCase
                 ? navigate(`/app/cases/${activeCase.id}`)
-                : navigate('/app/counseling/new')
+                : navigate('/app/counseling/wizard')
             }
-            className="w-full py-2.5 px-3 rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 text-xs font-semibold flex items-center justify-center gap-1 transition-colors min-h-[44px]"
+            className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all min-h-[44px]"
           >
-            <span>{activeCase ? 'Detail Kasus & Sesi' : 'Ajukan Kasus Konseling'}</span>
-            <ChevronRight className="w-4 h-4" />
+            <span>{activeCase ? 'Detail Kasus & Riwayat Sesi' : 'Daftar Konseling Sekarang'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </section>

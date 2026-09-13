@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -34,7 +35,21 @@ import {
   Calendar,
   X,
   FileText,
-  Check
+  Check,
+  Globe,
+  SlidersHorizontal,
+  Mail,
+  Phone,
+  MapPin,
+  Megaphone,
+  Bell,
+  Info,
+  ArrowRight,
+  UserCheck,
+  UserX,
+  HeartHandshake,
+  Filter,
+  ChevronRight
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
@@ -44,12 +59,37 @@ import PageTransition from '../../components/common/PageTransition';
 import NaraVoiceManager from '../../components/admin/NaraVoiceManager';
 
 export const AdminDashboard = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [data, setData] = useState(null);
   const [users, setUsers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [settings, setSettings] = useState({
+    // Web CMS Settings
+    site_title: 'Ruang BK - Layanan Bimbingan & Konseling Kampus',
+    site_tagline: 'Ruang Aman untuk Tumbuh dan Bercerita',
+    site_meta_description: 'Layanan bimbingan dan konseling online & offline terpadu untuk civitas akademika.',
+    site_meta_keywords: 'konseling online, bimbingan mahasiswa, kesehatan mental, konselor kampus',
+    contact_email: 'bk@kampus.ac.id',
+    contact_whatsapp: '+62 812-3456-7890',
+    campus_address: 'Gedung Pusat Kegiatan Mahasiswa Lt. 2, Kampus Terpadu',
+    operating_hours: 'Senin - Jumat, 08:00 - 16:00 WIB',
+    announcement_bar_enabled: false,
+    announcement_text: 'Layanan Konseling Tatap Muka & Online tetap beroperasi penuh.',
+
+    // BK Online Application Settings
+    default_session_duration: 60,
+    max_active_sessions_per_student: 2,
+    cancellation_buffer_hours: 6,
+    auto_approve_counseling: false,
     tutor_assignment_mode: 'student_select',
     crisis_flag_enabled: true,
+    crisis_alert_email: 'crisis-center@kampus.ac.id',
+    reminder_notifications_enabled: true,
+
+    // Zoom Server-to-Server OAuth
     zoom_mock_mode: true,
     zoom_account_id: '',
     zoom_client_id: '',
@@ -75,7 +115,33 @@ export const AdminDashboard = () => {
   const [articleCategoryFilter, setArticleCategoryFilter] = useState('all');
   const [previewArticle, setPreviewArticle] = useState(null);
 
-  const [activeTab, setActiveTab] = useState('overview'); // overview | users | articles | cms | audit | settings
+  // User Management State (Filter Peran, Tab Konseli/Konselor/Admin, Sub-Filter, Pencarian, Modal)
+  const [userRoleFilter, setUserRoleFilter] = useState('ALL'); // 'ALL' | 'COUNSELEE' | 'TUTOR' | 'ADMIN'
+  const [counseleeSubFilter, setCounseleeSubFilter] = useState('ALL'); // 'ALL' | 'STUDENT' | 'GENERAL'
+  const [userSearch, setUserSearch] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState('ALL'); // 'ALL' | 'active' | 'inactive'
+  const [showTerminologyNotice, setShowTerminologyNotice] = useState(true);
+  const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  // Active tab driven exclusively from URL search params or route path
+  const getActiveTab = () => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      if (tabParam === 'settings') return 'counseling_settings';
+      return tabParam;
+    }
+    if (location.pathname.includes('/admin/users')) return 'users';
+    if (location.pathname.includes('/admin/audit-logs')) return 'audit';
+    if (location.pathname.includes('/admin/settings')) return 'counseling_settings';
+    return 'overview';
+  };
+
+  const activeTab = getActiveTab();
+  const setActiveTab = (newTab) => {
+    setSearchParams({ tab: newTab });
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const { showSuccess, showError } = useToast();
@@ -93,7 +159,7 @@ export const AdminDashboard = () => {
         if (res.data) setLandingContent(res.data);
       }).catch(() => {});
 
-      api.get('/admin/users').then((res) => {
+      api.get('/admin/users?per_page=100').then((res) => {
         setUsers(res.data || []);
       }).catch(() => {});
 
@@ -102,7 +168,21 @@ export const AdminDashboard = () => {
       }).catch(() => {});
 
       api.get('/admin/settings').then((res) => {
-        if (res) setSettings(res);
+        if (res) {
+          setSettings((prev) => ({
+            ...prev,
+            ...res,
+            default_session_duration: Number(res.default_session_duration || 60),
+            max_active_sessions_per_student: Number(res.max_active_sessions_per_student || 2),
+            cancellation_buffer_hours: Number(res.cancellation_buffer_hours || 6),
+            auto_approve_counseling: Boolean(res.auto_approve_counseling),
+            crisis_flag_enabled: Boolean(res.crisis_flag_enabled),
+            reminder_notifications_enabled: Boolean(res.reminder_notifications_enabled),
+            announcement_bar_enabled: Boolean(res.announcement_bar_enabled),
+            zoom_mock_mode: Boolean(res.zoom_mock_mode),
+            zoom_is_configured: Boolean(res.zoom_is_configured),
+          }));
+        }
       }).catch(() => {});
     } catch (err) {
       showError('Gagal memuat data administrasi.');
@@ -114,6 +194,19 @@ export const AdminDashboard = () => {
     loadData();
   }, []);
 
+  const reloadUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const res = await api.get('/admin/users?per_page=100');
+      setUsers(res.data || []);
+      showSuccess('Data pengguna berhasil diperbarui.');
+    } catch (err) {
+      showError('Gagal memuat ulang data pengguna.');
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
   const handleToggleUserStatus = async (userId) => {
     try {
       const res = await api.put(`/admin/users/${userId}/toggle-status`);
@@ -121,6 +214,9 @@ export const AdminDashboard = () => {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, status: res.user.status } : u))
       );
+      if (selectedUserDetail?.id === userId) {
+        setSelectedUserDetail((prev) => ({ ...prev, status: res.user.status }));
+      }
     } catch (err) {
       showError(err.message || 'Gagal mengubah status pengguna.');
     }
@@ -594,97 +690,316 @@ export const AdminDashboard = () => {
 
   const stats = data?.stats || {};
 
+  const getSectionInfo = (tab) => {
+    switch (tab) {
+      case 'overview':
+        return {
+          badge: 'Dashboard Utama',
+          title: 'Ringkasan & Analitik Operasional',
+          desc: 'Statistik real-time, antrean kasus konseling aktif, dan ringkasan aktivitas sistem.'
+        };
+      case 'users':
+        return {
+          badge: 'Manajemen Pengguna',
+          title: 'Data & Hak Akses Pengguna',
+          desc: 'Kelola akun mahasiswa, pengguna umum, konselor/tutor, dan administrator.'
+        };
+      case 'articles':
+        return {
+          badge: 'CMS Artikel',
+          title: 'Kelola Artikel & Edukasi Psikologi',
+          desc: 'Tulis, sunting, dan publikasikan materi edukasi kesehatan mental untuk mahasiswa.'
+        };
+      case 'cms':
+        return {
+          badge: 'CMS Landing Page',
+          title: 'Editor Konten Website Publik',
+          desc: 'Kustomisasi tampilan hero banner, topik bimbingan, layanan, FAQ, dan footer website.'
+        };
+      case 'web_settings':
+        return {
+          badge: 'Pengaturan Web',
+          title: 'Identitas, SEO & Kontak Website',
+          desc: 'Konfigurasi judul portal, deskripsi Google SERP, hotline WhatsApp, dan banner pengumuman atas.'
+        };
+      case 'counseling_settings':
+        return {
+          badge: 'Aplikasi BK Online',
+          title: 'Aturan & Operasional Konseling',
+          desc: 'Konfigurasi durasi konseling, batas kuota mahasiswa, alur persetujuan, dan penugasan tutor.'
+        };
+      case 'zoom_settings':
+        return {
+          badge: 'Integrasi Eksternal',
+          title: 'Integrasi Akun Zoom Meeting (Server-to-Server OAuth)',
+          desc: 'Sinkronisasi otomatis pembuatan link video call konseling ke kalender akun Zoom resmi.'
+        };
+      case 'voice':
+        return {
+          badge: 'Asisten Virtual Nara',
+          title: 'Rekaman Suara Asisten Nara 🎙️',
+          desc: 'Manajemen file rekaman suara sambutan, panduan skrining, dan afirmasi Nara.'
+        };
+      case 'crisis_settings':
+        return {
+          badge: 'Keselamatan & Darurat',
+          title: 'Deteksi Krisis & Skrining Mental',
+          desc: 'Protokol deteksi otomatis risiko tinggi dan notifikasi darurat penanganan krisis kampus.'
+        };
+      case 'audit':
+        return {
+          badge: 'Keamanan Sistem',
+          title: 'Audit Logs & Jejak Aktivitas',
+          desc: 'Riwayat aktivitas sensitif, perubahan status akun, dan rekaman akses data konseling.'
+        };
+      case 'general_settings':
+        return {
+          badge: 'Konfigurasi Sistem',
+          title: 'Pengaturan Umum & Status Server',
+          desc: 'Status environment aplikasi, database, dan pembersihan cache sistem.'
+        };
+      default:
+        return {
+          badge: 'Admin Panel',
+          title: 'Panel Administrasi BK',
+          desc: 'Tata kelola sistem bimbingan konseling dan konten web.'
+        };
+    }
+  };
+
+  const currentSection = getSectionInfo(activeTab);
+
+  // User Counts by Role & Status
+  const userCounts = {
+    all: users.length,
+    counselee: users.filter((u) => u.role === 'STUDENT' || u.role === 'GENERAL').length,
+    student: users.filter((u) => u.role === 'STUDENT').length,
+    general: users.filter((u) => u.role === 'GENERAL').length,
+    tutor: users.filter((u) => u.role === 'TUTOR').length,
+    admin: users.filter((u) => u.role === 'ADMIN').length,
+    active: users.filter((u) => u.status === 'active').length,
+    inactive: users.filter((u) => u.status !== 'active').length,
+  };
+
+  // Filtered Users List based on Tab, Sub-filter, Status, and Search Query
+  const filteredUsers = users.filter((u) => {
+    // 1. Role Filter Tab
+    if (userRoleFilter === 'COUNSELEE') {
+      if (u.role !== 'STUDENT' && u.role !== 'GENERAL') return false;
+      if (counseleeSubFilter === 'STUDENT' && u.role !== 'STUDENT') return false;
+      if (counseleeSubFilter === 'GENERAL' && u.role !== 'GENERAL') return false;
+    } else if (userRoleFilter === 'TUTOR') {
+      if (u.role !== 'TUTOR') return false;
+    } else if (userRoleFilter === 'ADMIN') {
+      if (u.role !== 'ADMIN') return false;
+    }
+
+    // 2. Status Filter
+    if (userStatusFilter !== 'ALL' && u.status !== userStatusFilter) {
+      return false;
+    }
+
+    // 3. Search Query (name, email, phone, NIM, NIK, NIP, prodi, specialization)
+    if (userSearch.trim()) {
+      const q = userSearch.toLowerCase();
+      const nameMatch = u.name?.toLowerCase().includes(q);
+      const emailMatch = u.email?.toLowerCase().includes(q);
+      const phoneMatch = u.phone?.toLowerCase().includes(q);
+      const nimMatch = u.student_profile?.nim?.toLowerCase().includes(q);
+      const prodiMatch = u.student_profile?.program_study?.toLowerCase().includes(q);
+      const nikMatch = u.general_profile?.nik?.toLowerCase().includes(q);
+      const nipMatch = u.tutor_profile?.nip?.toLowerCase().includes(q);
+      const specMatch = u.tutor_profile?.specialization?.toLowerCase().includes(q);
+
+      return nameMatch || emailMatch || phoneMatch || nimMatch || prodiMatch || nikMatch || nipMatch || specMatch;
+    }
+
+    return true;
+  });
+
   return (
     <PageTransition className="space-y-6">
-      {/* Top Header */}
-      <div className="flex items-center justify-between">
+      {/* Top Section Header (All navigation is in the Left Sidebar - No top tabs) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-softborder">
         <div>
-          <h2 className="text-xl font-bold text-darktext">Tata Kelola & Operasional</h2>
-          <p className="text-xs text-mutedtext mt-0.5">Pantau aktivitas sistem, hak akses, dan manajemen konten landing page</p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider">
+              {currentSection.badge}
+            </span>
+            <h2 className="text-xl font-black text-darktext tracking-tight">
+              {currentSection.title}
+            </h2>
+          </div>
+          <p className="text-xs text-mutedtext mt-1">
+            {currentSection.desc}
+          </p>
         </div>
-        <button
-          onClick={loadData}
-          className="p-2.5 rounded-2xl bg-white border border-softborder text-mutedtext hover:text-darktext shadow-soft-sm"
-          title="Segarkan Data"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex p-1 bg-gray-100 rounded-2xl max-w-2xl overflow-x-auto">
-        {[
-          { key: 'overview', label: 'Ringkasan' },
-          { key: 'users', label: 'Pengguna' },
-          { key: 'articles', label: 'Kelola Artikel' },
-          { key: 'cms', label: 'Kelola Landing Page' },
-          { key: 'voice', label: 'Rekaman Suara Nara 🎙️' },
-          { key: 'audit', label: 'Audit Logs' },
-          { key: 'settings', label: 'Pengaturan' },
-        ].map((tab) => (
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
-              activeTab === tab.key
-                ? 'bg-white text-emerald-800 shadow-sm'
-                : 'text-mutedtext hover:text-darktext'
-            }`}
+            onClick={loadData}
+            disabled={isLoading}
+            className="px-3.5 py-2 rounded-2xl bg-white border border-softborder text-xs font-bold text-slate-700 hover:text-darktext hover:bg-slate-50 shadow-soft-xs flex items-center gap-2 transition-all min-h-[38px]"
+            title="Segarkan Seluruh Data"
           >
-            {tab.label}
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
+            <span>Segarkan Data</span>
           </button>
-        ))}
+        </div>
       </div>
 
       {/* 1. Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Admin Control Center Hero Banner */}
+          <div className="relative overflow-hidden p-6 md:p-7 rounded-3xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-950 text-white shadow-soft-md border border-emerald-900/30">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="space-y-2 max-w-xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 backdrop-blur-md flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                    <span>Control Center Ruang BK</span>
+                  </span>
+                  <span className="text-xs text-slate-300 font-mono">
+                    {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-black tracking-tight text-white">
+                  Dashboard Administrasi & Operasional Kampus
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Pantau metrik kasus konseling mahasiswa, kelola akun pengguna & konselor, integrasi Zoom Meeting, dan kepatuhan audit sistem secara terpusat.
+                </p>
+              </div>
+
+              {/* Quick Navigation Shortcuts */}
+              <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('users');
+                    setUserRoleFilter('ALL');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all flex items-center justify-between gap-3 min-w-[170px]"
+                >
+                  <span className="flex items-center gap-2">
+                    <Users className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Kelola Pengguna</span>
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-white/60" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('zoom_settings')}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all flex items-center justify-between gap-3 min-w-[170px]"
+                >
+                  <span className="flex items-center gap-2">
+                    <Video className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Integrasi Zoom</span>
+                  </span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${settings.zoom_is_configured ? 'bg-emerald-500/30 text-emerald-300' : 'bg-amber-500/30 text-amber-300'}`}>
+                    {settings.zoom_is_configured ? 'Siap' : 'Setup'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('articles')}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all flex items-center justify-between gap-3 min-w-[170px]"
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Artikel Edukasi</span>
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-white/60" />
+                </button>
+              </div>
+            </div>
+
+            {/* Glowing background orbs */}
+            <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+          </div>
+
+          {/* 4 Colored Stat Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <StatCard
               icon={GraduationCap}
-              label="Total Mahasiswa"
+              label="Konseli Mahasiswa"
               value={stats.total_students || 0}
-              subtext="Akun terverifikasi"
+              subtext="Akun kampus terverifikasi"
               color="emerald"
+              badge="Kampus"
+              onClick={() => {
+                setActiveTab('users');
+                setUserRoleFilter('COUNSELEE');
+                setCounseleeSubFilter('STUDENT');
+              }}
             />
             <StatCard
-              icon={Users}
-              label="Pengguna Umum"
+              icon={Globe}
+              label="Klien Masyarakat"
               value={stats.total_general || 0}
-              subtext="Terdaftar NIK"
-              color="teal"
+              subtext="Terdaftar NIK resmi"
+              color="purple"
+              badge="Umum"
+              onClick={() => {
+                setActiveTab('users');
+                setUserRoleFilter('COUNSELEE');
+                setCounseleeSubFilter('GENERAL');
+              }}
             />
             <StatCard
               icon={FolderHeart}
               label="Kasus Konseling Aktif"
               value={stats.active_cases || 0}
-              subtext="Sedang berjalan"
-              color="blue"
+              subtext="Sedang dalam pendampingan"
+              color="indigo"
+              badge="Berjalan"
             />
             <StatCard
               icon={ShieldAlert}
-              label="Crisis Flags"
+              label="Deteksi Krisis"
               value={stats.crisis_flag_count || 0}
-              subtext="Perlu perhatian konselor"
-              color="amber"
+              subtext="Prioritas penanganan konselor"
+              color="rose"
+              badge={stats.crisis_flag_count > 0 ? 'Perhatian' : 'Aman'}
+              onClick={() => setActiveTab('crisis_settings')}
             />
           </div>
 
           {/* Recent Audit Logs Snapshot */}
           <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-3">
-            <h3 className="text-sm font-bold text-darktext">Aktivitas Sistem Terkini (Audit)</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-darktext flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                Aktivitas Sistem Terkini (Audit)
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveTab('audit')}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+              >
+                <span>Lihat Seluruh Log</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             <div className="space-y-2">
               {data?.recent_logs?.map((log) => (
                 <div
                   key={log.id}
-                  className="p-3 rounded-2xl bg-gray-50/70 border border-gray-100 flex items-center justify-between text-xs"
+                  className="p-3 rounded-2xl bg-gray-50/80 hover:bg-gray-50 border border-gray-100 flex items-center justify-between text-xs transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="font-bold text-darktext capitalize">{log.action}</span>
-                    <span className="text-mutedtext">oleh {log.user?.name || 'Sistem'}</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
+                    <span className="font-bold text-darktext capitalize px-2 py-0.5 rounded-lg bg-white border border-gray-200">
+                      {log.action}
+                    </span>
+                    <span className="text-mutedtext">oleh <strong className="text-darktext">{log.user?.name || 'Sistem'}</strong></span>
                   </div>
-                  <span className="text-[10px] text-mutedtext font-mono">
+                  <span className="text-[10px] text-mutedtext font-mono bg-white px-2 py-0.5 rounded-md border border-gray-100">
                     {new Date(log.created_at).toLocaleTimeString('id-ID')}
                   </span>
                 </div>
@@ -694,54 +1009,838 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* 2. Users Tab */}
+      {/* 2. Users Tab (Kelola Pengguna: Konseli Mahasiswa & Umum, Konselor/Tutor, Administrator) */}
       {activeTab === 'users' && (
-        <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
-          <h3 className="text-sm font-bold text-darktext">Daftar Pengguna ({users.length})</h3>
-
-          <div className="space-y-2.5">
-            {users.map((u) => (
-              <div
-                key={u.id}
-                className="p-4 rounded-2xl border border-softborder flex items-center justify-between gap-3 text-xs"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 font-bold flex items-center justify-center text-xs">
-                    {u.name?.charAt(0) || 'U'}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-darktext">{u.name}</h4>
-                    <p className="text-mutedtext text-[11px]">{u.email}</p>
-                    <span className="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 mt-1">
-                      {u.role}
-                    </span>
-                  </div>
+        <div className="space-y-6">
+          {/* Terminology Advisory Notice (Edukasi Terminologi: Mengapa Konseli/Klien, Bukan Pasien) */}
+          <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/60 border border-indigo-100 shadow-soft-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-indigo-100/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                      u.status === 'active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200'
-                    }`}
-                  >
-                    {u.status === 'active' ? 'Aktif' : 'Non-aktif'}
-                  </span>
-
-                  {u.role !== 'ADMIN' && (
-                    <button
-                      onClick={() => handleToggleUserStatus(u.id)}
-                      className="p-2 rounded-xl border border-softborder text-mutedtext hover:text-darktext hover:bg-gray-50 transition-colors"
-                      title="Ubah Status Pengguna"
-                    >
-                      <Power className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                <div>
+                  <h4 className="text-xs md:text-sm font-bold text-darktext flex items-center gap-2">
+                    Panduan Terminologi: Mengapa Menggunakan "Konseli" & "Klien", Bukan "Pasien"?
+                  </h4>
+                  <p className="text-[11px] text-mutedtext">
+                    Rekomendasi standar Asosiasi Bimbingan dan Konseling Indonesia (ABKIN) & Himpunan Psikologi Indonesia (HIMPSI).
+                  </p>
                 </div>
               </div>
-            ))}
+
+              <button
+                type="button"
+                onClick={() => setShowTerminologyNotice(!showTerminologyNotice)}
+                className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors shrink-0 self-start sm:self-auto"
+              >
+                {showTerminologyNotice ? 'Sembunyikan Panduan' : 'Pelajari Standar Istilah'}
+              </button>
+            </div>
+
+            {showTerminologyNotice && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
+                <div className="p-3.5 rounded-2xl bg-white/90 border border-rose-100 shadow-sm space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-rose-700 font-bold text-xs">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    ❌ Hindari Istilah "Pasien"
+                  </div>
+                  <p className="text-[11px] text-mutedtext leading-relaxed">
+                    Istilah <strong>Pasien</strong> berakar dari ranah medis / psikiatri klinis ("orang sakit"). Menggunakannya berisiko memicu <strong>stigma sosial negatif</strong> (takut dicap tidak waras / gangguan mental) sehingga mahasiswa enggan datang mencari bantuan.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-white/90 border border-indigo-100 shadow-sm space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-indigo-700 font-bold text-xs">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    🎓 "Konseli" (Standar Kampus / ABKIN)
+                  </div>
+                  <p className="text-[11px] text-mutedtext leading-relaxed">
+                    Istilah resmi dan baku untuk mahasiswa adalah <strong>Konseli</strong> (<em>counselee</em>). Konseli dipandang sebagai <strong>individu sehat, berdaya, dan berpotensi</strong> yang sedang menavigasi dinamika akademik, karir, atau emosi bersama konselor.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-white/90 border border-purple-100 shadow-sm space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-purple-700 font-bold text-xs">
+                    <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                    🌐 "Klien" (Standar Profesional & Umum)
+                  </div>
+                  <p className="text-[11px] text-mutedtext leading-relaxed">
+                    Untuk pengguna masyarakat umum, istilah standar profesional adalah <strong>Klien</strong> (<em>client</em>). Menegaskan hubungan <strong>kemitraan profesional sejajar</strong>, saling menghormati, dan menjamin kerahasiaan tanpa prasangka medis.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Quick Metrics Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <button
+              type="button"
+              onClick={() => setUserRoleFilter('ALL')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                userRoleFilter === 'ALL'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/10'
+                  : 'bg-white text-darktext border-softborder hover:border-gray-300 shadow-soft-sm'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-xs font-semibold ${userRoleFilter === 'ALL' ? 'text-gray-300' : 'text-mutedtext'}`}>
+                  Semua Pengguna
+                </span>
+                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${userRoleFilter === 'ALL' ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                  <Users className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black">
+                {userCounts.all}
+              </div>
+              <p className={`text-[10px] mt-1 ${userRoleFilter === 'ALL' ? 'text-gray-400' : 'text-mutedtext'}`}>
+                {userCounts.active} aktif • {userCounts.inactive} non-aktif
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setUserRoleFilter('COUNSELEE');
+                setCounseleeSubFilter('ALL');
+              }}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                userRoleFilter === 'COUNSELEE'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-600/20'
+                  : 'bg-white text-darktext border-softborder hover:border-indigo-200 shadow-soft-sm'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-xs font-semibold ${userRoleFilter === 'COUNSELEE' ? 'text-indigo-100' : 'text-indigo-700'}`}>
+                  Konseli / Klien
+                </span>
+                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${userRoleFilter === 'COUNSELEE' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'}`}>
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black">
+                {userCounts.counselee}
+              </div>
+              <p className={`text-[10px] mt-1 ${userRoleFilter === 'COUNSELEE' ? 'text-indigo-200' : 'text-mutedtext'}`}>
+                {userCounts.student} Mahasiswa • {userCounts.general} Umum
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setUserRoleFilter('TUTOR')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                userRoleFilter === 'TUTOR'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-600/20'
+                  : 'bg-white text-darktext border-softborder hover:border-emerald-200 shadow-soft-sm'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-xs font-semibold ${userRoleFilter === 'TUTOR' ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                  Konselor / Tutor
+                </span>
+                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${userRoleFilter === 'TUTOR' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
+                  <GraduationCap className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black">
+                {userCounts.tutor}
+              </div>
+              <p className={`text-[10px] mt-1 ${userRoleFilter === 'TUTOR' ? 'text-emerald-200' : 'text-mutedtext'}`}>
+                Konselor & praktisi aktif
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setUserRoleFilter('ADMIN')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                userRoleFilter === 'ADMIN'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-md ring-2 ring-amber-600/20'
+                  : 'bg-white text-darktext border-softborder hover:border-amber-200 shadow-soft-sm'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-xs font-semibold ${userRoleFilter === 'ADMIN' ? 'text-amber-100' : 'text-amber-700'}`}>
+                  Administrator
+                </span>
+                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${userRoleFilter === 'ADMIN' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'}`}>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black">
+                {userCounts.admin}
+              </div>
+              <p className={`text-[10px] mt-1 ${userRoleFilter === 'ADMIN' ? 'text-amber-200' : 'text-mutedtext'}`}>
+                Akses kelola sistem & audit
+              </p>
+            </button>
+          </div>
+
+          {/* Main Controls Card */}
+          <div className="p-5 md:p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+            {/* Role Filter Tabs */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-softborder">
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-gray-100/90 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setUserRoleFilter('ALL')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    userRoleFilter === 'ALL'
+                      ? 'bg-white text-darktext shadow-sm'
+                      : 'text-mutedtext hover:text-darktext hover:bg-white/40'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Semua Pengguna
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 text-darktext">
+                    {userCounts.all}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserRoleFilter('COUNSELEE');
+                    setCounseleeSubFilter('ALL');
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    userRoleFilter === 'COUNSELEE'
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-mutedtext hover:text-indigo-700 hover:bg-white/40'
+                  }`}
+                >
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                  Konseli / Klien (Mhs & Umum)
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                    {userCounts.counselee}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setUserRoleFilter('TUTOR')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    userRoleFilter === 'TUTOR'
+                      ? 'bg-white text-emerald-700 shadow-sm'
+                      : 'text-mutedtext hover:text-emerald-700 hover:bg-white/40'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  Konselor / Tutor
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    {userCounts.tutor}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setUserRoleFilter('ADMIN')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    userRoleFilter === 'ADMIN'
+                      ? 'bg-white text-amber-700 shadow-sm'
+                      : 'text-mutedtext hover:text-amber-700 hover:bg-white/40'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Administrator
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    {userCounts.admin}
+                  </span>
+                </button>
+              </div>
+
+              {/* Refresh Button */}
+              <button
+                type="button"
+                onClick={reloadUsers}
+                disabled={isLoadingUsers}
+                className="px-3.5 py-2 rounded-xl border border-softborder hover:bg-gray-50 text-xs font-semibold text-mutedtext hover:text-darktext transition-colors flex items-center gap-2 self-start md:self-auto shrink-0"
+                title="Segarkan daftar pengguna"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingUsers ? 'animate-spin text-emerald-700' : ''}`} />
+                {isLoadingUsers ? 'Menyegarkan...' : 'Segarkan Data'}
+              </button>
+            </div>
+
+            {/* Sub-filter Chips for Konseli (Only visible when Konseli / Klien tab is active) */}
+            {userRoleFilter === 'COUNSELEE' && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                <span className="text-xs font-semibold text-mutedtext flex items-center gap-1 mr-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  Kategori Konseli:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCounseleeSubFilter('ALL')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    counseleeSubFilter === 'ALL'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                  }`}
+                >
+                  Semua Konseli ({userCounts.counselee})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCounseleeSubFilter('STUDENT')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    counseleeSubFilter === 'STUDENT'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                  }`}
+                >
+                  🎓 Mahasiswa Kampus ({userCounts.student})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCounseleeSubFilter('GENERAL')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    counseleeSubFilter === 'GENERAL'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                  }`}
+                >
+                  🌐 Masyarakat Umum ({userCounts.general})
+                </button>
+              </div>
+            )}
+
+            {/* Search and Status Filter Row */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Search Field */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-mutedtext absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Cari nama, email, no HP, NIM, NIK, program studi, atau spesialisasi..."
+                  className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-softborder text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all bg-gray-50/50 hover:bg-white focus:bg-white"
+                />
+                {userSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setUserSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-mutedtext hover:text-darktext"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Dropdown Filter */}
+              <div className="flex items-center gap-2 shrink-0">
+                <select
+                  value={userStatusFilter}
+                  onChange={(e) => setUserStatusFilter(e.target.value)}
+                  className="px-3 py-2.5 rounded-xl border border-softborder text-xs font-semibold text-darktext bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                >
+                  <option value="ALL">Semua Status</option>
+                  <option value="active">🟢 Hanya Aktif ({userCounts.active})</option>
+                  <option value="inactive">🔴 Hanya Non-aktif ({userCounts.inactive})</option>
+                </select>
+
+                {(userSearch || userStatusFilter !== 'ALL' || userRoleFilter !== 'ALL' || counseleeSubFilter !== 'ALL') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserSearch('');
+                      setUserStatusFilter('ALL');
+                      setUserRoleFilter('ALL');
+                      setCounseleeSubFilter('ALL');
+                    }}
+                    className="px-3 py-2.5 rounded-xl border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 text-xs font-semibold transition-colors"
+                    title="Reset semua filter"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Status Information Bar */}
+            <div className="flex items-center justify-between text-xs text-mutedtext pt-1">
+              <span>
+                Menampilkan <strong className="text-darktext">{filteredUsers.length}</strong> dari {users.length} pengguna
+              </span>
+              {userRoleFilter !== 'ALL' && (
+                <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                  Filter: {userRoleFilter === 'COUNSELEE' ? 'Konseli / Klien' : userRoleFilter === 'TUTOR' ? 'Konselor / Tutor' : 'Administrator'}
+                </span>
+              )}
+            </div>
+
+            {/* Users List Cards */}
+            <div className="space-y-3 pt-1">
+              {filteredUsers.length === 0 ? (
+                <div className="p-8 text-center rounded-2xl border border-dashed border-softborder bg-gray-50/50 space-y-2">
+                  <Users className="w-8 h-8 text-mutedtext mx-auto" />
+                  <p className="text-xs font-bold text-darktext">Tidak ada pengguna yang cocok</p>
+                  <p className="text-[11px] text-mutedtext">
+                    Coba sesuaikan kata kunci pencarian atau ubah filter peran/status di atas.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserSearch('');
+                      setUserStatusFilter('ALL');
+                      setUserRoleFilter('ALL');
+                      setCounseleeSubFilter('ALL');
+                    }}
+                    className="mt-2 text-xs font-bold text-emerald-700 hover:text-emerald-800 underline"
+                  >
+                    Tampilkan Semua Pengguna
+                  </button>
+                </div>
+              ) : (
+                filteredUsers.map((u) => {
+                  const isStudent = u.role === 'STUDENT';
+                  const isGeneral = u.role === 'GENERAL';
+                  const isTutor = u.role === 'TUTOR';
+                  const isAdmin = u.role === 'ADMIN';
+
+                  return (
+                    <div
+                      key={u.id}
+                      className="p-4 md:p-5 rounded-2xl border border-softborder hover:border-gray-300 hover:shadow-soft-sm transition-all bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs"
+                    >
+                      {/* Left: Avatar & Identity */}
+                      <div className="flex items-start gap-3.5 min-w-[280px]">
+                        <div
+                          className={`w-11 h-11 rounded-2xl font-black text-sm flex items-center justify-center shrink-0 border ${
+                            isStudent
+                              ? 'bg-gradient-to-br from-indigo-50 to-indigo-100 text-indigo-700 border-indigo-200'
+                              : isGeneral
+                              ? 'bg-gradient-to-br from-purple-50 to-purple-100 text-purple-700 border-purple-200'
+                              : isTutor
+                              ? 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200'
+                              : 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          {u.name?.charAt(0) || 'U'}
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-darktext text-sm hover:text-emerald-800 transition-colors">
+                              {u.name}
+                            </h4>
+                            {/* Role Tag */}
+                            {isStudent && (
+                              <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                                🎓 Konseli Mahasiswa
+                              </span>
+                            )}
+                            {isGeneral && (
+                              <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                                🌐 Klien Umum
+                              </span>
+                            )}
+                            {isTutor && (
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                                🧑‍🏫 Konselor / Tutor BK
+                              </span>
+                            )}
+                            {isAdmin && (
+                              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                                🛡️ Administrator Sistem
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-mutedtext text-[11px]">
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              {u.email}
+                            </span>
+                            {u.phone && (
+                              <a
+                                href={`https://wa.me/${u.phone.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-medium"
+                                title="Chat WhatsApp"
+                              >
+                                <Phone className="w-3 h-3" />
+                                {u.phone}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle: Context Metadata */}
+                      <div className="flex-1 px-0 lg:px-4 py-2 lg:py-0 border-y lg:border-y-0 lg:border-x border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                        {isStudent && (
+                          <>
+                            <div>
+                              <span className="text-mutedtext block">NIM & Status:</span>
+                              <span className="font-semibold text-darktext">
+                                {u.student_profile?.nim || '-'} • {u.student_profile?.campus_status || 'AKTIF'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-mutedtext block">Program Studi:</span>
+                              <span className="font-semibold text-darktext truncate block">
+                                {u.student_profile?.program_study || 'Mahasiswa Aktif'} (Smt {u.student_profile?.semester || '-'})
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                        {isGeneral && (
+                          <>
+                            <div>
+                              <span className="text-mutedtext block">Identitas KTP (NIK):</span>
+                              <span className="font-semibold text-darktext">
+                                {u.general_profile?.nik || 'Terverifikasi'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-mutedtext block">Alamat / Domisili:</span>
+                              <span className="font-semibold text-darktext truncate block">
+                                {u.general_profile?.address || u.general_profile?.birth_place || 'Umum'}
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                        {isTutor && (
+                          <>
+                            <div>
+                              <span className="text-mutedtext block">NIP / ID Konselor:</span>
+                              <span className="font-semibold text-darktext">
+                                {u.tutor_profile?.nip || 'Konselor Kampus'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-mutedtext block">Spesialisasi:</span>
+                              <span className="font-semibold text-darktext truncate block text-emerald-800" title={u.tutor_profile?.specialization}>
+                                {u.tutor_profile?.specialization || 'Bimbingan Konseling'}
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                        {isAdmin && (
+                          <div className="sm:col-span-2">
+                            <span className="text-mutedtext block">Hak Akses Superadmin:</span>
+                            <span className="font-semibold text-darktext">
+                              Kelola Pengguna, CMS Landing, Integrasi Zoom OAuth, dan Audit Logs
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Status & Actions */}
+                      <div className="flex items-center justify-between lg:justify-end gap-2.5 shrink-0">
+                        <span
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1.5 ${
+                            u.status === 'active'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                          {u.status === 'active' ? 'Aktif' : 'Non-aktif'}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserDetail(u)}
+                          className="px-3 py-1.5 rounded-xl border border-softborder text-mutedtext hover:text-darktext hover:bg-gray-50 transition-colors font-semibold text-[11px] flex items-center gap-1.5"
+                          title="Lihat profil detail pengguna"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Detail</span>
+                        </button>
+
+                        {u.role !== 'ADMIN' && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleUserStatus(u.id)}
+                            className={`px-3 py-1.5 rounded-xl border transition-colors font-semibold text-[11px] flex items-center gap-1.5 ${
+                              u.status === 'active'
+                                ? 'border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-100'
+                                : 'border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100'
+                            }`}
+                            title={u.status === 'active' ? 'Nonaktifkan akun pengguna ini' : 'Aktifkan kembali akun ini'}
+                          >
+                            <Power className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">
+                              {u.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* User Detail Modal */}
+          {selectedUserDetail && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl border border-softborder shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+                {/* Modal Header */}
+                <div className="p-6 border-b border-softborder flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-12 h-12 rounded-2xl font-black text-base flex items-center justify-center border ${
+                        selectedUserDetail.role === 'STUDENT'
+                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          : selectedUserDetail.role === 'GENERAL'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : selectedUserDetail.role === 'TUTOR'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {selectedUserDetail.name?.charAt(0) || 'U'}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-darktext">
+                        {selectedUserDetail.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-100 text-darktext">
+                          ID: #{selectedUserDetail.id}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                            selectedUserDetail.status === 'active'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          {selectedUserDetail.status === 'active' ? 'Akun Aktif' : 'Akun Non-aktif'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUserDetail(null)}
+                    className="p-2 rounded-xl text-mutedtext hover:text-darktext hover:bg-gray-100 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-6 overflow-y-auto space-y-5 text-xs">
+                  {/* Account Information */}
+                  <div>
+                    <h4 className="font-bold text-darktext mb-2.5 flex items-center gap-2 text-xs">
+                      <Users className="w-4 h-4 text-emerald-700" />
+                      Informasi Akun & Kontak
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-gray-50/80 border border-gray-100">
+                      <div>
+                        <span className="text-[11px] text-mutedtext block">Email:</span>
+                        <span className="font-semibold text-darktext">{selectedUserDetail.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-mutedtext block">Nomor WhatsApp:</span>
+                        <span className="font-semibold text-darktext">{selectedUserDetail.phone || 'Belum diisi'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-mutedtext block">Peran (Role):</span>
+                        <span className="font-semibold text-darktext">{selectedUserDetail.role}</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-mutedtext block">Tanggal Pendaftaran:</span>
+                        <span className="font-semibold text-darktext font-mono text-[11px]">
+                          {new Date(selectedUserDetail.created_at).toLocaleDateString('id-ID', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Role-Specific Information */}
+                  {selectedUserDetail.role === 'STUDENT' && selectedUserDetail.student_profile && (
+                    <div>
+                      <h4 className="font-bold text-darktext mb-2.5 flex items-center gap-2 text-xs">
+                        <GraduationCap className="w-4 h-4 text-indigo-700" />
+                        Data Akademik Konseli Mahasiswa
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Nomor Induk Mahasiswa (NIM):</span>
+                          <span className="font-semibold text-darktext font-mono">
+                            {selectedUserDetail.student_profile.nim || '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Status Kampus:</span>
+                          <span className="font-semibold text-emerald-700">
+                            {selectedUserDetail.student_profile.campus_status || 'AKTIF'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Program Studi:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.student_profile.program_study || '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Jenjang & Semester:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.student_profile.degree || 'S1'} - Semester {selectedUserDetail.student_profile.semester || '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Tempat, Tanggal Lahir:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.student_profile.birth_place || '-'}
+                            {selectedUserDetail.student_profile.birth_date ? `, ${new Date(selectedUserDetail.student_profile.birth_date).toLocaleDateString('id-ID')}` : ''}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Jenis Kelamin:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.student_profile.gender || '-'}
+                          </span>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <span className="text-[11px] text-mutedtext block">Alamat Domisili:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.student_profile.address || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedUserDetail.role === 'GENERAL' && selectedUserDetail.general_profile && (
+                    <div>
+                      <h4 className="font-bold text-darktext mb-2.5 flex items-center gap-2 text-xs">
+                        <Globe className="w-4 h-4 text-purple-700" />
+                        Data Kependudukan Klien Umum
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-purple-50/50 border border-purple-100">
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Nomor Induk Kependudukan (NIK):</span>
+                          <span className="font-semibold text-darktext font-mono">
+                            {selectedUserDetail.general_profile.nik || '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Jenis Kelamin:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.general_profile.gender || '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Tempat, Tanggal Lahir:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.general_profile.birth_place || '-'}
+                            {selectedUserDetail.general_profile.birth_date ? `, ${new Date(selectedUserDetail.general_profile.birth_date).toLocaleDateString('id-ID')}` : ''}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Alamat Terdaftar:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.general_profile.address || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedUserDetail.role === 'TUTOR' && selectedUserDetail.tutor_profile && (
+                    <div>
+                      <h4 className="font-bold text-darktext mb-2.5 flex items-center gap-2 text-xs">
+                        <GraduationCap className="w-4 h-4 text-emerald-700" />
+                        Profil Konselor / Tutor BK
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100">
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Nomor Induk Pegawai (NIP):</span>
+                          <span className="font-semibold text-darktext font-mono">
+                            {selectedUserDetail.tutor_profile.nip || '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-mutedtext block">Ketersediaan Konseling:</span>
+                          <span className={`font-semibold ${selectedUserDetail.tutor_profile.is_available ? 'text-emerald-700' : 'text-rose-700'}`}>
+                            {selectedUserDetail.tutor_profile.is_available ? '🟢 Siap Menerima Jadwal' : '🔴 Jadwal Sedang Ditutup'}
+                          </span>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <span className="text-[11px] text-mutedtext block">Bidang Spesialisasi:</span>
+                          <span className="font-semibold text-darktext">
+                            {selectedUserDetail.tutor_profile.specialization || 'Konseling Umum'}
+                          </span>
+                        </div>
+                        {selectedUserDetail.tutor_profile.bio && (
+                          <div className="sm:col-span-2">
+                            <span className="text-[11px] text-mutedtext block">Bio Singkat:</span>
+                            <p className="text-darktext/90 italic bg-white/60 p-2.5 rounded-xl border border-emerald-100">
+                              "{selectedUserDetail.tutor_profile.bio}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedUserDetail.role === 'ADMIN' && (
+                    <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100 space-y-2">
+                      <h4 className="font-bold text-amber-900 flex items-center gap-2 text-xs">
+                        <ShieldCheck className="w-4 h-4 text-amber-700" />
+                        Izin Akses Tingkat Administrator
+                      </h4>
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        Akun ini memiliki hak akses tertinggi ke seluruh panel administrasi, konfigurasi web, pengaturan integrasi Zoom Server-to-Server OAuth, manajemen protokol darurat krisis, serta audit log sistem.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-mutedtext">
+                    Status saat ini: <strong>{selectedUserDetail.status === 'active' ? 'Aktif' : 'Non-aktif'}</strong>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {selectedUserDetail.role !== 'ADMIN' && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleUserStatus(selectedUserDetail.id)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 ${
+                          selectedUserDetail.status === 'active'
+                            ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                        }`}
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                        {selectedUserDetail.status === 'active' ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserDetail(null)}
+                      className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-xs font-bold text-darktext transition-colors"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1845,70 +2944,478 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* 5. Settings Tab */}
-      {activeTab === 'settings' && (
-        <form
-          onSubmit={handleSaveSettings}
-          className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5 max-w-xl"
-        >
-          <h3 className="text-sm font-bold text-darktext border-b border-gray-100 pb-2">
-            Konfigurasi Sistem Bimbingan Konseling
-          </h3>
-
-          <div>
-            <label className="block text-xs font-bold text-darktext mb-1">
-              Mode Penugasan Tutor (Tutor Assignment Mode)
-            </label>
-            <select
-              value={settings.tutor_assignment_mode}
-              onChange={(e) =>
-                setSettings({ ...settings, tutor_assignment_mode: e.target.value })
-              }
-              className="w-full h-11 px-3 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-            >
-              <option value="student_select">Mahasiswa Memilih Tutor (student_select)</option>
-              <option value="manual">Manual oleh Admin (manual)</option>
-              <option value="automatic">Otomatis Berdasarkan Ketersediaan (automatic)</option>
-            </select>
-            <span className="text-[11px] text-mutedtext mt-1 block">
-              Menentukan bagaimana tutor diasosiasikan dengan kasus konseling baru.
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between py-2 border-t border-gray-100">
-            <div>
-              <h4 className="text-xs font-bold text-darktext">Deteksi Crisis Flag Otomatis</h4>
-              <p className="text-[11px] text-mutedtext">Tandai screening berisiko tinggi untuk evaluasi segera.</p>
+      {/* 5. Web CMS & SEO Settings Tab */}
+      {activeTab === 'web_settings' && (
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+          {/* Card 1: Identitas & SEO Website */}
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <Globe className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-darktext">Identitas Website & Optimasi Mesin Pencari (SEO)</h3>
+                <p className="text-xs text-mutedtext">Atur nama portal, slogan kampus, dan bagaimana website Ruang BK tampil di hasil pencarian Google.</p>
+              </div>
             </div>
-            <input
-              type="checkbox"
-              checked={settings.crisis_flag_enabled}
-              onChange={(e) =>
-                setSettings({ ...settings, crisis_flag_enabled: e.target.checked })
-              }
-              className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500"
-            />
+
+            {/* Live Google Search Snippet Preview */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Pratinjau Tampilan di Google (SERP Preview)
+              </span>
+              <div className="font-sans text-xs space-y-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 truncate">
+                  <span className="text-emerald-700 font-semibold">https://bk-online.uinssc.ac.id</span>
+                  <span className="text-slate-400">›</span>
+                  <span className="text-slate-500">layanan-konseling</span>
+                </div>
+                <h4 className="text-sm font-medium text-[#1a0dab] hover:underline cursor-pointer line-clamp-1">
+                  {settings.site_title || 'Ruang BK - Layanan Bimbingan & Konseling Kampus'} | {settings.site_tagline || 'Ruang Aman'}
+                </h4>
+                <p className="text-[11px] text-[#4d5156] line-clamp-2 leading-relaxed">
+                  {settings.site_meta_description || 'Layanan bimbingan dan konseling online & offline terpadu untuk civitas akademika kampus. Akses sesi privat dengan konselor terpercaya.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1">
+                  Nama / Judul Website (Site Title) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={settings.site_title || ''}
+                  onChange={(e) => setSettings({ ...settings, site_title: e.target.value })}
+                  placeholder="Ruang BK - Layanan Bimbingan & Konseling Kampus"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  required
+                />
+                <span className="text-[11px] text-mutedtext mt-1 block">Tampil pada tab browser dan judul utama portal.</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1">
+                  Slogan / Tagline Website
+                </label>
+                <input
+                  type="text"
+                  value={settings.site_tagline || ''}
+                  onChange={(e) => setSettings({ ...settings, site_tagline: e.target.value })}
+                  placeholder="Ruang Aman untuk Tumbuh dan Bercerita"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+                <span className="text-[11px] text-mutedtext mt-1 block">Subjudul pemikat di samping logo dan hero banner.</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-darktext">
+                  Deskripsi Meta SEO (Google Meta Description)
+                </label>
+                <span className={`text-[10px] font-semibold ${
+                  (settings.site_meta_description?.length || 0) > 160 ? 'text-amber-600 font-bold' : 'text-mutedtext'
+                }`}>
+                  {settings.site_meta_description?.length || 0} / 160 karakter disarankan
+                </span>
+              </div>
+              <textarea
+                rows={2}
+                value={settings.site_meta_description || ''}
+                onChange={(e) => setSettings({ ...settings, site_meta_description: e.target.value })}
+                placeholder="Deskripsi singkat yang merangkum layanan BK kampus ketika tautan dibagikan atau dicari di Google..."
+                className="w-full p-3 rounded-2xl border border-softborder bg-gray-50 text-xs text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 leading-relaxed"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-darktext mb-1">
+                Kata Kunci SEO (Meta Keywords)
+              </label>
+              <input
+                type="text"
+                value={settings.site_meta_keywords || ''}
+                onChange={(e) => setSettings({ ...settings, site_meta_keywords: e.target.value })}
+                placeholder="konseling online, bimbingan mahasiswa, kesehatan mental, konselor kampus"
+                className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              />
+              <span className="text-[11px] text-mutedtext mt-1 block">Pisahkan dengan tanda koma. Membantu indeksasi search engine kampus.</span>
+            </div>
           </div>
 
-          {/* Zoom Server-to-Server OAuth Integration Card */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-teal-50/20 border border-slate-200/90 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-soft-xs">
+          {/* Card 2: Kontak Resmi & Lokasi Fisik */}
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-darktext">Kontak Resmi & Lokasi Kantor Pelayanan</h3>
+                <p className="text-xs text-mutedtext">Informasi kontak publik untuk mahasiswa yang membutuhkan bantuan atau sesi tatap muka (offline).</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Email Resmi Layanan BK</span>
+                </label>
+                <input
+                  type="email"
+                  value={settings.contact_email || ''}
+                  onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
+                  placeholder="konseling@syekhnurjati.ac.id"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <span>WhatsApp Hotline / Helpdesk BK</span>
+                </label>
+                <input
+                  type="text"
+                  value={settings.contact_whatsapp || ''}
+                  onChange={(e) => setSettings({ ...settings, contact_whatsapp: e.target.value })}
+                  placeholder="+62 812-3456-7890"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Alamat Fisik Gedung / Ruang Konseling</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={settings.campus_address || ''}
+                  onChange={(e) => setSettings({ ...settings, campus_address: e.target.value })}
+                  placeholder="Gedung PKM Lt. 2, Kampus Terpadu UINSSC, Cirebon"
+                  className="w-full p-3 rounded-2xl border border-softborder bg-gray-50 text-xs text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Jam Operasional Pelayanan</span>
+                </label>
+                <input
+                  type="text"
+                  value={settings.operating_hours || ''}
+                  onChange={(e) => setSettings({ ...settings, operating_hours: e.target.value })}
+                  placeholder="Senin - Jumat, 08:00 - 16:00 WIB"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+                <span className="text-[11px] text-mutedtext mt-1 block">Waktu ketersediaan konselor tatap muka di kampus.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Banner Pengumuman Website */}
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-darktext">Banner Pengumuman Atas (Announcement Bar)</h3>
+                  <p className="text-xs text-mutedtext">Pita pengumuman darurat atau info penting di bagian teratas website publik.</p>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={settings.announcement_bar_enabled}
+                  onChange={(e) => setSettings({ ...settings, announcement_bar_enabled: e.target.checked })}
+                  className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-xs font-bold text-darktext">
+                  {settings.announcement_bar_enabled ? 'Aktif' : 'Nonaktif'}
+                </span>
+              </label>
+            </div>
+
+            {settings.announcement_bar_enabled && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-darktext mb-1">
+                    Isi Pesan Pengumuman
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.announcement_text || ''}
+                    onChange={(e) => setSettings({ ...settings, announcement_text: e.target.value })}
+                    placeholder="Layanan Konseling Tatap Muka & Online tetap beroperasi penuh selama masa perkuliahan."
+                    className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* Live Preview Box */}
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                    Pratinjau Banner di Website Publik:
+                  </span>
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-soft-xs text-center">
+                    <Megaphone className="w-4 h-4 shrink-0" />
+                    <span>{settings.announcement_text || 'Pengumuman informasi penting untuk civitas akademika.'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Submit CTA */}
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingSettings}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center gap-2 transition-all min-h-[46px]"
+            >
+              {isSavingSettings ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Menyimpan Pengaturan Web...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Simpan Pengaturan Web & SEO</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* 6. BK Online App Settings Tab */}
+      {(activeTab === 'counseling_settings' || activeTab === 'settings') && (
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+          {/* Card 1: Parameter Sesi Konseling Mahasiswa */}
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <SlidersHorizontal className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-darktext">Parameter Operasional Sesi Konseling</h3>
+                <p className="text-xs text-mutedtext">Konfigurasi durasi tatap muka online/offline, kuota mahasiswa, dan batasan pembatalan.</p>
+              </div>
+            </div>
+
+            {/* Durasi Sesi Konseling */}
+            <div>
+              <label className="block text-xs font-bold text-darktext mb-2">
+                Durasi Standar per Sesi Konseling
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { value: 30, label: '30 Menit', desc: 'Konseling Singkat' },
+                  { value: 45, label: '45 Menit', desc: 'Sesi Reguler' },
+                  { value: 60, label: '60 Menit', desc: 'Mendalam (Standar)' },
+                  { value: 90, label: '90 Menit', desc: 'Kasus Kompleks' },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setSettings({ ...settings, default_session_duration: item.value })}
+                    className={`p-3.5 rounded-2xl border text-left transition-all ${
+                      Number(settings.default_session_duration) === item.value
+                        ? 'border-emerald-600 bg-emerald-50/70 shadow-soft-xs ring-2 ring-emerald-600/10'
+                        : 'border-softborder bg-gray-50/70 hover:bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="text-xs font-black text-darktext block">{item.label}</span>
+                    <span className="text-[10px] text-mutedtext mt-0.5 block">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+              <span className="text-[11px] text-mutedtext mt-1.5 block">Durasi ini otomatis menjadi acuan durasi meeting Zoom dan kalender konselor.</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t border-gray-100">
+              {/* Maksimal Kasus Aktif per Mahasiswa */}
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1">
+                  Batas Kasus Konseling Aktif per Mahasiswa
+                </label>
+                <select
+                  value={settings.max_active_sessions_per_student}
+                  onChange={(e) => setSettings({ ...settings, max_active_sessions_per_student: Number(e.target.value) })}
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                >
+                  <option value={1}>1 Sesi Aktif (Ketat - Wajib Selesai Sebelum Booking Baru)</option>
+                  <option value={2}>2 Sesi Aktif (Rekomendasi - Fleksibel)</option>
+                  <option value={3}>3 Sesi Aktif</option>
+                  <option value={4}>4 Sesi Aktif</option>
+                  <option value={5}>5 Sesi Aktif (Maksimal)</option>
+                </select>
+                <span className="text-[11px] text-mutedtext mt-1 block">Mencegah satu mahasiswa memborong banyak jadwal konselor sekaligus.</span>
+              </div>
+
+              {/* Cancellation Window Buffer */}
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1">
+                  Batas Waktu Pembatalan Mandiri (Cancellation Window)
+                </label>
+                <select
+                  value={settings.cancellation_buffer_hours}
+                  onChange={(e) => setSettings({ ...settings, cancellation_buffer_hours: Number(e.target.value) })}
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                >
+                  <option value={2}>2 Jam Sebelum Jadwal (Sangat Fleksibel)</option>
+                  <option value={6}>6 Jam Sebelum Jadwal (Rekomendasi)</option>
+                  <option value={12}>12 Jam Sebelum Jadwal (Moderat)</option>
+                  <option value={24}>24 Jam Sebelum Jadwal (Ketat)</option>
+                </select>
+                <span className="text-[11px] text-mutedtext mt-1 block">Mahasiswa tidak dapat membatalkan mandiri jika waktu sesi mendekati batas ini.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Alur Penugasan Tutor & Persetujuan */}
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-darktext">Alur Penugasan Konselor & Persetujuan Permohonan</h3>
+                <p className="text-xs text-mutedtext">Tentukan bagaimana mahasiswa mendapatkan konselor dan apakah sesi langsung terkonfirmasi otomatis.</p>
+              </div>
+            </div>
+
+            {/* Mode Penugasan Tutor */}
+            <div>
+              <label className="block text-xs font-bold text-darktext mb-2">
+                Mode Penugasan Tutor (Tutor Assignment Mode)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    value: 'student_select',
+                    title: 'Pilih Sendiri',
+                    desc: 'Mahasiswa memilih konselor sendiri dari daftar tutor yang tersedia.',
+                  },
+                  {
+                    value: 'manual',
+                    title: 'Manual Admin',
+                    desc: 'Kasus konseling masuk antrean, admin yang menentukan konselor yang tepat.',
+                  },
+                  {
+                    value: 'automatic',
+                    title: 'Otomatis Sistem',
+                    desc: 'Sistem membagi merata ke konselor berdasarkan ketersediaan jadwal.',
+                  },
+                ].map((mode) => (
+                  <label
+                    key={mode.value}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      settings.tutor_assignment_mode === mode.value
+                        ? 'border-emerald-600 bg-emerald-50/60 shadow-soft-xs ring-2 ring-emerald-600/10'
+                        : 'border-softborder bg-gray-50/60 hover:bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-black text-darktext">{mode.title}</span>
+                        <input
+                          type="radio"
+                          name="tutor_mode"
+                          checked={settings.tutor_assignment_mode === mode.value}
+                          onChange={() => setSettings({ ...settings, tutor_assignment_mode: mode.value })}
+                          className="text-emerald-600 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <p className="text-[11px] text-mutedtext leading-relaxed">{mode.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Auto Approve Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+              <div>
+                <h4 className="text-xs font-bold text-darktext">Persetujuan Otomatis Permohonan Konseling (Auto-Approve)</h4>
+                <p className="text-[11px] text-mutedtext mt-0.5">
+                  Jika aktif, jadwal langsung terbit dan tautan Zoom otomatis digenerate tanpa perlu menunggu konfirmasi manual tutor.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.auto_approve_counseling}
+                onChange={(e) => setSettings({ ...settings, auto_approve_counseling: e.target.checked })}
+                className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 shrink-0 ml-4"
+              />
+            </div>
+
+            {/* Session Reminder Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+              <div>
+                <h4 className="text-xs font-bold text-darktext">Pengingat Jadwal Konseling (Session Reminder)</h4>
+                <p className="text-[11px] text-mutedtext mt-0.5">
+                  Kirim notifikasi lonceng dan pemberitahuan berkala kepada mahasiswa dan tutor menjelang sesi konsultasi.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.reminder_notifications_enabled}
+                onChange={(e) => setSettings({ ...settings, reminder_notifications_enabled: e.target.checked })}
+                className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 shrink-0 ml-4"
+              />
+            </div>
+          </div>
+
+          {/* Submit CTA */}
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingSettings}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center gap-2 transition-all min-h-[46px]"
+            >
+              {isSavingSettings ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Menyimpan Aturan Konseling...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Simpan Aturan Operasional Konseling</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* 7. Dedicated Zoom OAuth Settings Tab */}
+      {activeTab === 'zoom_settings' && (
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-soft-xs">
                   <Video className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-slate-900">
-                    Integrasi Akun Zoom (Server-to-Server OAuth)
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Jadwalkan konseling otomatis langsung ke akun dan kalender Zoom Anda.
-                  </p>
+                  <h3 className="text-sm font-black text-slate-900">Integrasi Akun Zoom Meeting (Server-to-Server OAuth)</h3>
+                  <p className="text-xs text-slate-500">Jadwalkan konseling otomatis langsung ke akun dan kalender Zoom Anda.</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                <span className={`px-3 py-1 rounded-full text-[11px] font-bold border ${
                   settings.zoom_mock_mode
                     ? 'bg-amber-50 text-amber-800 border-amber-200'
                     : settings.zoom_is_configured
@@ -1927,7 +3434,7 @@ export const AdminDashboard = () => {
             {/* Mode Switcher */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label
-                className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
+                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
                   settings.zoom_mock_mode
                     ? 'bg-white border-emerald-600 shadow-soft-xs ring-2 ring-emerald-600/10'
                     : 'bg-white/80 border-slate-200 hover:border-slate-300'
@@ -1949,7 +3456,7 @@ export const AdminDashboard = () => {
               </label>
 
               <label
-                className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
+                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
                   !settings.zoom_mock_mode
                     ? 'bg-white border-blue-600 shadow-soft-xs ring-2 ring-blue-600/10'
                     : 'bg-white/80 border-slate-200 hover:border-slate-300'
@@ -1971,37 +3478,37 @@ export const AdminDashboard = () => {
               </label>
             </div>
 
-            {/* Quick Tutorial Toggle */}
-            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-950">
+            {/* Quick Step-by-Step Guide Accordion */}
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-3.5 text-xs text-blue-950">
               <div
                 onClick={() => setShowZoomGuide(!showZoomGuide)}
                 className="flex items-center justify-between cursor-pointer font-bold select-none"
               >
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <Sparkles className="w-4 h-4 text-blue-600" />
                   <span>Panduan Cara Buat Kredensial Server-to-Server OAuth di marketplace.zoom.us (Gratis)</span>
                 </div>
-                <span className="text-[11px] text-blue-700 underline">
-                  {showZoomGuide ? 'Sembunyikan' : 'Lihat Langkah'}
+                <span className="text-[11px] text-blue-700 underline font-bold">
+                  {showZoomGuide ? 'Sembunyikan' : 'Lihat Langkah Lengkap'}
                 </span>
               </div>
 
               {showZoomGuide && (
-                <div className="mt-2.5 pt-2.5 border-t border-blue-200/70 space-y-1.5 text-[11px] leading-relaxed text-slate-700">
+                <div className="mt-3 pt-3 border-t border-blue-200/70 space-y-2 text-[11px] leading-relaxed text-slate-700">
                   <p>
                     1. Buka <a href="https://marketplace.zoom.us" target="_blank" rel="noreferrer" className="font-bold text-blue-700 underline inline-flex items-center gap-0.5">marketplace.zoom.us <ExternalLink className="w-2.5 h-2.5" /></a> dan login dengan akun Zoom Anda.
                   </p>
                   <p>
-                    2. Klik menu <strong>Develop</strong> di kanan/kiri bawah, pilih <strong>Build an App</strong>.
+                    2. Klik menu <strong>Develop</strong> di navigasi atas/bawah, lalu pilih <strong>Build an App</strong>.
                   </p>
                   <p>
-                    3. Pilih kartu <strong>Server-to-Server OAuth</strong>, lalu klik <strong>Create</strong> dan beri nama aplikasi (contoh: <em>Ruang BK UINSSC</em>).
+                    3. Pilih kartu <strong>Server-to-Server OAuth</strong>, lalu klik <strong>Create</strong> dan beri nama aplikasi (contoh: <em>Ruang BK Kampus</em>).
                   </p>
                   <p>
-                    4. Pada tab <strong>App Credentials</strong>, Anda akan melihat <strong>Account ID</strong>, <strong>Client ID</strong>, dan <strong>Client Secret</strong>. Salin ke kolom di bawah.
+                    4. Pada tab <strong>App Credentials</strong>, Anda akan menemukan <strong>Account ID</strong>, <strong>Client ID</strong>, dan <strong>Client Secret</strong>. Salin ke kolom di bawah.
                   </p>
                   <p>
-                    5. Pada tab <strong>Scopes</strong>, klik <em>Add Scopes</em>, centang <code>meeting:write:admin</code> (atau <code>meeting:write</code>) dan <code>user:read:admin</code>.
+                    5. Pada tab <strong>Scopes</strong>, klik <em>Add Scopes</em>, centang scope <code>meeting:write:admin</code> (atau <code>meeting:write</code>) dan <code>user:read:admin</code>.
                   </p>
                   <p>
                     6. Buka tab <strong>Activation</strong> lalu klik tombol <strong>Activate your app</strong>. Selesai!
@@ -2011,7 +3518,7 @@ export const AdminDashboard = () => {
             </div>
 
             {/* Credential Inputs */}
-            <div className="space-y-3 pt-1">
+            <div className="space-y-4 pt-1">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Zoom Account ID
@@ -2021,11 +3528,11 @@ export const AdminDashboard = () => {
                   value={settings.zoom_account_id || ''}
                   onChange={(e) => setSettings({ ...settings, zoom_account_id: e.target.value })}
                   placeholder="Contoh: xYzAbCdEfG123456"
-                  className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-200 text-xs font-mono bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Zoom Client ID
@@ -2035,7 +3542,7 @@ export const AdminDashboard = () => {
                     value={settings.zoom_client_id || ''}
                     onChange={(e) => setSettings({ ...settings, zoom_client_id: e.target.value })}
                     placeholder="Contoh: aBcDeFgHiJkLmNoP"
-                    className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full h-11 px-3.5 rounded-2xl border border-slate-200 text-xs font-mono bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
 
@@ -2049,12 +3556,12 @@ export const AdminDashboard = () => {
                       value={settings.zoom_client_secret || ''}
                       onChange={(e) => setSettings({ ...settings, zoom_client_secret: e.target.value })}
                       placeholder={settings.zoom_has_client_secret ? `${settings.zoom_client_secret_masked} (Tersimpan - isi jika ingin ganti)` : 'Tempel Client Secret di sini'}
-                      className="w-full h-10 px-3.5 pr-10 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full h-11 px-3.5 pr-10 rounded-2xl border border-slate-200 text-xs font-mono bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowZoomSecret(!showZoomSecret)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
                     >
                       {showZoomSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -2070,8 +3577,8 @@ export const AdminDashboard = () => {
                   type="email"
                   value={settings.zoom_host_email || ''}
                   onChange={(e) => setSettings({ ...settings, zoom_host_email: e.target.value })}
-                  placeholder="Kosongkan untuk otomatis menggunakan akun utama ('me') atau isi email akun Zoom"
-                  className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  placeholder="Kosongkan untuk otomatis menggunakan akun pemilik ('me') atau isi email akun Zoom"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-200 text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
                 <span className="text-[11px] text-slate-400 mt-1 block">
                   Jika akun Zoom Anda memiliki beberapa lisensi konselor, Anda dapat mengisi email host konselor di sini.
@@ -2085,7 +3592,7 @@ export const AdminDashboard = () => {
                 type="button"
                 disabled={isTestingZoom || !settings.zoom_account_id || !settings.zoom_client_id}
                 onClick={handleTestZoomConnection}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-soft-xs flex items-center gap-2 transition-colors cursor-pointer min-h-[38px]"
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-soft-xs flex items-center gap-2 transition-colors cursor-pointer min-h-[40px]"
               >
                 {isTestingZoom ? (
                   <>
@@ -2095,19 +3602,19 @@ export const AdminDashboard = () => {
                 ) : (
                   <>
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Uji Koneksi Zoom API</span>
+                    <span>Uji Koneksi Zoom API Langsung</span>
                   </>
                 )}
               </button>
 
               <span className="text-[11px] text-slate-500">
-                Memverifikasi apakah kredensial valid dan dapat mengakses Zoom API.
+                Memverifikasi apakah token OAuth dapat diterbitkan dan berkomunikasi langsung dengan Zoom API.
               </span>
             </div>
 
             {/* Connection Test Result Box */}
             {zoomTestResult && (
-              <div className={`p-3.5 rounded-xl border text-xs ${
+              <div className={`p-4 rounded-2xl border text-xs ${
                 zoomTestResult.success
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
                   : 'bg-rose-50 border-rose-200 text-rose-900'
@@ -2121,7 +3628,7 @@ export const AdminDashboard = () => {
                   <span>{zoomTestResult.message}</span>
                 </div>
                 {zoomTestResult.data && (
-                  <div className="mt-2 pt-2 border-t border-emerald-200/70 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                  <div className="mt-2.5 pt-2.5 border-t border-emerald-200/70 grid grid-cols-2 sm:grid-cols-3 gap-3 text-[11px]">
                     <div>
                       <span className="text-slate-500 block">Nama Akun:</span>
                       <strong className="text-slate-800">{zoomTestResult.data.name || '-'}</strong>
@@ -2140,14 +3647,224 @@ export const AdminDashboard = () => {
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={isSavingSettings}
-            className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 min-h-[48px]"
-          >
-            <span>{isSavingSettings ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
-          </button>
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingSettings}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center gap-2 transition-all min-h-[46px]"
+            >
+              {isSavingSettings ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Menyimpan Pengaturan Zoom...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Simpan Konfigurasi Zoom</span>
+                </>
+              )}
+            </button>
+          </div>
         </form>
+      )}
+
+      {/* 8. Crisis & Screening Settings Tab */}
+      {activeTab === 'crisis_settings' && (
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-darktext">Deteksi Krisis & Skrining Kebutuhan Mental</h3>
+                <p className="text-xs text-mutedtext">Konfigurasi perlindungan darurat untuk mendeteksi indikasi risiko tinggi pada mahasiswa.</p>
+              </div>
+            </div>
+
+            {/* Crisis Flagging Switch */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-rose-50/60 border border-rose-100">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-darktext">Deteksi Crisis Flag Otomatis</h4>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                    Prioritas Darurat
+                  </span>
+                </div>
+                <p className="text-[11px] text-mutedtext mt-1 leading-relaxed">
+                  Tandai secara otomatis screening mahasiswa yang terdeteksi memiliki ide menyakiti diri sendiri, keputusasaan akut, atau skor depresi berat. Kasus ini langsung diprioritaskan di daftar konseling.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.crisis_flag_enabled}
+                onChange={(e) => setSettings({ ...settings, crisis_flag_enabled: e.target.checked })}
+                className="w-5 h-5 rounded text-rose-600 focus:ring-rose-500 shrink-0 ml-4"
+              />
+            </div>
+
+            {/* Emergency Notification Email */}
+            <div>
+              <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                <span>Email Notifikasi Darurat Tim Krisis Kampus</span>
+              </label>
+              <input
+                type="email"
+                value={settings.crisis_alert_email || ''}
+                onChange={(e) => setSettings({ ...settings, crisis_alert_email: e.target.value })}
+                placeholder="crisis-center@syekhnurjati.ac.id"
+                className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+              />
+              <span className="text-[11px] text-mutedtext mt-1 block">
+                Saat ada screening terdeteksi krisis, sistem akan mengirimkan peringatan khusus ke email koordinator konselor atau satgas kesehatan mental.
+              </span>
+            </div>
+
+            {/* SOP Protocol Box */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs text-slate-700">
+              <h5 className="font-bold text-slate-900 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Prosedur Standar (SOP) Penanganan Krisis</span>
+              </h5>
+              <ul className="list-disc pl-5 space-y-1 text-[11px] text-slate-600">
+                <li>Mahasiswa dengan tanda krisis akan didahulukan dalam penentuan jadwal tanpa antrean reguler.</li>
+                <li>Data screening dienkripsi dan hanya dapat diakses oleh konselor yang memiliki izin asesmen klinis.</li>
+                <li>Asisten virtual Nara tidak akan memberikan diagnosis mandiri dan akan mengarahkan mahasiswa ke hotline darurat.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingSettings}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center gap-2 transition-all min-h-[46px]"
+            >
+              {isSavingSettings ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Menyimpan Pengaturan Krisis...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Simpan Pengaturan Krisis</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* 9. General System Settings & Health Tab */}
+      {activeTab === 'general_settings' && (
+        <div className="space-y-6 max-w-4xl">
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
+                <Settings className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-darktext">Informasi Lingkungan Sistem & Status Server</h3>
+                <p className="text-xs text-mutedtext">Pemeriksaan integritas komponen backend, basis data, dan modul integrasi.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] font-bold text-mutedtext uppercase tracking-wider block">Versi Aplikasi</span>
+                <span className="text-base font-black text-darktext mt-1 block">Ruang BK v2.4</span>
+                <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">🟢 Status: Aktif & Stabil</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] font-bold text-mutedtext uppercase tracking-wider block">Backend & Basis Data</span>
+                <span className="text-base font-black text-darktext mt-1 block">Laravel 11 / PHP 8.2</span>
+                <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">🟢 MySQL Connected</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] font-bold text-mutedtext uppercase tracking-wider block">Modul Video Conference</span>
+                <span className="text-base font-black text-darktext mt-1 block">
+                  {settings.zoom_mock_mode ? 'Simulasi Mock' : 'Live Zoom OAuth'}
+                </span>
+                <span className={`text-[11px] font-semibold mt-0.5 block ${
+                  settings.zoom_is_configured ? 'text-emerald-600' : 'text-amber-600'
+                }`}>
+                  {settings.zoom_is_configured ? '🟢 OAuth API Terverifikasi' : '🟡 Belum Terhubung'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Navigation Shortcuts */}
+            <div className="pt-3 border-t border-gray-100 space-y-2">
+              <h4 className="text-xs font-bold text-darktext">Pintas Navigasi CMS & Konfigurasi</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('web_settings')}
+                  className="p-3 rounded-2xl border border-softborder hover:border-emerald-300 bg-white text-left flex items-center justify-between group transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Globe className="w-4 h-4 text-emerald-600" />
+                    <div>
+                      <span className="text-xs font-bold text-darktext group-hover:text-emerald-800 block">Pengaturan Identitas & SEO Web</span>
+                      <span className="text-[11px] text-mutedtext block">Ubah judul, meta description, dan hotline</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-mutedtext group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('counseling_settings')}
+                  className="p-3 rounded-2xl border border-softborder hover:border-emerald-300 bg-white text-left flex items-center justify-between group transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
+                    <div>
+                      <span className="text-xs font-bold text-darktext group-hover:text-emerald-800 block">Aturan Operasional Konseling</span>
+                      <span className="text-[11px] text-mutedtext block">Durasi sesi, kuota mahasiswa, penugasan</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-mutedtext group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('zoom_settings')}
+                  className="p-3 rounded-2xl border border-softborder hover:border-blue-300 bg-white text-left flex items-center justify-between group transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Video className="w-4 h-4 text-blue-600" />
+                    <div>
+                      <span className="text-xs font-bold text-darktext group-hover:text-blue-800 block">Integrasi Zoom Server-to-Server OAuth</span>
+                      <span className="text-[11px] text-mutedtext block">Kredensial API & Uji Koneksi Langsung</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-mutedtext group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('voice')}
+                  className="p-3 rounded-2xl border border-softborder hover:border-purple-300 bg-white text-left flex items-center justify-between group transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Mic className="w-4 h-4 text-purple-600" />
+                    <div>
+                      <span className="text-xs font-bold text-darktext group-hover:text-purple-800 block">Rekaman Suara Asisten Nara 🎙️</span>
+                      <span className="text-[11px] text-mutedtext block">Kelola audio salam, skrining & panduan</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-mutedtext group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 6. Nara Voice Manager Tab */}

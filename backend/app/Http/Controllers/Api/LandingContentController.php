@@ -272,22 +272,33 @@ class LandingContentController extends Controller
     public function show(): JsonResponse
     {
         $setting = SystemSetting::where('key', 'landing_content')->first();
+        $base = self::getDefaultContent();
+        $isCustom = false;
+
         if ($setting && $setting->value) {
             $content = json_decode($setting->value, true);
             if (is_array($content)) {
-                $merged = array_replace_recursive(self::getDefaultContent(), $content);
-                return response()->json([
-                    'success' => true,
-                    'data' => $merged,
-                    'is_custom' => true,
-                ]);
+                $base = array_replace_recursive($base, $content);
+                $isCustom = true;
             }
         }
 
+        // Merge dynamic Web CMS settings into response
+        $base['web_settings'] = [
+            'site_title' => SystemSetting::get('site_title', 'Ruang BK - Layanan Bimbingan & Konseling Kampus'),
+            'site_tagline' => SystemSetting::get('site_tagline', 'Ruang Aman untuk Tumbuh dan Bercerita'),
+            'contact_email' => SystemSetting::get('contact_email', 'bk@kampus.ac.id'),
+            'contact_whatsapp' => SystemSetting::get('contact_whatsapp', '+62 812-3456-7890'),
+            'campus_address' => SystemSetting::get('campus_address', 'Gedung Pusat Kegiatan Mahasiswa Lt. 2, Kampus Terpadu'),
+            'operating_hours' => SystemSetting::get('operating_hours', 'Senin - Jumat, 08:00 - 16:00 WIB'),
+            'announcement_bar_enabled' => SystemSetting::get('announcement_bar_enabled', 'false') === 'true',
+            'announcement_text' => SystemSetting::get('announcement_text', 'Layanan Konseling Tatap Muka & Online tetap beroperasi penuh.'),
+        ];
+
         return response()->json([
             'success' => true,
-            'data' => self::getDefaultContent(),
-            'is_custom' => false,
+            'data' => $base,
+            'is_custom' => $isCustom,
         ]);
     }
 
