@@ -799,36 +799,35 @@ export const CounselingWizard = () => {
         {/* STEP 4: KONFIRMASI */}
         {currentStep === 4 && (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+            className="space-y-3 sm:space-y-3.5"
           >
-            {/* Nara Guide Header for Step 4 */}
-            <div className="flex items-center gap-3.5 p-4 rounded-3xl bg-white border border-emerald-100/90 shadow-soft-xs">
-              <VirtualGuide mode="avatar" expression="positive" size="sm" />
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <span className="text-xs sm:text-sm font-black text-emerald-950 block">
-                  Saya Nara, asisten virtual Anda.
-                </span>
-                <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                  Periksa kembali detail jadwal pertemuan dan ringkasan asesmen sebelum mengirimkan pengajuan ke konselor.
+            {/* Main Section Header */}
+            <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-soft-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-black border border-emerald-200/70">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span>Langkah 4: Konfirmasi Akhir</span>
+                </div>
+                <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                  Konfirmasi Pengajuan Konseling
+                </h1>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                  Tinjau ringkasan konsultasi Anda bersama <span className="font-bold text-slate-800">{selectedCounselor.name}</span> sebelum dikirimkan.
                 </p>
+              </div>
+
+              <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-emerald-900 text-xs font-bold shrink-0">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>100% Privat & Terenkripsi</span>
               </div>
             </div>
 
-            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-soft-sm space-y-1">
-              <h2 className="text-lg sm:text-xl font-black text-slate-900">
-                Konfirmasi Pengajuan Konseling
-              </h2>
-              <p className="text-xs text-slate-500">
-                Tinjau ringkasan konsultasi Anda sebelum dikirimkan ke konselor.
-              </p>
-            </div>
-
             {/* Summary Details Card */}
-            <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-soft-sm space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100">
-                <div className="space-y-1">
+            <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-soft-xs space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-slate-100">
+                <div className="space-y-0.5">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                     Konselor Pendamping
                   </span>
@@ -836,7 +835,7 @@ export const CounselingWizard = () => {
                   <p className="text-xs text-emerald-800 font-semibold">{selectedCounselor.specialization}</p>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                     Topik Konsultasi
                   </span>
@@ -845,15 +844,15 @@ export const CounselingWizard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100">
-                <div className="space-y-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-slate-100">
+                <div className="space-y-0.5">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                     Metode Konseling
                   </span>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-0.5">
                     {selectedMethod === 'CHAT' && <MessageSquare className="w-4 h-4 text-emerald-700" />}
-                    {selectedMethod === 'ZOOM' && <Video className="w-4 h-4 text-emerald-700" />}
-                    {selectedMethod === 'OFFLINE' && <Building2 className="w-4 h-4 text-emerald-700" />}
+                    {selectedMethod === 'ZOOM' && <Video className="w-4 h-4 text-blue-600" />}
+                    {selectedMethod === 'OFFLINE' && <Building2 className="w-4 h-4 text-purple-600" />}
                     <span className="text-xs font-bold text-slate-800">
                       {selectedMethod === 'CHAT' && 'Chat Konseling'}
                       {selectedMethod === 'ZOOM' && 'Video Konseling (Zoom)'}
@@ -861,32 +860,32 @@ export const CounselingWizard = () => {
                     </span>
                   </div>
                   {selectedMethod === 'OFFLINE' && (
-                    <p className="text-[11px] text-slate-500 mt-1">
+                    <p className="text-[11px] text-slate-500 mt-0.5">
                       Gedung Pusat Mahasiswa Lt. 2, Ruang Layanan BK
                     </p>
                   )}
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                     Jadwal Pertemuan
                   </span>
                   <p className="text-xs font-bold text-slate-900">
-                    {selectedSlot?.date} • {selectedSlot?.start_time?.substring(0, 5)} – {selectedSlot?.end_time?.substring(0, 5)} WIB
+                    {selectedSlot?.date ? formatSlotDateBadge(selectedSlot.date).fullDate : selectedSlot?.date} • {selectedSlot?.start_time?.substring(0, 5)} – {selectedSlot?.end_time?.substring(0, 5)} WIB
                   </p>
-                  <span className="inline-block text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  <span className="inline-block text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-0.5">
                     Slot Terkonfirmasi
                   </span>
                 </div>
               </div>
 
               {/* Assessment Summary */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+              <div className="p-3 rounded-xl sm:rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-1">
                 <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                   Ringkasan Asesmen Awal Anda
                 </h4>
-                <div className="text-xs text-slate-600 space-y-1">
+                <div className="text-xs text-slate-600 space-y-0.5">
                   <p>
                     <span className="font-semibold text-slate-700">Kendala Utama:</span>{' '}
                     {assessmentData?.main_issue || (mainIssue === 'Lainnya' ? customMainIssue : mainIssue)}
@@ -895,7 +894,7 @@ export const CounselingWizard = () => {
                     <span className="font-semibold text-slate-700">Durasi:</span>{' '}
                     {assessmentData?.duration || duration} •{' '}
                     <span className="font-semibold text-slate-700">Tingkat Gangguan:</span>{' '}
-                    {assessmentData?.impact_level || impactLevel}/5
+                    <span className="font-bold text-slate-900">{assessmentData?.impact_level || impactLevel}/5</span>
                   </p>
                   <p className="line-clamp-2">
                     <span className="font-semibold text-slate-700">Pesan Awal:</span> "{assessmentData?.story || story}"
@@ -905,21 +904,21 @@ export const CounselingWizard = () => {
             </div>
 
             {/* Submit Action */}
-            <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2">
+            <div className="flex items-center justify-between gap-3 pt-0.5">
               <button
                 type="button"
                 onClick={() => setCurrentStep(3)}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs sm:text-sm font-bold hover:bg-slate-50 flex items-center justify-center gap-1.5 min-h-[44px]"
+                className="px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs sm:text-sm font-bold hover:bg-slate-50 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Kembali</span>
+                <span>Kembali ke Jadwal</span>
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleFinalSubmit}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white font-bold text-xs sm:text-sm shadow-soft-sm flex items-center justify-center gap-2 transition-all min-h-[48px]"
+                className="px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white font-bold text-xs sm:text-sm shadow-soft-sm flex items-center gap-2 transition-all cursor-pointer hover:shadow-md disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>
