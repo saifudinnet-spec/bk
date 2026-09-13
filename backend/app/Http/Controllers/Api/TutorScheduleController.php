@@ -176,12 +176,20 @@ class TutorScheduleController extends Controller
     public function getTutorSlots(Request $request, $tutorId)
     {
         $query = TutorAvailability::where('tutor_id', $tutorId)
-            ->where('date', '>=', Carbon::today())
-            ->where('status', 'AVAILABLE');
+            ->where('date', '>=', Carbon::today());
+
+        if (!$request->boolean('include_booked') && !$request->boolean('all_statuses')) {
+            $query->where('status', 'AVAILABLE');
+        }
 
         if ($request->filled('method')) {
             $method = strtoupper($request->query('method'));
-            $query->whereIn('method', [$method, 'ALL']);
+            $query->where(function ($q) use ($method) {
+                $q->whereIn('method', [$method, 'ALL']);
+                if (in_array($method, ['CHAT', 'ZOOM'])) {
+                    $q->orWhere('method', 'ONLINE');
+                }
+            });
         }
 
         $slots = $query->orderBy('date')
@@ -207,7 +215,7 @@ class TutorScheduleController extends Controller
             'slots' => 'required|array|min:1',
             'slots.*.start_time' => 'required|date_format:H:i',
             'slots.*.end_time' => 'required|date_format:H:i|after:slots.*.start_time',
-            'slots.*.method' => 'nullable|in:ALL,CHAT,ZOOM,OFFLINE',
+            'slots.*.method' => 'nullable|in:ALL,ONLINE,CHAT,ZOOM,OFFLINE',
             'slot_duration' => 'nullable|integer|min:30|max:120',
         ]);
 
@@ -236,5 +244,34 @@ class TutorScheduleController extends Controller
             'message' => 'Jadwal ketersediaan berhasil ditambahkan.',
             'data' => $createdSlots,
         ], 201);
+    }
+
+    /**
+     * Tutor deletes an unbooked availability slot
+     */
+    public function deleteAvailability(Request $request, $slotId)
+    {
+        $user = $request->user();
+        if (!$user->isTutor() && !$user->isAdmin()) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        $slot = TutorAvailability::where('id', $slotId)
+            ->where('tutor_id', $user->id)
+            ->first();
+
+        if (!$slot) {
+            return response()->json(['message' => 'Slot jadwal tidak ditemukan atau bukan milik Anda.'], 404);
+        }
+
+        if ($slot->status === 'BOOKED') {
+            return response()->json(['message' => 'Slot ini sudah dibooking oleh mahasiswa dan tidak dapat dihapus.'], 400);
+        }
+
+        $slot->delete();
+
+        return response()->json([
+            'message' => 'Slot jadwal berhasil dihapus.',
+        ]);
     }
 }
