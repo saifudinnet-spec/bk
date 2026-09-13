@@ -25,7 +25,6 @@ import { useAuth } from '../../store/AuthContext';
 import { useCounselingFlow } from '../../store/CounselingFlowContext';
 import { useToast } from '../../store/ToastContext';
 import PageTransition from '../../components/common/PageTransition';
-import VirtualGuide from '../../components/guidance/VirtualGuide';
 import GuidedAssessment from '../../components/counseling/GuidedAssessment';
 
 const steps = [
@@ -227,20 +226,25 @@ export const CounselingWizard = () => {
 
   // BOOKING SUCCESS CONFIRMATION SCREEN (Section 18 of prompt)
   if (bookingSuccessData) {
+    const rawDate = bookingSuccessData.date ? String(bookingSuccessData.date).split('T')[0] : '';
+    const formattedDate = formatSlotDateBadge(rawDate).fullDate || rawDate;
+
     return (
-      <PageTransition className="max-w-2xl mx-auto py-6 space-y-6">
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-emerald-100 shadow-soft-sm text-center space-y-6">
-          {/* Nara avatar with greeting */}
-          <div className="flex flex-col items-center justify-center space-y-3">
-            <VirtualGuide mode="avatar" expression="positive" size="lg" />
+      <PageTransition className="max-w-xl mx-auto py-4 sm:py-6 space-y-4">
+        <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-soft-sm text-center space-y-4">
+          {/* Celebratory Success Icon */}
+          <div className="flex flex-col items-center justify-center space-y-2.5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-soft-xs ring-8 ring-emerald-50/60">
+              <CheckCircle2 className="w-8 h-8 sm:w-9 sm:h-9 stroke-[2.2]" />
+            </div>
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Nara • Pemandu Ruang BK</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-black border border-emerald-200/70">
+                <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span>Pengajuan Berhasil Diterima</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                Jadwal Anda sudah dibuat!
-              </h2>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Jadwal Anda Sudah Dibuat!
+              </h1>
               <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
                 Konselor akan memeriksa pengajuan Anda. Notifikasi konfirmasi akan kami kirimkan ke dashboard Anda.
               </p>
@@ -248,7 +252,7 @@ export const CounselingWizard = () => {
           </div>
 
           {/* Ticket / Booking Card */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-200/80 text-left space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-50/60 to-teal-50/30 border border-emerald-200/80 text-left space-y-3.5">
             <div className="flex items-center justify-between pb-3 border-b border-emerald-100">
               <div>
                 <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">Konselor</span>
@@ -261,8 +265,8 @@ export const CounselingWizard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+            <div className="grid grid-cols-2 gap-2.5 text-xs">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
                 <span className="text-[10px] text-slate-400 block font-semibold">Metode Konseling</span>
                 <span className="font-bold text-slate-900 mt-0.5 block">
                   {bookingSuccessData.method === 'CHAT' && 'Chat Konseling'}
@@ -270,18 +274,18 @@ export const CounselingWizard = () => {
                   {bookingSuccessData.method === 'OFFLINE' && 'Tatap Muka Langsung'}
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
                 <span className="text-[10px] text-slate-400 block font-semibold">Jadwal Sesi</span>
-                <span className="font-bold text-slate-900 mt-0.5 block">
-                  {bookingSuccessData.date} • {bookingSuccessData.time}
+                <span className="font-bold text-slate-900 mt-0.5 block truncate" title={`${formattedDate} • ${bookingSuccessData.time}`}>
+                  {formattedDate} • {bookingSuccessData.time}
                 </span>
               </div>
             </div>
 
             {/* Status Pill */}
-            <div className="pt-2 flex items-center justify-between">
+            <div className="pt-1 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500">Status Sesi:</span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-bold text-xs border border-amber-200">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 font-bold text-xs border border-amber-200">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 Menunggu Konfirmasi Konselor
               </span>
@@ -294,7 +298,7 @@ export const CounselingWizard = () => {
               resetFlow();
               navigate('/app');
             }}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 text-white font-bold text-xs sm:text-sm shadow-soft-sm flex items-center justify-center gap-2 mx-auto transition-transform hover:scale-[1.01]"
+            className="w-full sm:w-auto px-7 py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white font-bold text-xs sm:text-sm shadow-soft-sm flex items-center justify-center gap-2 mx-auto transition-transform hover:scale-[1.01] cursor-pointer"
           >
             <span>Buka Dashboard Mahasiswa</span>
             <ArrowRight className="w-4 h-4" />
