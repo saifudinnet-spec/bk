@@ -80,11 +80,71 @@ const durationOptions = [
 ];
 
 const impactLevels = [
-  { val: 1, label: 'Sangat Ringan', desc: 'Aktivitas belajar & harian berjalan normal' },
-  { val: 2, label: 'Ringan', desc: 'Sedikit mengganggu, namun masih dapat diatasi mandiri' },
-  { val: 3, label: 'Sedang', desc: 'Mulai memengaruhi fokus, motivasi, atau tidur' },
-  { val: 4, label: 'Cukup Berat', desc: 'Banyak tugas & rutinitas harian terhambat' },
-  { val: 5, label: 'Sangat Mengganggu', desc: 'Sangat sulit berfungsi dalam aktivitas harian' },
+  {
+    val: 1,
+    label: 'Sangat Ringan',
+    desc: 'Aktivitas belajar & harian berjalan normal',
+    colorKey: 'sky',
+    accentDot: 'bg-sky-400',
+    selectedClass: 'bg-gradient-to-b from-sky-500 to-sky-600 text-white border-sky-500 shadow-soft-sm ring-4 ring-sky-400/25 scale-[1.03]',
+    unselectedClass: 'bg-white border-slate-200/90 text-slate-700 hover:bg-sky-50/50 hover:border-sky-300 hover:text-sky-950 hover:scale-[1.01]',
+    badgeClass: 'bg-sky-500 text-white shadow-sky-500/30',
+    cardClass: 'bg-sky-50/90 border-sky-200/90 text-sky-950',
+    cardBadge: 'bg-sky-500 text-white',
+    summaryBadge: 'bg-sky-100 text-sky-800 border-sky-200',
+  },
+  {
+    val: 2,
+    label: 'Ringan',
+    desc: 'Sedikit mengganggu, namun masih dapat diatasi mandiri',
+    colorKey: 'teal',
+    accentDot: 'bg-teal-400',
+    selectedClass: 'bg-gradient-to-b from-teal-500 to-teal-600 text-white border-teal-500 shadow-soft-sm ring-4 ring-teal-400/25 scale-[1.03]',
+    unselectedClass: 'bg-white border-slate-200/90 text-slate-700 hover:bg-teal-50/50 hover:border-teal-300 hover:text-teal-950 hover:scale-[1.01]',
+    badgeClass: 'bg-teal-600 text-white shadow-teal-600/30',
+    cardClass: 'bg-teal-50/90 border-teal-200/90 text-teal-950',
+    cardBadge: 'bg-teal-600 text-white',
+    summaryBadge: 'bg-teal-100 text-teal-800 border-teal-200',
+  },
+  {
+    val: 3,
+    label: 'Sedang',
+    desc: 'Mulai memengaruhi fokus, motivasi, atau tidur',
+    colorKey: 'amber',
+    accentDot: 'bg-amber-400',
+    selectedClass: 'bg-gradient-to-b from-amber-500 to-amber-600 text-white border-amber-500 shadow-soft-sm ring-4 ring-amber-400/25 scale-[1.03]',
+    unselectedClass: 'bg-white border-slate-200/90 text-slate-700 hover:bg-amber-50/50 hover:border-amber-300 hover:text-amber-950 hover:scale-[1.01]',
+    badgeClass: 'bg-amber-500 text-white shadow-amber-500/30',
+    cardClass: 'bg-amber-50/90 border-amber-200/90 text-amber-950',
+    cardBadge: 'bg-amber-500 text-white',
+    summaryBadge: 'bg-amber-100 text-amber-800 border-amber-200',
+  },
+  {
+    val: 4,
+    label: 'Cukup Berat',
+    desc: 'Banyak tugas & rutinitas harian terhambat',
+    colorKey: 'orange',
+    accentDot: 'bg-orange-400',
+    selectedClass: 'bg-gradient-to-b from-orange-500 to-orange-600 text-white border-orange-500 shadow-soft-sm ring-4 ring-orange-400/25 scale-[1.03]',
+    unselectedClass: 'bg-white border-slate-200/90 text-slate-700 hover:bg-orange-50/50 hover:border-orange-300 hover:text-orange-950 hover:scale-[1.01]',
+    badgeClass: 'bg-orange-500 text-white shadow-orange-500/30',
+    cardClass: 'bg-orange-50/90 border-orange-200/90 text-orange-950',
+    cardBadge: 'bg-orange-500 text-white',
+    summaryBadge: 'bg-orange-100 text-orange-800 border-orange-200',
+  },
+  {
+    val: 5,
+    label: 'Sangat Mengganggu',
+    desc: 'Sangat sulit berfungsi dalam aktivitas harian',
+    colorKey: 'rose',
+    accentDot: 'bg-rose-500',
+    selectedClass: 'bg-gradient-to-b from-rose-600 to-rose-700 text-white border-rose-600 shadow-soft-sm ring-4 ring-rose-500/25 scale-[1.03]',
+    unselectedClass: 'bg-white border-slate-200/90 text-slate-700 hover:bg-rose-50/50 hover:border-rose-300 hover:text-rose-950 hover:scale-[1.01]',
+    badgeClass: 'bg-rose-600 text-white shadow-rose-600/30',
+    cardClass: 'bg-rose-50/90 border-rose-200/90 text-rose-950',
+    cardBadge: 'bg-rose-600 text-white',
+    summaryBadge: 'bg-rose-100 text-rose-800 border-rose-200',
+  },
 ];
 
 const suggestionChips = [
@@ -605,7 +665,7 @@ export const GuidedAssessment = ({
                       </p>
                     </div>
 
-                    {/* Rating Numbers Segmented Bar - Comfortable, Proportional & Readable */}
+                    {/* Rating Numbers Segmented Bar - Colorful Severity Spectrum */}
                     <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5 pt-1">
                       {impactLevels.map((lvl) => {
                         const isSelected = impactLevel === lvl.val;
@@ -614,14 +674,22 @@ export const GuidedAssessment = ({
                             key={lvl.val}
                             type="button"
                             onClick={() => setImpactLevel(lvl.val)}
-                            className={`py-3 sm:py-3.5 px-1.5 sm:px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center min-h-[68px] sm:min-h-[76px] cursor-pointer ${
-                              isSelected
-                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-sm ring-4 ring-emerald-600/20 scale-[1.02]'
-                                : 'bg-white border-slate-200/90 text-slate-700 hover:bg-emerald-50/40 hover:border-emerald-200 hover:scale-[1.01]'
+                            className={`py-3 sm:py-3.5 px-1.5 sm:px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center min-h-[68px] sm:min-h-[76px] cursor-pointer group ${
+                              isSelected ? lvl.selectedClass : lvl.unselectedClass
                             }`}
                           >
+                            {/* Color Accent Pill */}
+                            <span
+                              className={`w-5 h-1 rounded-full mb-1 transition-all ${
+                                isSelected ? 'bg-white/80' : `${lvl.accentDot} opacity-60 group-hover:opacity-100`
+                              }`}
+                            />
                             <span className="text-xl sm:text-2xl font-black block leading-none">{lvl.val}</span>
-                            <span className="text-[10px] sm:text-xs font-semibold block leading-tight mt-1.5 text-center opacity-90">
+                            <span
+                              className={`text-[10px] sm:text-xs font-bold block leading-tight mt-1 text-center ${
+                                isSelected ? 'text-white' : 'text-slate-600'
+                              }`}
+                            >
                               {lvl.label}
                             </span>
                           </button>
@@ -629,16 +697,24 @@ export const GuidedAssessment = ({
                       })}
                     </div>
 
-                    {/* Highlight Selected Level Meaning Card */}
-                    <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 text-xs sm:text-sm flex items-center gap-3 shadow-2xs">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-soft-xs">
+                    {/* Highlight Selected Level Meaning Card - Dynamic Severity Theme */}
+                    <motion.div
+                      key={currentImpactObj.val}
+                      initial={{ opacity: 0, y: 3 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className={`p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm flex items-center gap-3 shadow-2xs transition-colors duration-200 ${currentImpactObj.cardClass}`}
+                    >
+                      <div
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-soft-xs ${currentImpactObj.cardBadge}`}
+                      >
                         {impactLevel}
                       </div>
                       <div className="min-w-0 flex-1">
                         <span className="font-extrabold text-slate-900 block text-xs sm:text-sm">{currentImpactObj.label}</span>
                         <span className="text-[11px] sm:text-xs text-slate-600 block mt-0.5 leading-relaxed">{currentImpactObj.desc}</span>
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
 
                   {/* Navigation */}
@@ -859,7 +935,7 @@ export const GuidedAssessment = ({
                           <div>
                             <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Tingkat Gangguan</span>
                             <div className="inline-flex items-center gap-1.5 mt-0.5">
-                              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-xs">
+                              <span className={`px-2 py-0.5 rounded border font-bold text-xs ${currentImpactObj.summaryBadge}`}>
                                 Skala {impactLevel}/5
                               </span>
                               <span className="text-slate-600 text-xs">({currentImpactObj.label})</span>
