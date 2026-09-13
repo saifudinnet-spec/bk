@@ -20,6 +20,8 @@ import {
   Radio,
   SlidersHorizontal,
   Loader2,
+  Mic,
+  Award,
 } from 'lucide-react';
 
 /**
@@ -56,9 +58,92 @@ const playAssistantChime = () => {
 };
 
 /**
- * List of available Indonesian natural voices for Nara
+ * Global cache of active custom voice recordings recorded by admin/counselors
+ */
+let activeRecordingsMap = {};
+let isFetchingRecordings = false;
+
+export const loadActiveRecordings = async () => {
+  if (isFetchingRecordings) return activeRecordingsMap;
+  isFetchingRecordings = true;
+  try {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+    const res = await fetch(`${apiBase}/voice-recordings/active`);
+    if (res.ok) {
+      const data = await res.json();
+      activeRecordingsMap = data.recordings || {};
+    }
+  } catch (err) {
+    console.warn('Could not load custom voice recordings:', err);
+  } finally {
+    isFetchingRecordings = false;
+  }
+  return activeRecordingsMap;
+};
+
+// Auto-fetch recordings on boot
+if (typeof window !== 'undefined') {
+  loadActiveRecordings();
+}
+
+/**
+ * Helper to match recorded audio for a specific text or dialogue key
+ */
+export const findRecordedAudio = (text = '', dialogueKey = null) => {
+  if (!activeRecordingsMap || Object.keys(activeRecordingsMap).length === 0) {
+    return null;
+  }
+
+  // 1. Direct dialogue key match
+  if (dialogueKey && activeRecordingsMap[dialogueKey]?.audio_url) {
+    return activeRecordingsMap[dialogueKey];
+  }
+
+  if (!text) return null;
+
+  const clean = text.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // 2. Search for matching script
+  for (const key in activeRecordingsMap) {
+    const rec = activeRecordingsMap[key];
+    if (!rec || !rec.audio_url) continue;
+
+    const recClean = (rec.text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (recClean && (clean.includes(recClean) || recClean.includes(clean))) {
+      return rec;
+    }
+
+    // Specific dialogue keyword fallbacks
+    if (clean.includes('yukluangkan') && key === 'counseling_step_0') return rec;
+    if (clean.includes('kendala') && key === 'counseling_step_1') return rec;
+    if (clean.includes('berapalama') && key === 'counseling_step_2') return rec;
+    if (clean.includes('memengaruhifokus') && key === 'counseling_step_3') return rec;
+    if (clean.includes('upayamandiri') && key === 'counseling_step_4') return rec;
+    if (clean.includes('harapan') && key === 'counseling_step_5') return rec;
+    if (clean.includes('rangkuman') && key === 'counseling_step_6') return rec;
+    if (clean.includes('narasiapbantu') && key === 'poke_1') return rec;
+    if (clean.includes('ceritamuaman') && key === 'poke_2') return rec;
+    if (clean.includes('kamuhebat') && key === 'poke_3') return rec;
+    if (clean.includes('tipsdiatas') && key === 'poke_4') return rec;
+  }
+
+  return null;
+};
+
+/**
+ * List of available Indonesian voices for Nara
  */
 export const NARA_VOICES = [
+  {
+    id: 'custom_recording',
+    name: 'Suara Rekaman Konselor',
+    badge: '🎙️ Suara Asli Manusia',
+    gender: 'Konselor',
+    color: 'amber',
+    badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 font-extrabold',
+    character: 'Rekaman suara asli manusia dari tim konselor/admin Ruang BK UINSSC (fallback otomatis ke suara alami jika dialog belum direkam).',
+    sampleText: 'Halo! Ini adalah contoh rekaman suara asli langsung dari tim konselor Ruang BK.',
+  },
   {
     id: 'gadis',
     name: 'Nara Gadis',
@@ -169,13 +254,14 @@ const speakWithBrowserVoice = (text, { onStart, onEnd, onError } = {}) => {
 };
 
 /**
- * Speak Nara Voice with high-quality natural Indonesian audio stream
+ * Speak Nara Voice with custom recorded human audio OR high-quality natural Indonesian audio stream
  */
 export const speakNaraVoice = (
   text,
   {
     voiceId = null,
     rate = null,
+    dialogueKey = null,
     onStart,
     onEnd,
     onError,
@@ -188,7 +274,7 @@ export const speakNaraVoice = (
     return false;
   }
 
-  // Clean text: strip emojis, markdown characters, asterisks
+  // Clean text
   const cleanText = text
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
     .replace(/[*_~`#💡❓✨🎉🎙️]/g, '')
@@ -200,17 +286,67 @@ export const speakNaraVoice = (
     return false;
   }
 
-  const selectedVoice = voiceId || localStorage.getItem('bk_nara_voice_choice') || 'gadis';
+  const selectedVoice = voiceId || localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
   const selectedRate = rate || localStorage.getItem('bk_nara_voice_rate') || '+0%';
 
-  // If user explicitly chose local browser synthesizer
+  // 1. Check if user prefers custom human recordings (or default) AND a recording exists for this dialogue
+  if (selectedVoice === 'custom_recording') {
+    const recordedAudio = findRecordedAudio(cleanText, dialogueKey);
+    if (recordedAudio && recordedAudio.audio_url) {
+      try {
+        const audio = new Audio(recordedAudio.audio_url);
+        currentAudioInstance = audio;
+
+        audio.onplay = () => {
+          if (onStart) onStart();
+        };
+
+        audio.onended = () => {
+          currentAudioInstance = null;
+          if (onEnd) onEnd();
+        };
+
+        audio.onerror = (e) => {
+          console.warn('Recorded audio playback error, falling back to neural TTS:', e);
+          currentAudioInstance = null;
+          speakWithNeuralTts(cleanText, 'gadis', selectedRate, { onStart, onEnd, onError });
+        };
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('Audio play interrupted:', err);
+            currentAudioInstance = null;
+            if (onEnd) onEnd();
+          });
+        }
+
+        return true;
+      } catch (err) {
+        console.warn('Error playing recorded audio:', err);
+      }
+    }
+
+    // Fallback if no recording exists yet for this specific sentence: use Nara Gadis neural
+    return speakWithNeuralTts(cleanText, 'gadis', selectedRate, { onStart, onEnd, onError });
+  }
+
+  // 2. If user explicitly chose local browser synthesizer
   if (selectedVoice === 'browser') {
     return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
   }
 
+  // 3. Chosen Neural Voice (gadis, siti, google)
+  return speakWithNeuralTts(cleanText, selectedVoice, selectedRate, { onStart, onEnd, onError });
+};
+
+/**
+ * Helper to speak using backend Neural TTS stream
+ */
+const speakWithNeuralTts = (cleanText, voice, rate, { onStart, onEnd, onError } = {}) => {
   try {
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-    const streamUrl = `${apiBase}/tts?text=${encodeURIComponent(cleanText)}&voice=${encodeURIComponent(selectedVoice)}&rate=${encodeURIComponent(selectedRate)}`;
+    const streamUrl = `${apiBase}/tts?text=${encodeURIComponent(cleanText)}&voice=${encodeURIComponent(voice)}&rate=${encodeURIComponent(rate)}`;
 
     const audio = new Audio(streamUrl);
     currentAudioInstance = audio;
@@ -236,7 +372,6 @@ export const speakNaraVoice = (
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch((err) => {
-        // Autoplay may be temporarily blocked until user interaction
         console.warn('Playback error or interrupted:', err);
         if (!hasStarted) {
           currentAudioInstance = null;
@@ -266,6 +401,7 @@ const VoiceSettingsModal = ({
   onToggleAutoVoice,
   onTestVoice,
   testingVoiceId,
+  hasRecordingsCount,
 }) => {
   if (!isOpen) return null;
 
@@ -306,7 +442,7 @@ const VoiceSettingsModal = ({
           {/* Voice Cards */}
           <div className="space-y-2.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-              Pilihan Karakter Suara Wanita
+              Pilihan Karakter Suara
             </label>
             <div className="space-y-2">
               {NARA_VOICES.map((v) => {
@@ -329,6 +465,11 @@ const VoiceSettingsModal = ({
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${v.badgeClass}`}>
                             {v.badge}
                           </span>
+                          {v.id === 'custom_recording' && hasRecordingsCount > 0 && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                              {hasRecordingsCount} Rekaman Tersedia
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">
                           {v.character}
@@ -438,7 +579,7 @@ const VoiceSettingsModal = ({
 
 /**
  * Nara – 3D Interactive Virtual Assistant (Clippy-Style)
- * Featuring Natural Indonesian Female Voice Engine & 3D Interactive Avatar
+ * Featuring Custom Human Voice Recordings & Natural Indonesian Female Neural Voice
  */
 export const VirtualGuide = ({
   mode = 'sidebar', // 'sidebar' | 'floating' | 'assistant' | 'avatar' | 'compact'
@@ -446,6 +587,7 @@ export const VirtualGuide = ({
   className = '',
   size = 'md', // 'sm' | 'md' | 'lg'
   speechText = '',
+  dialogueKey = null, // Optional key to map directly to custom recording (e.g. 'counseling_step_0')
   stepTitle = 'Panduan Asesmen',
   onTipClick = null,
   onWhyClick = null,
@@ -461,12 +603,15 @@ export const VirtualGuide = ({
   const [pokeMessage, setPokeMessage] = useState(null);
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
 
+  // Custom Recordings Cache state
+  const [hasRecordingsCount, setHasRecordingsCount] = useState(0);
+
   // Voice Settings State
   const [voiceChoice, setVoiceChoice] = useState(() => {
     try {
-      return localStorage.getItem('bk_nara_voice_choice') || 'gadis';
+      return localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
     } catch {
-      return 'gadis';
+      return 'custom_recording';
     }
   });
 
@@ -490,6 +635,16 @@ export const VirtualGuide = ({
   const [testingVoiceId, setTestingVoiceId] = useState(null);
 
   const characterRef = useRef(null);
+
+  // Load custom recordings count on mount
+  useEffect(() => {
+    loadActiveRecordings().then((map) => {
+      setHasRecordingsCount(Object.keys(map || {}).length);
+    });
+  }, []);
+
+  // Check if current dialogue has a recorded human audio
+  const currentRecordedAudio = findRecordedAudio(pokeMessage || speechText, dialogueKey);
 
   // Active Voice Meta
   const activeVoiceMeta = NARA_VOICES.find((v) => v.id === voiceChoice) || NARA_VOICES[0];
@@ -540,7 +695,7 @@ export const VirtualGuide = ({
   }, []);
 
   // Speak handler
-  const handleSpeak = useCallback((customText = null, overrideVoice = null) => {
+  const handleSpeak = useCallback((customText = null, overrideVoice = null, overrideKey = null) => {
     if (!soundEnabled) return;
 
     if (isSpeaking) {
@@ -556,6 +711,7 @@ export const VirtualGuide = ({
     speakNaraVoice(targetText, {
       voiceId: overrideVoice || voiceChoice,
       rate: voiceRate,
+      dialogueKey: overrideKey || (customText ? null : dialogueKey),
       onStart: () => setIsSpeaking(true),
       onEnd: () => {
         setIsSpeaking(false);
@@ -566,7 +722,7 @@ export const VirtualGuide = ({
         setTestingVoiceId(null);
       },
     });
-  }, [soundEnabled, isSpeaking, pokeMessage, speechText, voiceChoice, voiceRate]);
+  }, [soundEnabled, isSpeaking, pokeMessage, speechText, voiceChoice, voiceRate, dialogueKey]);
 
   // Test voice sample in modal
   const handleTestVoice = (voice) => {
@@ -620,18 +776,17 @@ export const VirtualGuide = ({
     }
 
     const playfulMessages = [
-      'Halo! Nara siap bantu jika ada pertanyaan yang membingungkan.',
-      'Jawab dengan santai ya, ceritamu aman dan privat bersama konselor.',
-      'Kamu hebat sudah mengambil langkah pertama untuk konseling!',
-      'Butuh panduan lebih dalam? Klik tombol Tips di atas ya.',
+      { text: 'Halo! Nara siap bantu jika ada pertanyaan yang membingungkan.', key: 'poke_1' },
+      { text: 'Jawab dengan santai ya, ceritamu aman dan privat bersama konselor.', key: 'poke_2' },
+      { text: 'Kamu hebat sudah mengambil langkah pertama untuk konseling!', key: 'poke_3' },
+      { text: 'Butuh panduan lebih dalam? Klik tombol Tips di atas ya.', key: 'poke_4' },
     ];
-    const randomMsg = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
-    setPokeMessage(randomMsg);
+    const chosen = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+    setPokeMessage(chosen.text);
 
-    // Speak poke message with gentle Indonesian female voice
     if (soundEnabled) {
       setTimeout(() => {
-        handleSpeak(randomMsg);
+        handleSpeak(chosen.text, null, chosen.key);
       }, 150);
     }
 
@@ -850,6 +1005,7 @@ export const VirtualGuide = ({
           onToggleAutoVoice={handleToggleAutoVoice}
           onTestVoice={handleTestVoice}
           testingVoiceId={testingVoiceId}
+          hasRecordingsCount={hasRecordingsCount}
         />
 
         {/* Speech Bubble on Top with pointer pointing down to Nara */}
@@ -863,8 +1019,10 @@ export const VirtualGuide = ({
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <div className="text-xs font-black text-emerald-950 tracking-tight truncate flex items-center gap-1">
                 <span>Nara</span>
-                <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100">
-                  {activeVoiceMeta.name.replace('Nara ', '')}
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100 truncate max-w-[120px]">
+                  {currentRecordedAudio && voiceChoice === 'custom_recording'
+                    ? 'Suara Asli Konselor'
+                    : activeVoiceMeta.name.replace('Nara ', '')}
                 </span>
               </div>
             </div>
@@ -886,7 +1044,7 @@ export const VirtualGuide = ({
                 type="button"
                 onClick={() => setIsVoiceModalOpen(true)}
                 className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title="Pilih karakter suara wanita Nara"
+                title="Pilih karakter suara Nara"
               >
                 <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
@@ -933,7 +1091,13 @@ export const VirtualGuide = ({
                     ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
                 }`}
-                title={isSpeaking ? 'Hentikan suara Nara' : `Putar suara wanita ${activeVoiceMeta.name}`}
+                title={
+                  isSpeaking
+                    ? 'Hentikan suara Nara'
+                    : currentRecordedAudio && voiceChoice === 'custom_recording'
+                    ? 'Putar rekaman suara asli konselor'
+                    : `Putar suara wanita ${activeVoiceMeta.name}`
+                }
               >
                 {isSpeaking ? (
                   <>
@@ -943,7 +1107,11 @@ export const VirtualGuide = ({
                 ) : (
                   <>
                     <Volume2 className="w-3 h-3 text-emerald-600" />
-                    <span>Suara Nara 🎙️</span>
+                    <span>
+                      {currentRecordedAudio && voiceChoice === 'custom_recording'
+                        ? 'Suara Asli 🎙️'
+                        : 'Suara Nara 🎙️'}
+                    </span>
                   </>
                 )}
               </button>
@@ -952,7 +1120,7 @@ export const VirtualGuide = ({
                 type="button"
                 onClick={() => setIsVoiceModalOpen(true)}
                 className="p-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 transition-colors cursor-pointer"
-                title="Ganti karakter suara wanita Nara"
+                title="Ganti karakter suara Nara"
               >
                 <SlidersHorizontal className="w-3 h-3" />
               </button>
@@ -1038,6 +1206,7 @@ export const VirtualGuide = ({
         onToggleAutoVoice={handleToggleAutoVoice}
         onTestVoice={handleTestVoice}
         testingVoiceId={testingVoiceId}
+        hasRecordingsCount={hasRecordingsCount}
       />
 
       {/* 3D Moving Assistant Character */}
@@ -1059,7 +1228,9 @@ export const VirtualGuide = ({
                 <span>Saya Nara, asisten virtual Anda.</span>
                 <span className="text-emerald-600 text-xs">✨</span>
                 <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 ml-1 hidden sm:inline-block">
-                  {activeVoiceMeta.name}
+                  {currentRecordedAudio && voiceChoice === 'custom_recording'
+                    ? 'Suara Asli Konselor'
+                    : activeVoiceMeta.name}
                 </span>
               </span>
             </div>
@@ -1081,7 +1252,7 @@ export const VirtualGuide = ({
                 type="button"
                 onClick={() => setIsVoiceModalOpen(true)}
                 className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title="Pilih karakter suara wanita Nara"
+                title="Pilih karakter suara Nara"
               >
                 <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
@@ -1130,7 +1301,13 @@ export const VirtualGuide = ({
                     ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
                 }`}
-                title={isSpeaking ? 'Hentikan suara Nara' : `Dengarkan suara wanita ${activeVoiceMeta.name}`}
+                title={
+                  isSpeaking
+                    ? 'Hentikan suara Nara'
+                    : currentRecordedAudio && voiceChoice === 'custom_recording'
+                    ? 'Dengarkan rekaman suara asli konselor'
+                    : `Dengarkan suara ${activeVoiceMeta.name}`
+                }
               >
                 {isSpeaking ? (
                   <>
@@ -1140,7 +1317,11 @@ export const VirtualGuide = ({
                 ) : (
                   <>
                     <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Dengarkan Suara Nara 🎙️</span>
+                    <span>
+                      {currentRecordedAudio && voiceChoice === 'custom_recording'
+                        ? 'Putar Suara Asli 🎙️'
+                        : 'Dengarkan Suara Nara 🎙️'}
+                    </span>
                   </>
                 )}
               </button>
@@ -1149,10 +1330,10 @@ export const VirtualGuide = ({
                 type="button"
                 onClick={() => setIsVoiceModalOpen(true)}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold text-xs transition-colors cursor-pointer"
-                title="Ganti karakter suara wanita Nara"
+                title="Ganti karakter suara Nara"
               >
                 <SlidersHorizontal className="w-3 h-3" />
-                <span>Pilih Suara ({activeVoiceMeta.name.replace('Nara ', '')})</span>
+                <span>Pilih Suara</span>
               </button>
             </div>
 

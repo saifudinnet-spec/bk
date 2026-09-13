@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\CounselingSessionController;
 use App\Http\Controllers\Api\CounselingTopicController;
 use App\Http\Controllers\Api\LandingContentController;
 use App\Http\Controllers\Api\MoodCheckinController;
+use App\Http\Controllers\Api\NaraVoiceController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\QuestionnaireController;
 use App\Http\Controllers\Api\SessionFeedbackController;
@@ -41,6 +42,10 @@ Route::get('/questionnaires/active', [QuestionnaireController::class, 'getActive
 // Nara Virtual Assistant Natural TTS Voice Stream
 Route::get('/tts', [TtsController::class, 'stream']);
 Route::get('/tts/voices', [TtsController::class, 'voices']);
+
+// Nara Voice Recordings (Public active list & stream)
+Route::get('/voice-recordings/active', [NaraVoiceController::class, 'publicActiveRecordings']);
+Route::get('/voice-recordings/stream/{key}', [NaraVoiceController::class, 'stream']);
 
 // Public Topics & Tutors for Jalur A & Jalur B
 Route::get('/topics', [CounselingTopicController::class, 'index']);
@@ -130,5 +135,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings', [AdminController::class, 'updateSettings']);
         Route::put('/landing-content', [LandingContentController::class, 'update']);
         Route::post('/landing-content/reset', [LandingContentController::class, 'resetDefault']);
+
+        // Nara Voice Recording Management
+        Route::get('/voice-recordings', [NaraVoiceController::class, 'index']);
+        Route::post('/voice-recordings', [NaraVoiceController::class, 'store']);
+        Route::post('/voice-recordings/{key}/upload', [NaraVoiceController::class, 'upload']);
+        Route::delete('/voice-recordings/{key}/audio', [NaraVoiceController::class, 'deleteAudio']);
+        Route::put('/voice-recordings/{id}', [NaraVoiceController::class, 'update']);
+        Route::delete('/voice-recordings/{id}', [NaraVoiceController::class, 'destroy']);
     });
 });

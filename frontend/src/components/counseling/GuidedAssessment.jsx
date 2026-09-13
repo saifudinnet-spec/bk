@@ -902,6 +902,7 @@ export const GuidedAssessment = ({
             mode="sidebar"
             expression={naraExpression}
             speechText={stepExplanation}
+            dialogueKey={`counseling_step_${step}`}
             stepTitle={step === 0 ? 'Pengantar' : step === 6 ? 'Rangkuman' : `Pertanyaan ${step} dari 5`}
             tipsAvailable={Boolean(stepTips[step])}
             whyAvailable={Boolean(stepWhy[step])}

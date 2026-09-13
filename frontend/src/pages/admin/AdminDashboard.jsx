@@ -37,6 +37,7 @@ import { useToast } from '../../store/ToastContext';
 import StatCard from '../../components/cards/StatCard';
 import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
+import NaraVoiceManager from '../../components/admin/NaraVoiceManager';
 
 export const AdminDashboard = () => {
   const [data, setData] = useState(null);
@@ -577,6 +578,7 @@ export const AdminDashboard = () => {
           { key: 'users', label: 'Pengguna' },
           { key: 'articles', label: 'Kelola Artikel' },
           { key: 'cms', label: 'Kelola Landing Page' },
+          { key: 'voice', label: 'Rekaman Suara Nara 🎙️' },
           { key: 'audit', label: 'Audit Logs' },
           { key: 'settings', label: 'Pengaturan' },
         ].map((tab) => (
@@ -1873,6 +1875,11 @@ export const AdminDashboard = () => {
             <span>{isSavingSettings ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
           </button>
         </form>
+      )}
+
+      {/* 6. Nara Voice Manager Tab */}
+      {activeTab === 'voice' && (
+        <NaraVoiceManager />
       )}
 
       {/* WordPress-like Article Editor Modal */}
