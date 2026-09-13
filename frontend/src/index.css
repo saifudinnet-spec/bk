@@ -5,7 +5,7 @@
 /* Responsive Root Font Size: 1 step larger on Web View (Desktop & Tablet) */
 html {
   font-size: 16px; /* Base 16px for Mobile (standard readable app scale) */
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 @media screen and (min-width: 768px) {
@@ -42,8 +42,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: hidden;
-  overscroll-behavior-y: none;
 }
 
 /* Touch targets >= 44px for mobile devices */
