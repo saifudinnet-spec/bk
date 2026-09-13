@@ -134,6 +134,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/audit-logs', [AdminController::class, 'getAuditLogs']);
         Route::get('/settings', [AdminController::class, 'getSettings']);
         Route::put('/settings', [AdminController::class, 'updateSettings']);
+        Route::post('/zoom/test-connection', [AdminController::class, 'testZoomConnection']);
         Route::put('/landing-content', [LandingContentController::class, 'update']);
         Route::post('/landing-content/reset', [LandingContentController::class, 'resetDefault']);
 

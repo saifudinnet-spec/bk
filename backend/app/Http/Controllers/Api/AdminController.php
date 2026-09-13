@@ -137,10 +137,24 @@ class AdminController extends Controller
     {
         $this->ensureAdmin($request);
 
+        $clientSecret = SystemSetting::get('zoom_client_secret', env('ZOOM_CLIENT_SECRET', ''));
+        $maskedSecret = '';
+        if (!empty($clientSecret)) {
+            $maskedSecret = strlen($clientSecret) > 8
+                ? substr($clientSecret, 0, 4) . '••••••••' . substr($clientSecret, -4)
+                : '••••••••';
+        }
+
         return response()->json([
             'tutor_assignment_mode' => SystemSetting::get('tutor_assignment_mode', 'student_select'),
             'crisis_flag_enabled' => SystemSetting::get('crisis_flag_enabled', 'true') === 'true',
-            'zoom_mock_mode' => SystemSetting::get('zoom_mock_mode', 'true') === 'true',
+            'zoom_mock_mode' => SystemSetting::get('zoom_mock_mode', env('ZOOM_MOCK_MODE', 'true')) === 'true',
+            'zoom_account_id' => SystemSetting::get('zoom_account_id', env('ZOOM_ACCOUNT_ID', '')),
+            'zoom_client_id' => SystemSetting::get('zoom_client_id', env('ZOOM_CLIENT_ID', '')),
+            'zoom_client_secret_masked' => $maskedSecret,
+            'zoom_has_client_secret' => !empty($clientSecret),
+            'zoom_host_email' => SystemSetting::get('zoom_host_email', env('ZOOM_HOST_EMAIL', '')),
+            'zoom_is_configured' => \App\Services\ZoomApiService::isConfigured(),
         ]);
     }
 
@@ -155,6 +169,10 @@ class AdminController extends Controller
             'tutor_assignment_mode' => 'nullable|in:manual,student_select,automatic',
             'crisis_flag_enabled' => 'nullable|boolean',
             'zoom_mock_mode' => 'nullable|boolean',
+            'zoom_account_id' => 'nullable|string|max:255',
+            'zoom_client_id' => 'nullable|string|max:255',
+            'zoom_client_secret' => 'nullable|string|max:255',
+            'zoom_host_email' => 'nullable|string|email|max:255',
         ]);
 
         if ($request->has('tutor_assignment_mode')) {
@@ -166,11 +184,48 @@ class AdminController extends Controller
         if ($request->has('zoom_mock_mode')) {
             SystemSetting::set('zoom_mock_mode', $request->boolean('zoom_mock_mode') ? 'true' : 'false');
         }
+        if ($request->has('zoom_account_id')) {
+            SystemSetting::set('zoom_account_id', trim($request->input('zoom_account_id') ?? ''));
+        }
+        if ($request->has('zoom_client_id')) {
+            SystemSetting::set('zoom_client_id', trim($request->input('zoom_client_id') ?? ''));
+        }
+        if ($request->filled('zoom_client_secret')) {
+            SystemSetting::set('zoom_client_secret', trim($request->input('zoom_client_secret')));
+        }
+        if ($request->has('zoom_host_email')) {
+            SystemSetting::set('zoom_host_email', trim($request->input('zoom_host_email') ?? ''));
+        }
 
-        AuditLogService::log('update_settings', 'SystemSetting', null, $request->all(), $request->user()->id);
+        AuditLogService::log('update_settings', 'SystemSetting', null, $request->except(['zoom_client_secret']), $request->user()->id);
 
         return response()->json([
             'message' => 'Pengaturan sistem berhasil diperbarui.',
+            'zoom_is_configured' => \App\Services\ZoomApiService::isConfigured(),
         ]);
+    }
+
+    /**
+     * Test Zoom API connection via Server-to-Server OAuth
+     */
+    public function testZoomConnection(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        // If credentials are provided in request body, temporarily apply or test with them
+        if ($request->filled('zoom_account_id') && $request->filled('zoom_client_id')) {
+            if ($request->filled('zoom_client_secret')) {
+                SystemSetting::set('zoom_account_id', trim($request->input('zoom_account_id')));
+                SystemSetting::set('zoom_client_id', trim($request->input('zoom_client_id')));
+                SystemSetting::set('zoom_client_secret', trim($request->input('zoom_client_secret')));
+            }
+            if ($request->has('zoom_host_email')) {
+                SystemSetting::set('zoom_host_email', trim($request->input('zoom_host_email') ?? ''));
+            }
+        }
+
+        $result = \App\Services\ZoomApiService::testConnection();
+
+        return response()->json($result);
     }
 }

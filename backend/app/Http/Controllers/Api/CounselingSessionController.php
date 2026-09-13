@@ -100,6 +100,18 @@ class CounselingSessionController extends Controller
         // Generate meeting identifiers
         $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
         $meetingPassword = 'bk' . rand(1000, 9999);
+        $meetingUrl = null;
+        $sessionMethod = ($case->method || 'ZOOM');
+
+        if (strtoupper($sessionMethod) === 'ZOOM') {
+            $topic = "Bimbingan Konseling: {$case->category} - " . ($case->user->name ?? 'Mahasiswa');
+            $duration = max(15, $startAt->diffInMinutes($endAt));
+            $zoomResult = \App\Services\ZoomApiService::createMeeting($topic, $startAt->toIso8601String(), $duration);
+
+            $meetingNumber = $zoomResult['id'] ?? $meetingNumber;
+            $meetingPassword = $zoomResult['password'] ?? $meetingPassword;
+            $meetingUrl = $zoomResult['join_url'] ?? null;
+        }
 
         // Create Counseling Session
         $session = CounselingSession::create([
@@ -108,10 +120,12 @@ class CounselingSessionController extends Controller
             'tutor_id' => $availability->tutor_id,
             'start_at' => $startAt,
             'end_at' => $endAt,
+            'method' => $sessionMethod,
             'status' => 'SCHEDULED',
             'meeting_provider' => 'zoom',
             'meeting_number' => $meetingNumber,
             'meeting_password' => $meetingPassword,
+            'meeting_url' => $meetingUrl,
             'zoom_meeting_id' => $meetingNumber,
         ]);
 

@@ -26,6 +26,10 @@ import {
   Compass,
   Edit3,
   Eye,
+  EyeOff,
+  ExternalLink,
+  AlertTriangle,
+  Loader2,
   Clock,
   Calendar,
   X,
@@ -47,7 +51,18 @@ export const AdminDashboard = () => {
     tutor_assignment_mode: 'student_select',
     crisis_flag_enabled: true,
     zoom_mock_mode: true,
+    zoom_account_id: '',
+    zoom_client_id: '',
+    zoom_client_secret: '',
+    zoom_client_secret_masked: '',
+    zoom_has_client_secret: false,
+    zoom_host_email: '',
+    zoom_is_configured: false,
   });
+  const [isTestingZoom, setIsTestingZoom] = useState(false);
+  const [zoomTestResult, setZoomTestResult] = useState(null);
+  const [showZoomSecret, setShowZoomSecret] = useState(false);
+  const [showZoomGuide, setShowZoomGuide] = useState(false);
 
   // CMS Landing Content State
   const [landingContent, setLandingContent] = useState(null);
@@ -121,6 +136,31 @@ export const AdminDashboard = () => {
       showError(err.message || 'Gagal menyimpan pengaturan.');
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleTestZoomConnection = async () => {
+    setIsTestingZoom(true);
+    setZoomTestResult(null);
+    try {
+      const res = await api.post('/admin/zoom/test-connection', {
+        zoom_account_id: settings.zoom_account_id,
+        zoom_client_id: settings.zoom_client_id,
+        zoom_client_secret: settings.zoom_client_secret || undefined,
+        zoom_host_email: settings.zoom_host_email,
+      });
+      setZoomTestResult(res);
+      if (res.success) {
+        showSuccess('Koneksi ke Akun Zoom berhasil terverifikasi!');
+      } else {
+        showError(res.message || 'Koneksi ke Zoom gagal.');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Gagal menghubungi server Zoom.';
+      setZoomTestResult({ success: false, message: msg });
+      showError(msg);
+    } finally {
+      setIsTestingZoom(false);
     }
   };
 
@@ -1850,21 +1890,254 @@ export const AdminDashboard = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between py-2 border-t border-gray-100">
-            <div>
-              <h4 className="text-xs font-bold text-darktext">Zoom SDK Mock Mode (Development)</h4>
-              <p className="text-[11px] text-mutedtext">
-                Simulasi panggilan video interaktif tanpa memblokir testing lokal.
-              </p>
+          {/* Zoom Server-to-Server OAuth Integration Card */}
+          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-teal-50/20 border border-slate-200/90 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-soft-xs">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    Integrasi Akun Zoom (Server-to-Server OAuth)
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Jadwalkan konseling otomatis langsung ke akun dan kalender Zoom Anda.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                  settings.zoom_mock_mode
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : settings.zoom_is_configured
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}>
+                  {settings.zoom_mock_mode
+                    ? '🟡 Mock Mode (Simulasi Lokal)'
+                    : settings.zoom_is_configured
+                    ? '🟢 Live Zoom API (Terkonfigurasi)'
+                    : '⚪ Belum Dikonfigurasi'}
+                </span>
+              </div>
             </div>
-            <input
-              type="checkbox"
-              checked={settings.zoom_mock_mode}
-              onChange={(e) =>
-                setSettings({ ...settings, zoom_mock_mode: e.target.checked })
-              }
-              className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500"
-            />
+
+            {/* Mode Switcher */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label
+                className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
+                  settings.zoom_mock_mode
+                    ? 'bg-white border-emerald-600 shadow-soft-xs ring-2 ring-emerald-600/10'
+                    : 'bg-white/80 border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="zoom_mode"
+                  checked={settings.zoom_mock_mode}
+                  onChange={() => setSettings({ ...settings, zoom_mock_mode: true })}
+                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-slate-900 block">Simulasi / Mock Mode (Development)</span>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block leading-relaxed">
+                    Sesi video berjalan di browser tanpa perlu akun Zoom berbayar. Bebas testing alur konseling.
+                  </span>
+                </div>
+              </label>
+
+              <label
+                className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
+                  !settings.zoom_mock_mode
+                    ? 'bg-white border-blue-600 shadow-soft-xs ring-2 ring-blue-600/10'
+                    : 'bg-white/80 border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="zoom_mode"
+                  checked={!settings.zoom_mock_mode}
+                  onChange={() => setSettings({ ...settings, zoom_mock_mode: false })}
+                  className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-slate-900 block">Live Akun Zoom Resmi (Otomatis)</span>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block leading-relaxed">
+                    Otomatis buat jadwal meeting di akun Zoom host & kirim link resmi ke mahasiswa.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {/* Quick Tutorial Toggle */}
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-950">
+              <div
+                onClick={() => setShowZoomGuide(!showZoomGuide)}
+                className="flex items-center justify-between cursor-pointer font-bold select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Panduan Cara Buat Kredensial Server-to-Server OAuth di marketplace.zoom.us (Gratis)</span>
+                </div>
+                <span className="text-[11px] text-blue-700 underline">
+                  {showZoomGuide ? 'Sembunyikan' : 'Lihat Langkah'}
+                </span>
+              </div>
+
+              {showZoomGuide && (
+                <div className="mt-2.5 pt-2.5 border-t border-blue-200/70 space-y-1.5 text-[11px] leading-relaxed text-slate-700">
+                  <p>
+                    1. Buka <a href="https://marketplace.zoom.us" target="_blank" rel="noreferrer" className="font-bold text-blue-700 underline inline-flex items-center gap-0.5">marketplace.zoom.us <ExternalLink className="w-2.5 h-2.5" /></a> dan login dengan akun Zoom Anda.
+                  </p>
+                  <p>
+                    2. Klik menu <strong>Develop</strong> di kanan/kiri bawah, pilih <strong>Build an App</strong>.
+                  </p>
+                  <p>
+                    3. Pilih kartu <strong>Server-to-Server OAuth</strong>, lalu klik <strong>Create</strong> dan beri nama aplikasi (contoh: <em>Ruang BK UINSSC</em>).
+                  </p>
+                  <p>
+                    4. Pada tab <strong>App Credentials</strong>, Anda akan melihat <strong>Account ID</strong>, <strong>Client ID</strong>, dan <strong>Client Secret</strong>. Salin ke kolom di bawah.
+                  </p>
+                  <p>
+                    5. Pada tab <strong>Scopes</strong>, klik <em>Add Scopes</em>, centang <code>meeting:write:admin</code> (atau <code>meeting:write</code>) dan <code>user:read:admin</code>.
+                  </p>
+                  <p>
+                    6. Buka tab <strong>Activation</strong> lalu klik tombol <strong>Activate your app</strong>. Selesai!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Credential Inputs */}
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Zoom Account ID
+                </label>
+                <input
+                  type="text"
+                  value={settings.zoom_account_id || ''}
+                  onChange={(e) => setSettings({ ...settings, zoom_account_id: e.target.value })}
+                  placeholder="Contoh: xYzAbCdEfG123456"
+                  className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Zoom Client ID
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.zoom_client_id || ''}
+                    onChange={(e) => setSettings({ ...settings, zoom_client_id: e.target.value })}
+                    placeholder="Contoh: aBcDeFgHiJkLmNoP"
+                    className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Zoom Client Secret
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showZoomSecret ? 'text' : 'password'}
+                      value={settings.zoom_client_secret || ''}
+                      onChange={(e) => setSettings({ ...settings, zoom_client_secret: e.target.value })}
+                      placeholder={settings.zoom_has_client_secret ? `${settings.zoom_client_secret_masked} (Tersimpan - isi jika ingin ganti)` : 'Tempel Client Secret di sini'}
+                      className="w-full h-10 px-3.5 pr-10 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowZoomSecret(!showZoomSecret)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    >
+                      {showZoomSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Email Host Akun Zoom (Opsional)
+                </label>
+                <input
+                  type="email"
+                  value={settings.zoom_host_email || ''}
+                  onChange={(e) => setSettings({ ...settings, zoom_host_email: e.target.value })}
+                  placeholder="Kosongkan untuk otomatis menggunakan akun utama ('me') atau isi email akun Zoom"
+                  className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Jika akun Zoom Anda memiliki beberapa lisensi konselor, Anda dapat mengisi email host konselor di sini.
+                </span>
+              </div>
+            </div>
+
+            {/* Test Connection Button & Status */}
+            <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <button
+                type="button"
+                disabled={isTestingZoom || !settings.zoom_account_id || !settings.zoom_client_id}
+                onClick={handleTestZoomConnection}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-soft-xs flex items-center gap-2 transition-colors cursor-pointer min-h-[38px]"
+              >
+                {isTestingZoom ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menguji Koneksi ke Zoom...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Uji Koneksi Zoom API</span>
+                  </>
+                )}
+              </button>
+
+              <span className="text-[11px] text-slate-500">
+                Memverifikasi apakah kredensial valid dan dapat mengakses Zoom API.
+              </span>
+            </div>
+
+            {/* Connection Test Result Box */}
+            {zoomTestResult && (
+              <div className={`p-3.5 rounded-xl border text-xs ${
+                zoomTestResult.success
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-rose-50 border-rose-200 text-rose-900'
+              }`}>
+                <div className="flex items-center gap-2 font-bold mb-1">
+                  {zoomTestResult.success ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  )}
+                  <span>{zoomTestResult.message}</span>
+                </div>
+                {zoomTestResult.data && (
+                  <div className="mt-2 pt-2 border-t border-emerald-200/70 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-slate-500 block">Nama Akun:</span>
+                      <strong className="text-slate-800">{zoomTestResult.data.name || '-'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Email:</span>
+                      <strong className="text-slate-800">{zoomTestResult.data.email || '-'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Tipe Akun:</span>
+                      <strong className="text-slate-800">{zoomTestResult.data.account_type || '-'}</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <button

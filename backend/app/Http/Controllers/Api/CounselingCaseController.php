@@ -131,6 +131,17 @@ class CounselingCaseController extends Controller
 
                 $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
                 $meetingPassword = 'bk' . rand(1000, 9999);
+                $meetingUrl = null;
+
+                if ($method === 'ZOOM') {
+                    $topic = "Bimbingan Konseling: {$case->category} - " . ($user->name ?? 'Mahasiswa');
+                    $duration = max(15, $startAt->diffInMinutes($endAt));
+                    $zoomResult = \App\Services\ZoomApiService::createMeeting($topic, $startAt->toIso8601String(), $duration);
+
+                    $meetingNumber = $zoomResult['id'] ?? $meetingNumber;
+                    $meetingPassword = $zoomResult['password'] ?? $meetingPassword;
+                    $meetingUrl = $zoomResult['join_url'] ?? null;
+                }
 
                 $session = CounselingSession::create([
                     'counseling_case_id' => $case->id,
@@ -144,6 +155,7 @@ class CounselingCaseController extends Controller
                     'meeting_provider' => 'zoom',
                     'meeting_number' => $meetingNumber,
                     'meeting_password' => $meetingPassword,
+                    'meeting_url' => $meetingUrl,
                     'zoom_meeting_id' => $meetingNumber,
                 ]);
 
