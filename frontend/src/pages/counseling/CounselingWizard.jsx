@@ -387,150 +387,175 @@ export const CounselingWizard = () => {
         {/* STEP 2: PILIH METODE KONSELING */}
         {currentStep === 2 && (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+            className="space-y-3.5"
           >
-            {/* Nara Guide Header for Step 2 */}
-            <div className="flex items-center gap-3.5 p-4 rounded-3xl bg-white border border-emerald-100/90 shadow-soft-xs">
-              <VirtualGuide mode="avatar" expression="neutral" size="sm" />
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <span className="text-xs sm:text-sm font-black text-emerald-950 block">
-                  Saya Nara, asisten virtual Anda.
-                </span>
-                <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                  Silakan pilih metode konsultasi yang membuat Anda paling nyaman (Chat, Video Zoom, atau Tatap Muka Langsung).
+            {/* Main Section Header */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-soft-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-black border border-emerald-200/70">
+                  <Sparkles className="w-3 h-3 text-emerald-600" />
+                  <span>Langkah 2: Pilih Metode</span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Format Pertemuan Konseling
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
+                  Pilih metode pertemuan yang membuat Anda paling nyaman. Semua sesi dilakukan secara privat dan terjaga kerahasiaannya.
                 </p>
+              </div>
+
+              <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-emerald-900 text-xs font-bold shrink-0">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>100% Privat & Rahasia</span>
               </div>
             </div>
 
-            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-soft-sm space-y-1">
-              <h2 className="text-lg sm:text-xl font-black text-slate-900">
-                Format Pertemuan Konseling
-              </h2>
-              <p className="text-xs text-slate-500">
-                Semua metode dilakukan secara privat dan terjaga kerahasiaannya.
-              </p>
-            </div>
-
-            <div className="space-y-3">
+            {/* 3-Column Responsive Grid (Proportional 1 Screen View) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               {/* Card A: CHAT */}
               <div
                 onClick={() => setSelectedMethod('CHAT')}
-                className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                className={`relative p-4 sm:p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                   selectedMethod === 'CHAT'
                     ? 'bg-emerald-50/80 border-emerald-600 shadow-soft-sm ring-2 ring-emerald-600/20'
-                    : 'bg-white border-slate-200 hover:border-emerald-300'
+                    : 'bg-white border-slate-200/90 hover:border-emerald-300 hover:bg-slate-50/50'
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                      selectedMethod === 'CHAT'
-                        ? 'bg-emerald-600 text-white shadow-soft-xs'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    <MessageSquare className="w-6 h-6" />
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                        selectedMethod === 'CHAT'
+                          ? 'bg-emerald-600 text-white shadow-soft-xs'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                      }`}
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all shrink-0 ${
+                        selectedMethod === 'CHAT'
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                          : 'border-slate-300 bg-white text-transparent'
+                      }`}
+                    >
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
                   </div>
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm font-black text-slate-900">Chat Konseling</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed max-w-md">
-                      Konsultasi langsung melalui ruang chat pribadi bersama konselor pada jadwal yang telah ditentukan.
-                    </p>
-                  </div>
+
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 mb-1">
+                    Chat Konseling
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Konsultasi interaktif melalui ruang obrolan teks privat bersama konselor pada jadwal yang ditentukan.
+                  </p>
                 </div>
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center border shrink-0 ml-3 ${
-                    selectedMethod === 'CHAT'
-                      ? 'bg-emerald-600 border-emerald-600 text-white'
-                      : 'border-slate-300 text-transparent'
-                  }`}
-                >
-                  <Check className="w-3.5 h-3.5" />
+
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>Paling Fleksibel & Santai</span>
                 </div>
               </div>
 
               {/* Card B: VIDEO (ZOOM) */}
               <div
                 onClick={() => setSelectedMethod('ZOOM')}
-                className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                className={`relative p-4 sm:p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                   selectedMethod === 'ZOOM'
                     ? 'bg-emerald-50/80 border-emerald-600 shadow-soft-sm ring-2 ring-emerald-600/20'
-                    : 'bg-white border-slate-200 hover:border-emerald-300'
+                    : 'bg-white border-slate-200/90 hover:border-emerald-300 hover:bg-slate-50/50'
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                      selectedMethod === 'ZOOM'
-                        ? 'bg-emerald-600 text-white shadow-soft-xs'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    <Video className="w-6 h-6" />
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                        selectedMethod === 'ZOOM'
+                          ? 'bg-emerald-600 text-white shadow-soft-xs'
+                          : 'bg-blue-50 text-blue-700 border border-blue-100'
+                      }`}
+                    >
+                      <Video className="w-5 h-5" />
+                    </div>
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all shrink-0 ${
+                        selectedMethod === 'ZOOM'
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                          : 'border-slate-300 bg-white text-transparent'
+                      }`}
+                    >
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
                   </div>
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm font-black text-slate-900">Video Konseling (Zoom)</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed max-w-md">
-                      Konsultasi secara online tatap maya melalui Zoom terintegrasi langsung dari web bersama konselor.
-                    </p>
-                  </div>
+
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 mb-1">
+                    Video Konseling (Zoom)
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Konsultasi online tatap maya via Zoom yang terintegrasi langsung dari web bersama konselor.
+                  </p>
                 </div>
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center border shrink-0 ml-3 ${
-                    selectedMethod === 'ZOOM'
-                      ? 'bg-emerald-600 border-emerald-600 text-white'
-                      : 'border-slate-300 text-transparent'
-                  }`}
-                >
-                  <Check className="w-3.5 h-3.5" />
+
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-blue-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  <span>Tatap Maya Interaktif</span>
                 </div>
               </div>
 
               {/* Card C: OFFLINE (TATAP MUKA) */}
               <div
                 onClick={() => setSelectedMethod('OFFLINE')}
-                className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                className={`relative p-4 sm:p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                   selectedMethod === 'OFFLINE'
                     ? 'bg-emerald-50/80 border-emerald-600 shadow-soft-sm ring-2 ring-emerald-600/20'
-                    : 'bg-white border-slate-200 hover:border-emerald-300'
+                    : 'bg-white border-slate-200/90 hover:border-emerald-300 hover:bg-slate-50/50'
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                      selectedMethod === 'OFFLINE'
-                        ? 'bg-emerald-600 text-white shadow-soft-xs'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    <Building2 className="w-6 h-6" />
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                        selectedMethod === 'OFFLINE'
+                          ? 'bg-emerald-600 text-white shadow-soft-xs'
+                          : 'bg-purple-50 text-purple-700 border border-purple-100'
+                      }`}
+                    >
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all shrink-0 ${
+                        selectedMethod === 'OFFLINE'
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                          : 'border-slate-300 bg-white text-transparent'
+                      }`}
+                    >
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
                   </div>
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm font-black text-slate-900">Tatap Muka Langsung</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed max-w-md">
-                      Konsultasi fisik langsung bersama konselor di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2 Kampus.
-                    </p>
-                  </div>
+
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 mb-1">
+                    Tatap Muka Langsung
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Konsultasi fisik langsung bersama konselor di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2 Kampus.
+                  </p>
                 </div>
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center border shrink-0 ml-3 ${
-                    selectedMethod === 'OFFLINE'
-                      ? 'bg-emerald-600 border-emerald-600 text-white'
-                      : 'border-slate-300 text-transparent'
-                  }`}
-                >
-                  <Check className="w-3.5 h-3.5" />
+
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-purple-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  <span>Sesi Tatap Muka di Kampus</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2">
+            {/* Bottom Actions */}
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setCurrentStep(1)}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs sm:text-sm font-bold hover:bg-slate-50 flex items-center justify-center gap-1.5 min-h-[44px]"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs sm:text-sm font-bold hover:bg-slate-50 flex items-center justify-center gap-1.5 min-h-[42px] cursor-pointer transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Kembali ke Asesmen</span>
@@ -538,7 +563,7 @@ export const CounselingWizard = () => {
               <button
                 type="button"
                 onClick={handleNextFromMethod}
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 text-white font-bold text-xs sm:text-sm shadow-soft-xs flex items-center justify-center gap-2 min-h-[44px]"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white font-extrabold text-xs sm:text-sm shadow-soft-xs flex items-center justify-center gap-2 min-h-[42px] cursor-pointer transition-all hover:scale-102 active:scale-98"
               >
                 <span>Lanjut: Pilih Jadwal</span>
                 <ArrowRight className="w-4 h-4" />
