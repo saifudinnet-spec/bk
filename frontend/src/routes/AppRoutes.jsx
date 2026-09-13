@@ -38,6 +38,7 @@ const CounselingWizard = lazy(() => import('../pages/counseling/CounselingWizard
 const TutorDashboard = lazy(() => import('../pages/tutor/TutorDashboard'));
 const TutorStudents = lazy(() => import('../pages/tutor/TutorStudents'));
 const TutorSchedule = lazy(() => import('../pages/tutor/TutorSchedule'));
+const TutorProfile = lazy(() => import('../pages/tutor/TutorProfile'));
 
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
 
@@ -136,7 +137,7 @@ export const AppRoutes = () => {
           <Route path="students" element={<TutorStudents />} />
           <Route path="schedule" element={<TutorSchedule />} />
           <Route path="cases" element={<TutorStudents />} />
-          <Route path="profile" element={<Profile />} />
+          <Route path="profile" element={<TutorProfile />} />
         </Route>
 
         {/* Admin Portal Routes */}

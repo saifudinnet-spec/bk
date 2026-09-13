@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\QuestionnaireController;
 use App\Http\Controllers\Api\SessionFeedbackController;
 use App\Http\Controllers\Api\StudentDashboardController;
+use App\Http\Controllers\Api\TutorProfileController;
 use App\Http\Controllers\Api\TutorScheduleController;
 use App\Http\Controllers\Api\ZoomController;
 use Illuminate\Support\Facades\Route;
@@ -76,6 +77,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cases/{id}/respond-method-suggestion', [CounselingCaseController::class, 'respondMethodSuggestion']);
 
     // Tutor Schedules & Sessions
+    Route::get('/tutor/my-profile', [TutorProfileController::class, 'getProfile']);
+    Route::post('/tutor/my-profile', [TutorProfileController::class, 'updateProfile']);
+    Route::put('/tutor/my-profile', [TutorProfileController::class, 'updateProfile']);
+
     Route::get('/tutors', [TutorScheduleController::class, 'getTutors']);
     Route::get('/tutors/{id}', [TutorScheduleController::class, 'show']);
     Route::get('/tutors/{id}/slots', [TutorScheduleController::class, 'getTutorSlots']);

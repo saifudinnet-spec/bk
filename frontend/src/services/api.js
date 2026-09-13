@@ -44,9 +44,11 @@ class ApiClient {
     const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     const token = this.getToken();
 
+    const isFormData = options.body instanceof FormData;
+
     const headers = {
       'Accept': 'application/json',
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers,
     };
@@ -86,17 +88,19 @@ class ApiClient {
   }
 
   post(endpoint, body = {}, headers = {}) {
+    const isFormData = body instanceof FormData;
     return this.request(endpoint, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: isFormData ? body : JSON.stringify(body),
       headers,
     });
   }
 
   put(endpoint, body = {}, headers = {}) {
+    const isFormData = body instanceof FormData;
     return this.request(endpoint, {
       method: 'PUT',
-      body: JSON.stringify(body),
+      body: isFormData ? body : JSON.stringify(body),
       headers,
     });
   }

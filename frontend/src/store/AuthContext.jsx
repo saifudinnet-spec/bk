@@ -111,6 +111,10 @@ export const AuthProvider = ({ children }) => {
         registerGeneral,
         logout,
         refreshUser: fetchCurrentUser,
+        updateUser: (updatedUser) => {
+          setUser(updatedUser);
+          api.setUser(updatedUser);
+        },
       }}
     >
       {children}
