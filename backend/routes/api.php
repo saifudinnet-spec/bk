@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\QuestionnaireController;
 use App\Http\Controllers\Api\SessionFeedbackController;
 use App\Http\Controllers\Api\StudentDashboardController;
+use App\Http\Controllers\Api\TtsController;
 use App\Http\Controllers\Api\TutorProfileController;
 use App\Http\Controllers\Api\TutorScheduleController;
 use App\Http\Controllers\Api\ZoomController;
@@ -36,6 +37,10 @@ Route::get('/landing-content', [LandingContentController::class, 'show']);
 
 Route::post('/campus/lookup', [CampusApiController::class, 'lookup']);
 Route::get('/questionnaires/active', [QuestionnaireController::class, 'getActive']);
+
+// Nara Virtual Assistant Natural TTS Voice Stream
+Route::get('/tts', [TtsController::class, 'stream']);
+Route::get('/tts/voices', [TtsController::class, 'voices']);
 
 // Public Topics & Tutors for Jalur A & Jalur B
 Route::get('/topics', [CounselingTopicController::class, 'index']);

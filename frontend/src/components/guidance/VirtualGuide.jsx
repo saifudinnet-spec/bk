@@ -12,12 +12,18 @@ import {
   HelpCircle,
   Lightbulb,
   Square,
-  Play
+  Play,
+  Settings2,
+  Headphones,
+  Check,
+  X,
+  Radio,
+  SlidersHorizontal,
+  Loader2,
 } from 'lucide-react';
 
 /**
  * Play a gentle, cheerful synthesized chime using Web Audio API
- * (Clippy / Office Assistant sound feel, zero external audio assets)
  */
 const playAssistantChime = () => {
   try {
@@ -31,7 +37,6 @@ const playAssistantChime = () => {
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    // Arpeggio note: C5 -> E5 -> G5
     const now = ctx.currentTime;
     osc.frequency.setValueAtTime(523.25, now); // C5
     osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.08); // E5
@@ -51,40 +56,91 @@ const playAssistantChime = () => {
 };
 
 /**
- * Nara Speech Synthesis Engine
- * Menghasilkan narasi suara perempuan Indonesia yang halus, ramah, dan santai.
+ * List of available Indonesian natural voices for Nara
  */
-export const speakNaraVoice = (text, { onStart, onEnd, onError } = {}) => {
+export const NARA_VOICES = [
+  {
+    id: 'gadis',
+    name: 'Nara Gadis',
+    badge: '⭐ Paling Natural',
+    gender: 'Wanita',
+    color: 'emerald',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    character: 'Suara perempuan Indonesia neural berintonasi halus, ramah, dan sangat alami layaknya manusia.',
+    sampleText: 'Halo! Saya Nara, asisten virtual Anda. Yuk luangkan dua menit menjawab pertanyaan ini dengan santai.',
+  },
+  {
+    id: 'siti',
+    name: 'Nara Siti',
+    badge: '🍃 Lembut & Santun',
+    gender: 'Wanita',
+    color: 'teal',
+    badgeClass: 'bg-teal-100 text-teal-800 border-teal-300',
+    character: 'Karakter suara yang lebih tenang, teduh, santun, dan sangat menenangkan untuk suasana rileks.',
+    sampleText: 'Tarik napas sejenak ya. Ceritamu aman dan dijamin kerahasiaannya bersama konselor.',
+  },
+  {
+    id: 'google',
+    name: 'Nara Google',
+    badge: '⚡ Artikulasi Jelas',
+    gender: 'Wanita',
+    color: 'blue',
+    badgeClass: 'bg-blue-100 text-blue-800 border-blue-300',
+    character: 'Suara jernih khas Google berbahasa Indonesia dengan artikulasi tegas dan tempo teratur.',
+    sampleText: 'Yuk pilih salah satu jawaban yang paling mewakili situasimu saat ini.',
+  },
+  {
+    id: 'browser',
+    name: 'Suara Sistem Browser',
+    badge: '💻 Bawaan Komputer',
+    gender: 'Sistem',
+    color: 'slate',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-300',
+    character: 'Synthesizer lokal bawaan dari perangkat atau sistem operasi Anda (bisa diakses offline).',
+    sampleText: 'Ini adalah uji coba suara sintetis bawaan sistem operasi komputer Anda.',
+  },
+];
+
+// Active Audio Instance Singleton
+let currentAudioInstance = null;
+
+/**
+ * Stop any active Nara speech (both Audio stream & Web Speech API)
+ */
+export const stopNaraVoice = () => {
+  if (currentAudioInstance) {
+    try {
+      currentAudioInstance.pause();
+      currentAudioInstance.currentTime = 0;
+    } catch {}
+    currentAudioInstance = null;
+  }
+
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {}
+  }
+};
+
+/**
+ * Fallback: Browser Web Speech API
+ */
+const speakWithBrowserVoice = (text, { onStart, onEnd, onError } = {}) => {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    if (onEnd) onEnd();
     return false;
   }
 
-  // Cancel any ongoing speech
   window.speechSynthesis.cancel();
-
-  // Strip emojis and formatting characters so TTS pronounces naturally
-  const cleanText = text
-    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-    .replace(/[*_~`#💡❓✨🎉]/g, '')
-    .trim();
-
-  if (!cleanText) return false;
-
-  const utterance = new SpeechSynthesisUtterance(cleanText);
+  const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'id-ID';
+  utterance.pitch = 1.08;
+  utterance.rate = 0.95;
 
-  // Tuned for natural, gentle, feminine warmth in Indonesian
-  utterance.pitch = 1.08; // Sedikit lebih tinggi untuk kelembutan suara perempuan
-  utterance.rate = 0.95;  // Tempo tenang, ramah, dan mudah dipahami
-  utterance.volume = 1.0;
-
-  // Voice lookup with Indonesian female priority
-  const setBestVoice = () => {
-    const voices = window.speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) return;
-
-    // 1. Indonesian female neural voice (Windows / Edge: Gadis, Siti)
-    const indonesianFemale = voices.find(
+  const voices = window.speechSynthesis.getVoices();
+  if (voices && voices.length > 0) {
+    const idVoice = voices.find(
       (v) =>
         (v.lang === 'id-ID' || v.lang.toLowerCase().startsWith('id')) &&
         (v.name.toLowerCase().includes('gadis') ||
@@ -92,43 +148,17 @@ export const speakNaraVoice = (text, { onStart, onEnd, onError } = {}) => {
           v.name.toLowerCase().includes('female') ||
           v.name.toLowerCase().includes('wanita') ||
           v.name.toLowerCase().includes('natural'))
-    );
+    ) || voices.find((v) => v.lang === 'id-ID' || v.lang.toLowerCase().startsWith('id'));
 
-    // 2. Google Bahasa Indonesia in Chrome
-    const googleId = voices.find(
-      (v) =>
-        (v.lang === 'id-ID' || v.lang.toLowerCase().startsWith('id')) &&
-        v.name.toLowerCase().includes('google')
-    );
-
-    // 3. Any Indonesian voice
-    const anyId = voices.find(
-      (v) =>
-        v.lang === 'id-ID' ||
-        v.lang.toLowerCase().startsWith('id') ||
-        v.lang.toLowerCase().startsWith('in')
-    );
-
-    // 4. Fallback: Any gentle female voice
-    const fallbackFemale = voices.find(
-      (v) =>
-        v.name.toLowerCase().includes('female') ||
-        v.name.toLowerCase().includes('zira')
-    );
-
-    utterance.voice = indonesianFemale || googleId || anyId || fallbackFemale || null;
-  };
-
-  setBestVoice();
+    if (idVoice) utterance.voice = idVoice;
+  }
 
   utterance.onstart = () => {
     if (onStart) onStart();
   };
-
   utterance.onend = () => {
     if (onEnd) onEnd();
   };
-
   utterance.onerror = (e) => {
     if (onEnd) onEnd();
     if (onError) onError(e);
@@ -139,17 +169,276 @@ export const speakNaraVoice = (text, { onStart, onEnd, onError } = {}) => {
 };
 
 /**
- * Stop any active Nara speech
+ * Speak Nara Voice with high-quality natural Indonesian audio stream
  */
-export const stopNaraVoice = () => {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
+export const speakNaraVoice = (
+  text,
+  {
+    voiceId = null,
+    rate = null,
+    onStart,
+    onEnd,
+    onError,
+  } = {}
+) => {
+  stopNaraVoice();
+
+  if (!text) {
+    if (onEnd) onEnd();
+    return false;
+  }
+
+  // Clean text: strip emojis, markdown characters, asterisks
+  const cleanText = text
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .replace(/[*_~`#💡❓✨🎉🎙️]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanText) {
+    if (onEnd) onEnd();
+    return false;
+  }
+
+  const selectedVoice = voiceId || localStorage.getItem('bk_nara_voice_choice') || 'gadis';
+  const selectedRate = rate || localStorage.getItem('bk_nara_voice_rate') || '+0%';
+
+  // If user explicitly chose local browser synthesizer
+  if (selectedVoice === 'browser') {
+    return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
+  }
+
+  try {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+    const streamUrl = `${apiBase}/tts?text=${encodeURIComponent(cleanText)}&voice=${encodeURIComponent(selectedVoice)}&rate=${encodeURIComponent(selectedRate)}`;
+
+    const audio = new Audio(streamUrl);
+    currentAudioInstance = audio;
+
+    let hasStarted = false;
+
+    audio.onplay = () => {
+      hasStarted = true;
+      if (onStart) onStart();
+    };
+
+    audio.onended = () => {
+      currentAudioInstance = null;
+      if (onEnd) onEnd();
+    };
+
+    audio.onerror = (e) => {
+      console.warn('Backend TTS audio error, switching to browser speech synthesis fallback:', e);
+      currentAudioInstance = null;
+      speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
+    };
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        // Autoplay may be temporarily blocked until user interaction
+        console.warn('Playback error or interrupted:', err);
+        if (!hasStarted) {
+          currentAudioInstance = null;
+          if (onEnd) onEnd();
+        }
+      });
+    }
+
+    return true;
+  } catch (err) {
+    console.error('TTS execution error:', err);
+    return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
   }
 };
 
 /**
+ * Voice Settings Modal Component
+ */
+const VoiceSettingsModal = ({
+  isOpen,
+  onClose,
+  activeVoiceId,
+  onSelectVoice,
+  activeRate,
+  onSelectRate,
+  autoVoice,
+  onToggleAutoVoice,
+  onTestVoice,
+  testingVoiceId,
+}) => {
+  if (!isOpen) return null;
+
+  const rateOptions = [
+    { label: 'Santai (0.9x)', value: '-10%' },
+    { label: 'Normal (1.0x)', value: '+0%' },
+    { label: 'Cepat (1.1x)', value: '+10%' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+      <div
+        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-emerald-100 overflow-hidden text-slate-800"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
+              <Headphones className="w-5 h-5 text-emerald-100" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold tracking-tight">Karakter Suara Nara</h3>
+              <p className="text-xs text-emerald-100/90 font-medium">Pilih karakter suara wanita yang paling nyaman didengar</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center transition-colors cursor-pointer text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* Voice Cards */}
+          <div className="space-y-2.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              Pilihan Karakter Suara Wanita
+            </label>
+            <div className="space-y-2">
+              {NARA_VOICES.map((v) => {
+                const isSelected = activeVoiceId === v.id;
+                const isTestingThis = testingVoiceId === v.id;
+
+                return (
+                  <div
+                    key={v.id}
+                    className={`relative p-3.5 rounded-2xl border transition-all ${
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs'
+                        : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50/70'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-slate-900 text-sm">{v.name}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${v.badgeClass}`}>
+                            {v.badge}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">
+                          {v.character}
+                        </p>
+                      </div>
+
+                      {/* Right Action: Test Button & Radio */}
+                      <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => onTestVoice(v)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                            isTestingThis
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse'
+                              : 'bg-white hover:bg-emerald-100/70 text-emerald-800 border border-emerald-200 shadow-2xs'
+                          }`}
+                          title="Dengarkan contoh suara ini"
+                        >
+                          {isTestingThis ? (
+                            <>
+                              <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
+                              <span>Stop</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-2.5 h-2.5 fill-emerald-600 text-emerald-600" />
+                              <span>Tes</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onSelectVoice(v.id)}
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'border-2 border-slate-300 hover:border-emerald-500'
+                          }`}
+                          title={isSelected ? 'Suara aktif' : 'Pilih suara ini'}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Speed / Rate Setting */}
+          <div className="pt-2 border-t border-slate-100">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
+              Kecepatan Suara
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {rateOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onSelectRate(opt.value)}
+                  className={`py-2 px-2 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
+                    activeRate === opt.value
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Auto Voice Toggle */}
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100">
+            <div>
+              <div className="text-xs font-bold text-emerald-950">Suara Otomatis</div>
+              <div className="text-[11px] text-slate-500 font-medium">Otomatis bacakan panduan saat berpindah pertanyaan</div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoVoice}
+                onChange={(e) => onToggleAutoVoice(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+            </label>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-soft-sm transition-colors cursor-pointer"
+          >
+            Selesai
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
  * Nara – 3D Interactive Virtual Assistant (Clippy-Style)
- * With Indonesian Female Voice (Speech Synthesis) & 3D Interactive Avatar
+ * Featuring Natural Indonesian Female Voice Engine & 3D Interactive Avatar
  */
 export const VirtualGuide = ({
   mode = 'sidebar', // 'sidebar' | 'floating' | 'assistant' | 'avatar' | 'compact'
@@ -171,8 +460,24 @@ export const VirtualGuide = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [pokeMessage, setPokeMessage] = useState(null);
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
-  
-  // Persisted auto-voice preference
+
+  // Voice Settings State
+  const [voiceChoice, setVoiceChoice] = useState(() => {
+    try {
+      return localStorage.getItem('bk_nara_voice_choice') || 'gadis';
+    } catch {
+      return 'gadis';
+    }
+  });
+
+  const [voiceRate, setVoiceRate] = useState(() => {
+    try {
+      return localStorage.getItem('bk_nara_voice_rate') || '+0%';
+    } catch {
+      return '+0%';
+    }
+  });
+
   const [autoVoice, setAutoVoice] = useState(() => {
     try {
       return localStorage.getItem('bk_nara_autovoice') === 'true';
@@ -181,7 +486,13 @@ export const VirtualGuide = ({
     }
   });
 
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [testingVoiceId, setTestingVoiceId] = useState(null);
+
   const characterRef = useRef(null);
+
+  // Active Voice Meta
+  const activeVoiceMeta = NARA_VOICES.find((v) => v.id === voiceChoice) || NARA_VOICES[0];
 
   // Status labels & icons
   const statusLabels = {
@@ -209,16 +520,8 @@ export const VirtualGuide = ({
   const activeImageSrc = poseImages[expression] || poseImages.neutral;
   const StatusIcon = statusIcons[expression] || Sparkles;
 
-  // Initialize browser voices
+  // Cleanup on unmount
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      const updateVoices = () => {
-        window.speechSynthesis.getVoices();
-      };
-      updateVoices();
-      window.speechSynthesis.onvoiceschanged = updateVoices;
-    }
-
     return () => {
       stopNaraVoice();
     };
@@ -237,12 +540,13 @@ export const VirtualGuide = ({
   }, []);
 
   // Speak handler
-  const handleSpeak = useCallback((customText = null) => {
+  const handleSpeak = useCallback((customText = null, overrideVoice = null) => {
     if (!soundEnabled) return;
 
     if (isSpeaking) {
       stopNaraVoice();
       setIsSpeaking(false);
+      setTestingVoiceId(null);
       return;
     }
 
@@ -250,11 +554,53 @@ export const VirtualGuide = ({
     if (!targetText) return;
 
     speakNaraVoice(targetText, {
+      voiceId: overrideVoice || voiceChoice,
+      rate: voiceRate,
       onStart: () => setIsSpeaking(true),
-      onEnd: () => setIsSpeaking(false),
-      onError: () => setIsSpeaking(false),
+      onEnd: () => {
+        setIsSpeaking(false);
+        setTestingVoiceId(null);
+      },
+      onError: () => {
+        setIsSpeaking(false);
+        setTestingVoiceId(null);
+      },
     });
-  }, [soundEnabled, isSpeaking, pokeMessage, speechText]);
+  }, [soundEnabled, isSpeaking, pokeMessage, speechText, voiceChoice, voiceRate]);
+
+  // Test voice sample in modal
+  const handleTestVoice = (voice) => {
+    if (testingVoiceId === voice.id && isSpeaking) {
+      stopNaraVoice();
+      setIsSpeaking(false);
+      setTestingVoiceId(null);
+      return;
+    }
+
+    setTestingVoiceId(voice.id);
+    handleSpeak(voice.sampleText, voice.id);
+  };
+
+  const handleSelectVoice = (vId) => {
+    setVoiceChoice(vId);
+    try {
+      localStorage.setItem('bk_nara_voice_choice', vId);
+    } catch {}
+  };
+
+  const handleSelectRate = (rVal) => {
+    setVoiceRate(rVal);
+    try {
+      localStorage.setItem('bk_nara_voice_rate', rVal);
+    } catch {}
+  };
+
+  const handleToggleAutoVoice = (val) => {
+    setAutoVoice(val);
+    try {
+      localStorage.setItem('bk_nara_autovoice', val ? 'true' : 'false');
+    } catch {}
+  };
 
   // Auto-speak on step / speechText change if autoVoice is enabled
   useEffect(() => {
@@ -289,12 +635,10 @@ export const VirtualGuide = ({
       }, 150);
     }
 
-    // Reset poke bounce after animation finishes
     setTimeout(() => {
       setIsPoked(false);
     }, 600);
 
-    // Reset temporary poke message after 6 seconds
     setTimeout(() => {
       setPokeMessage(null);
     }, 6000);
@@ -328,7 +672,6 @@ export const VirtualGuide = ({
             </div>
           )}
         </motion.div>
-        {/* Active Status Dot */}
         <span
           className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs"
           title="Nara aktif memandu"
@@ -412,13 +755,10 @@ export const VirtualGuide = ({
       <motion.div
         onClick={handlePoke}
         animate={{
-          // Levitation & breathing rhythm (subtle speaking bounce when speaking)
           y: isPoked ? [0, -20, 0] : isSpeaking ? [0, -10, 0, -5, 0] : [0, -8, 0],
           scale: isPoked ? [1, 1.05, 1] : isSpeaking ? [1, 1.025, 1] : [1, 1.015, 1],
-          // 3D perspective mouse tracking
           rotateY: mouseOffset.x * 12,
           rotateX: -mouseOffset.y * 6,
-          // Subtle natural side-tilt
           rotateZ: isPoked ? [0, -3, 3, 0] : [-1, 1, -1],
         }}
         transition={{
@@ -444,90 +784,92 @@ export const VirtualGuide = ({
         className="relative cursor-pointer transition-transform z-20"
         title="Klik Nara untuk mendengar sapaan suaranya!"
       >
-        {/* Soft Ambient Character Back-glow */}
         <div className="absolute inset-0 -m-2 bg-gradient-to-b from-emerald-300/20 via-teal-200/15 to-transparent rounded-full blur-xl pointer-events-none -z-10" />
 
-        {/* Character Image Cutout */}
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={activeImageSrc}
-            src={activeImageSrc}
-            alt="Nara - Asisten Virtual Ruang BK"
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.04 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className={`${activeHeight} w-auto object-contain drop-shadow-[0_12px_20px_rgba(0,0,0,0.16)] drop-shadow-[0_3px_8px_rgba(5,150,105,0.12)]`}
-            onError={() => setImageError(true)}
-          />
-        </AnimatePresence>
+        <img
+          src={activeImageSrc}
+          alt="Nara - Asisten Virtual Ruang BK"
+          className={`${activeHeight} w-auto object-contain drop-shadow-[0_12px_24px_rgba(5,150,105,0.22)] select-none pointer-events-none transition-all duration-300`}
+          loading="eager"
+        />
 
-        {/* Status Pill Badge Floating Below Character */}
+        {/* Floating Expression Badge */}
         <motion.div
-          animate={{ scale: [1, 1.03, 1] }}
-          transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
-          className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-md border border-emerald-200 shadow-soft-xs text-[9px] font-bold text-emerald-800 flex items-center gap-1.5 whitespace-nowrap"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          key={expression + (isSpeaking ? '-speaking' : '')}
+          className={`absolute -bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1.5 shadow-soft-sm whitespace-nowrap border z-30 ${
+            isSpeaking
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-300 ring-2 ring-emerald-400/40 animate-pulse'
+              : 'bg-white/95 text-slate-700 border-emerald-200 backdrop-blur-md'
+          }`}
         >
           {isSpeaking ? (
             <>
-              <Volume2 className="w-3 h-3 text-emerald-600 animate-pulse" />
-              <span className="text-emerald-700 font-extrabold">Nara Berbicara...</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+              <span>Nara Berbicara...</span>
             </>
           ) : (
             <>
-              <StatusIcon className="w-2.5 h-2.5 text-emerald-600 animate-pulse" />
+              <StatusIcon className="w-3 h-3 text-emerald-600" />
               <span>{statusLabels[expression] || 'Siap Memandu'}</span>
             </>
           )}
         </motion.div>
       </motion.div>
 
-      {/* 3D Levitating Ground Shadow */}
+      {/* 3D Dynamic Floor Contact Shadow */}
       <motion.div
         animate={{
-          scaleX: isPoked ? [1, 0.55, 1] : [1, 0.75, 1],
-          scaleY: isPoked ? [1, 0.5, 1] : [1, 0.7, 1],
-          opacity: isPoked ? [0.35, 0.1, 0.35] : [0.3, 0.14, 0.3],
+          scale: isPoked ? [1, 0.7, 1] : isSpeaking ? [0.95, 1.05, 0.95] : [0.9, 1.1, 0.9],
+          opacity: isPoked ? [0.6, 0.2, 0.6] : [0.35, 0.55, 0.35],
         }}
         transition={{
           repeat: Infinity,
-          duration: 3.4,
+          duration: isSpeaking ? 1.6 : 3.4,
           ease: 'easeInOut',
         }}
-        className="w-20 sm:w-28 h-2 bg-emerald-950/25 rounded-full blur-[3px] mt-1 pointer-events-none"
+        className="w-24 sm:w-32 h-3.5 bg-emerald-950/20 rounded-full blur-xs mt-1"
       />
     </div>
   );
 
-  // Standalone Floating Mode
-  if (mode === 'floating') {
-    return (
-      <div className={`flex flex-col items-center ${className}`}>
-        {render3DCharacter()}
-      </div>
-    );
-  }
-
   // SIDEBAR MODE (NARA DISAMPING FORM - CLIPPY ASSISTANT STYLE)
   if (mode === 'sidebar') {
     return (
-      <div className={`flex flex-col items-center w-full max-w-sm lg:max-w-xs mx-auto ${className}`}>
-        {/* Speech Bubble Card */}
-        <div className="w-full relative p-3 sm:p-3.5 rounded-2xl bg-white/95 backdrop-blur-md border border-emerald-100 shadow-2xs text-slate-800 space-y-2">
-          {/* Arrow Pointer Pointing Downwards to Nara's Head on Desktop */}
-          <div className="hidden lg:block absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-r border-b border-emerald-100/90" />
+      <div className={`relative flex flex-col ${className}`}>
+        {/* Voice Settings Modal */}
+        <VoiceSettingsModal
+          isOpen={isVoiceModalOpen}
+          onClose={() => setIsVoiceModalOpen(false)}
+          activeVoiceId={voiceChoice}
+          onSelectVoice={handleSelectVoice}
+          activeRate={voiceRate}
+          onSelectRate={handleSelectRate}
+          autoVoice={autoVoice}
+          onToggleAutoVoice={handleToggleAutoVoice}
+          onTestVoice={handleTestVoice}
+          testingVoiceId={testingVoiceId}
+        />
 
-          {/* Header Bar */}
-          <div className="flex items-center justify-between gap-1.5 border-b border-emerald-50/80 pb-1.5">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-black text-emerald-950 tracking-tight flex items-center gap-1">
+        {/* Speech Bubble on Top with pointer pointing down to Nara */}
+        <div className="relative p-3.5 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-emerald-100 shadow-soft-sm text-slate-800 space-y-2.5">
+          {/* Arrow Pointer Pointing Downwards to Nara's Head */}
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-emerald-100/90" />
+
+          {/* Assistant Header */}
+          <div className="flex items-center justify-between gap-1.5 border-b border-emerald-50 pb-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div className="text-xs font-black text-emerald-950 tracking-tight truncate flex items-center gap-1">
                 <span>Nara</span>
-                <span className="text-emerald-600 text-[11px]">✨</span>
-              </span>
+                <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100">
+                  {activeVoiceMeta.name.replace('Nara ', '')}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -535,9 +877,18 @@ export const VirtualGuide = ({
                   setSoundEnabled(!soundEnabled);
                 }}
                 className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                title={soundEnabled ? 'Matikan suara' : 'Nyalakan suara'}
+                title={soundEnabled ? 'Matikan suara panduan' : 'Nyalakan suara panduan'}
               >
-                {soundEnabled ? <Volume2 className="w-3 h-3 text-emerald-600" /> : <VolumeX className="w-3 h-3 text-rose-500" />}
+                {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5 text-rose-500" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsVoiceModalOpen(true)}
+                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                title="Pilih karakter suara wanita Nara"
+              >
+                <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
 
               {onToggleMinimize && (
@@ -547,13 +898,9 @@ export const VirtualGuide = ({
                   className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                   title="Minimalkan panduan Nara"
                 >
-                  <Minimize2 className="w-3 h-3" />
+                  <Minimize2 className="w-3.5 h-3.5" />
                 </button>
               )}
-
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                {stepTitle}
-              </span>
             </div>
           </div>
 
@@ -576,29 +923,40 @@ export const VirtualGuide = ({
           </AnimatePresence>
 
           {/* Nara Voice Player Bar (Dedicated Voice Controls) */}
-          <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-emerald-50/80 text-[11px]">
-            <button
-              type="button"
-              onClick={() => handleSpeak()}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[11px] transition-all cursor-pointer shadow-2xs ${
-                isSpeaking
-                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
-                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
-              }`}
-              title={isSpeaking ? 'Hentikan suara Nara' : 'Dengarkan suara perempuan Indonesia yang halus'}
-            >
-              {isSpeaking ? (
-                <>
-                  <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
-                  <span>Hentikan Suara</span>
-                </>
-              ) : (
-                <>
-                  <Volume2 className="w-3 h-3 text-emerald-600" />
-                  <span>Suara Nara 🎙️</span>
-                </>
-              )}
-            </button>
+          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-emerald-50/80 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleSpeak()}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[11px] transition-all cursor-pointer shadow-2xs ${
+                  isSpeaking
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
+                }`}
+                title={isSpeaking ? 'Hentikan suara Nara' : `Putar suara wanita ${activeVoiceMeta.name}`}
+              >
+                {isSpeaking ? (
+                  <>
+                    <Square className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
+                    <span>Hentikan Suara</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3 h-3 text-emerald-600" />
+                    <span>Suara Nara 🎙️</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsVoiceModalOpen(true)}
+                className="p-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 transition-colors cursor-pointer"
+                title="Ganti karakter suara wanita Nara"
+              >
+                <SlidersHorizontal className="w-3 h-3" />
+              </button>
+            </div>
 
             {/* Audio Wave Visualizer while speaking / Auto-voice toggle */}
             {isSpeaking ? (
@@ -614,16 +972,10 @@ export const VirtualGuide = ({
                 <input
                   type="checkbox"
                   checked={autoVoice}
-                  onChange={(e) => {
-                    const val = e.target.checked;
-                    setAutoVoice(val);
-                    try {
-                      localStorage.setItem('bk_nara_autovoice', val ? 'true' : 'false');
-                    } catch {}
-                  }}
+                  onChange={(e) => handleToggleAutoVoice(e.target.checked)}
                   className="w-3 h-3 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
                 />
-                <span>Auto Suara</span>
+                <span>Auto</span>
               </label>
             )}
           </div>
@@ -674,6 +1026,20 @@ export const VirtualGuide = ({
   // Horizontal Assistant Experience (Speech Bubble beside Character)
   return (
     <div className={`relative flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 ${className}`}>
+      {/* Voice Settings Modal */}
+      <VoiceSettingsModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        activeVoiceId={voiceChoice}
+        onSelectVoice={handleSelectVoice}
+        activeRate={voiceRate}
+        onSelectRate={handleSelectRate}
+        autoVoice={autoVoice}
+        onToggleAutoVoice={handleToggleAutoVoice}
+        onTestVoice={handleTestVoice}
+        testingVoiceId={testingVoiceId}
+      />
+
       {/* 3D Moving Assistant Character */}
       <div className="shrink-0 flex justify-center">
         {render3DCharacter()}
@@ -692,6 +1058,9 @@ export const VirtualGuide = ({
               <span className="text-xs sm:text-sm font-black text-emerald-950 tracking-tight flex items-center gap-1.5">
                 <span>Saya Nara, asisten virtual Anda.</span>
                 <span className="text-emerald-600 text-xs">✨</span>
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 ml-1 hidden sm:inline-block">
+                  {activeVoiceMeta.name}
+                </span>
               </span>
             </div>
 
@@ -706,6 +1075,15 @@ export const VirtualGuide = ({
                 title={soundEnabled ? 'Matikan suara panduan' : 'Nyalakan suara panduan'}
               >
                 {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5 text-rose-500" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsVoiceModalOpen(true)}
+                className="p-1 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                title="Pilih karakter suara wanita Nara"
+              >
+                <Settings2 className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
               </button>
 
               {onToggleMinimize && (
@@ -743,28 +1121,40 @@ export const VirtualGuide = ({
 
           {/* Voice Player Bar */}
           <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
-            <button
-              type="button"
-              onClick={() => handleSpeak()}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs transition-all cursor-pointer shadow-2xs ${
-                isSpeaking
-                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
-                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
-              }`}
-              title={isSpeaking ? 'Hentikan suara Nara' : 'Dengarkan suara perempuan Indonesia yang halus'}
-            >
-              {isSpeaking ? (
-                <>
-                  <Square className="w-3 h-3 fill-rose-600 text-rose-600" />
-                  <span>Hentikan Suara</span>
-                </>
-              ) : (
-                <>
-                  <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Dengarkan Suara Nara 🎙️</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleSpeak()}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs transition-all cursor-pointer shadow-2xs ${
+                  isSpeaking
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90'
+                }`}
+                title={isSpeaking ? 'Hentikan suara Nara' : `Dengarkan suara wanita ${activeVoiceMeta.name}`}
+              >
+                {isSpeaking ? (
+                  <>
+                    <Square className="w-3 h-3 fill-rose-600 text-rose-600" />
+                    <span>Hentikan Suara</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Dengarkan Suara Nara 🎙️</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsVoiceModalOpen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold text-xs transition-colors cursor-pointer"
+                title="Ganti karakter suara wanita Nara"
+              >
+                <SlidersHorizontal className="w-3 h-3" />
+                <span>Pilih Suara ({activeVoiceMeta.name.replace('Nara ', '')})</span>
+              </button>
+            </div>
 
             {/* Audio Wave Visualizer / Auto-voice option */}
             {isSpeaking ? (
@@ -780,13 +1170,7 @@ export const VirtualGuide = ({
                 <input
                   type="checkbox"
                   checked={autoVoice}
-                  onChange={(e) => {
-                    const val = e.target.checked;
-                    setAutoVoice(val);
-                    try {
-                      localStorage.setItem('bk_nara_autovoice', val ? 'true' : 'false');
-                    } catch {}
-                  }}
+                  onChange={(e) => handleToggleAutoVoice(e.target.checked)}
                   className="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
                 />
                 <span>Suara Otomatis Setiap Step</span>
