@@ -1,0 +1,344 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\SystemSetting;
+use App\Services\AuditLogService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class LandingContentController extends Controller
+{
+    /**
+     * Get default landing page content (Bicarakan.id inspired, Campus tailored).
+     */
+    public static function getDefaultContent(): array
+    {
+        return [
+            'hero' => [
+                'tagline' => 'Layanan Bimbingan Konseling & Pendampingan Psikologis',
+                'title' => "Beri Ruang untuk Dirimu.\nCeritakan, Pulihkan, Lanjutkan.",
+                'subtitle' => 'Akses layanan konseling profesional tanpa biaya untuk sivitas akademika. Ceritamu aman dan rahasia bersama kami',
+                'image_url' => '/images/banner1.jpg',
+                'layout_style' => 'banner_full',
+                'online_card_title' => 'Konseling Online',
+                'online_card_desc' => 'Sesi video privat via Zoom dari mana saja, fleksibel dengan jadwal kuliahmu.',
+                'offline_card_title' => 'Konseling Offline (Tatap Muka)',
+                'offline_card_desc' => 'Pertemuan tatap muka langsung di Ruang Konseling Gedung Pusat Kemahasiswaan.',
+            ],
+            'trust_badges' => [
+                ['icon' => 'ShieldCheck', 'text' => 'Bebas Biaya'],
+                ['icon' => 'Award', 'text' => 'Psikolog & Konselor Berlisensi'],
+                ['icon' => 'Lock', 'text' => 'Kerahasiaan Data Terjamin'],
+                ['icon' => 'Video', 'text' => 'Pilihan Online & Tatap Muka'],
+            ],
+            'problems' => [
+                'title' => 'Sedang Menghadapi Masalah Apa?',
+                'subtitle' => 'Setiap tantangan memiliki jalan keluar. Temukan konselor dengan keahlian yang tepat untuk mendampingimu:',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'title' => 'Akademik & Skripsi',
+                        'desc' => 'Prokrastinasi, kebuntuan menyusun tugas akhir, motivasi belajar turun, atau kesulitan bimbingan.',
+                        'tag' => 'Akademik',
+                        'icon' => 'GraduationCap'
+                    ],
+                    [
+                        'id' => 2,
+                        'title' => 'Kecemasan & Overthinking',
+                        'desc' => 'Pikiran cemas berlebihan tentang masa depan, panic attack, overthinking, atau insomnia.',
+                        'tag' => 'Emosi',
+                        'icon' => 'Brain'
+                    ],
+                    [
+                        'id' => 3,
+                        'title' => 'Stres Perkuliahan & Burnout',
+                        'desc' => 'Kelelahan emosional akibat beban tugas, organisasi, dan tuntutan akademik yang menumpuk.',
+                        'tag' => 'Kesehatan Mental',
+                        'icon' => 'Sparkles'
+                    ],
+                    [
+                        'id' => 4,
+                        'title' => 'Relasi Pertemanan & Sosial',
+                        'desc' => 'Konflik dengan teman satu angkatan, kesepian di perantauan, atau adaptasi lingkungan baru.',
+                        'tag' => 'Sosial',
+                        'icon' => 'Users'
+                    ],
+                    [
+                        'id' => 5,
+                        'title' => 'Keluarga & Ekonomi',
+                        'desc' => 'Dilema ekspektasi orang tua, konflik internal keluarga, atau kecemasan finansial kuliah.',
+                        'tag' => 'Keluarga',
+                        'icon' => 'Home'
+                    ],
+                    [
+                        'id' => 6,
+                        'title' => 'Arah Karier & Masa Depan',
+                        'desc' => 'Bingung menentukan peminatan, magang, persiapan karier profesional, atau krisis quarter-life.',
+                        'tag' => 'Karier',
+                        'icon' => 'Compass'
+                    ],
+                ]
+            ],
+            'steps' => [
+                'title' => 'Langkah Mudah Memulai Konseling',
+                'subtitle' => 'Hanya butuh 3 langkah sederhana untuk mendapatkan ruang aman bercerita',
+                'items' => [
+                    [
+                        'step_number' => '01',
+                        'title' => 'Isi Screening Mandiri Singkat',
+                        'desc' => 'Evaluasi kondisi emosional dan kebutuhan bimbinganmu dalam 3 menit kuesioner terstruktur.'
+                    ],
+                    [
+                        'step_number' => '02',
+                        'title' => 'Pilih Konselor & Waktu Pertemuan',
+                        'desc' => 'Pilih konselor yang sesuai dengan topikmu dan tentukan jam yang tidak bertabrakan dengan jadwal kuliah.'
+                    ],
+                    [
+                        'step_number' => '03',
+                        'title' => 'Mulai Sesi Konseling Privat',
+                        'desc' => 'Masuk ke ruang video Zoom terenkripsi langsung dari aplikasi atau hadir di Ruang BK kampus.'
+                    ]
+                ]
+            ],
+            'screening_cta' => [
+                'tag' => 'Tes Kesehatan Mental Kampus',
+                'title' => 'Ingin Tahu Kondisi Emosi dan Kebutuhanmu Saat Ini?',
+                'desc' => 'Screening terstruktur kami membantu memetakan area stres akademik, emosional, dan sosial tanpa label penghakiman. Bebas biaya dan rahasia.',
+                'button_text' => 'Mulai Screening Mandiri'
+            ],
+            'faqs' => [
+                [
+                    'question' => 'Apakah layanan bimbingan konseling ini berbayar?',
+                    'answer' => 'Tidak sama sekali. Seluruh layanan bimbingan konseling ini 100% GRATIS dan merupakan hak fasilitas resmi kampus bagi seluruh mahasiswa aktif dan sivitas akademika.'
+                ],
+                [
+                    'question' => 'Apakah rahasia dan cerita saya dijamin aman?',
+                    'answer' => 'Sangat aman. Konselor kami terikat oleh kode etik profesi dan standar kerahasiaan institusi. Cerita dan catatan sesi Anda tidak akan dipublikasikan atau dibagikan kepada dosen maupun pihak luar.'
+                ],
+                [
+                    'question' => 'Apakah sesi konseling dilakukan secara online atau tatap muka?',
+                    'answer' => 'Anda bebas memilih! Kami menyediakan sesi video online (terintegrasi Zoom SDK tanpa instalasi rumit) maupun tatap muka langsung di Ruang Konseling Gedung Kemahasiswaan Kampus.'
+                ],
+                [
+                    'question' => 'Bagaimana jika saya merasa gugup atau tidak tahu harus mulai dari mana?',
+                    'answer' => 'Itu sangat wajar dan normal. Konselor kami sangat ramah, hangat, dan siap membimbing percakapan dengan santai. Anda tidak dituntut untuk langsung berbicara terstruktur.'
+                ],
+                [
+                    'question' => 'Berapa lama durasi satu sesi konseling?',
+                    'answer' => 'Satu sesi berlangsung selama 50 hingga 60 menit, memberikan waktu yang cukup untuk berdiskusi mendalam dan merumuskan langkah praktis.'
+                ]
+            ],
+            'testimonials' => [
+                [
+                    'id' => 1,
+                    'name' => 'Fadhil R.',
+                    'faculty' => 'Mahasiswa Teknik Informatika - Semester 7',
+                    'text' => 'Sangat terbantu saat stuck skripsi dan overthinking masa depan. Konselornya ramah dan tidak menghakimi sama sekali. Sekarang jauh lebih lega dan fokus.',
+                    'rating' => 5
+                ],
+                [
+                    'id' => 2,
+                    'name' => 'Nabila S.',
+                    'faculty' => 'Mahasiswi Psikologi - Semester 5',
+                    'text' => 'Platformnya nyaman banget, bisa langsung video call tanpa ribet. Ruang yang benar-benar aman buat menumpahkan unek-unek tanpa takut di-judge.',
+                    'rating' => 5
+                ],
+                [
+                    'id' => 3,
+                    'name' => 'Rian H.',
+                    'faculty' => 'Mahasiswa Manajemen - Semester 3',
+                    'text' => 'Adaptasi kuliah rantau sempat bikin stres berat. Setelah 2 sesi konseling, saya dapat tips regulasi emosi yang praktis dan aplikatif.',
+                    'rating' => 5
+                ]
+            ],
+            'services' => [
+                'title' => 'Layanan Bimbingan & Konseling Terpadu',
+                'subtitle' => 'Dukungan komprehensif dari konselor & psikolog berlisensi untuk kenyamanan dan kesehatan mental sivitas akademika',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'title' => 'Konseling Individu Online',
+                        'desc' => 'Sesi video privat via Zoom terenkripsi dari mana saja, fleksibel dengan jadwal perkuliahan Anda.',
+                        'tag' => 'Online',
+                        'icon' => 'Video'
+                    ],
+                    [
+                        'id' => 2,
+                        'title' => 'Konseling Tatap Muka Kampus',
+                        'desc' => 'Pertemuan tatap muka langsung di Ruang Konseling Gedung Pusat Kemahasiswaan yang privat dan nyaman.',
+                        'tag' => 'Offline',
+                        'icon' => 'Building2'
+                    ],
+                    [
+                        'id' => 3,
+                        'title' => 'Screening Kebutuhan Psikologis',
+                        'desc' => 'Evaluasi mandiri terstruktur untuk memetakan beban emosi, stres akademik, dan kesiapan mental.',
+                        'tag' => 'Mandiri',
+                        'icon' => 'Sparkles'
+                    ],
+                    [
+                        'id' => 4,
+                        'title' => 'Konsultasi Karier & Masa Depan',
+                        'desc' => 'Eksplorasi minat bakat, persiapan magang, dan strategi mengatasi kecemasan quarter-life crisis.',
+                        'tag' => 'Karier',
+                        'icon' => 'Compass'
+                    ]
+                ]
+            ],
+            'articles' => [
+                'title' => 'Artikel & Wawasan Kesehatan Mental',
+                'subtitle' => 'Tips psikologis praktis, edukasi kesehatan mental, dan panduan menjalani kehidupan perkuliahan yang sehat',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'title' => '5 Trik Mengatasi Burnout & Prokrastinasi Saat Menyusun Skripsi',
+                        'category' => 'Tips Akademik',
+                        'read_time' => '4 min baca',
+                        'date' => '02 Sep 2026',
+                        'author' => 'Tim Konselor UINSSC',
+                        'image_url' => '/images/banner1.jpg',
+                        'snippet' => 'Rasa jenuh dan kebuntuan tugas akhir adalah respons alami otak saat mengalami kelelahan mental. Kenali teknik micro-stepping untuk mengembalikan motivasi belajar.',
+                        'content' => 'Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi. Kunci utamanya adalah membagi target besar menjadi langkah-langkah mikro (micro-stepping) yang hanya membutuhkan waktu 15 menit setiap sesinya.'
+                    ],
+                    [
+                        'id' => 2,
+                        'title' => 'Mengenal Perbedaan Cemas Wajar vs Overthinking Berlebihan',
+                        'category' => 'Kesehatan Mental',
+                        'read_time' => '3 min baca',
+                        'date' => '28 Agu 2026',
+                        'author' => 'Psikolog Dian P., M.Psi.',
+                        'image_url' => '/images/hero_counseling.jpg',
+                        'snippet' => 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
+                        'content' => 'Rasa cemas sebelum ujian atau presentasi sidang adalah wajar dan membantu kita tetap waspada. Namun jika kekhawatiran itu terjadi terus menerus tanpa pemicu yang jelas hingga mengganggu pola tidur dan makan, saatnya berkonsultasi dengan konselor atau psikolog profesional.'
+                    ],
+                    [
+                        'id' => 3,
+                        'title' => 'Panduan Membuka Diri saat Pertama Kali Menjalani Sesi Konseling',
+                        'category' => 'Tips Konseling',
+                        'read_time' => '5 min baca',
+                        'date' => '20 Agu 2026',
+                        'author' => 'Ahmad Fauzi, S.Psi.',
+                        'image_url' => '/images/banner1.jpg',
+                        'snippet' => 'Merasa gugup sebelum konseling adalah hal yang lumrah. Ruang konseling adalah tempat yang aman tanpa penghakiman untuk membagikan cerita Anda.',
+                        'content' => 'Ruang konseling adalah zona aman tanpa penilaian. Anda tidak perlu menyusun cerita secara rapi atau runtut. Cukup sampaikan apa yang paling membebani pikiran Anda saat ini. Konselor kampus kami siap mendengarkan dan membantu Anda menemukan perspektif baru.'
+                    ]
+                ]
+            ],
+            'navbar' => [
+                'top_announcement' => 'Pusat Layanan Bimbingan & Konseling Mahasiswa',
+                'top_badge' => 'UINSSC CYBER CAMPUS',
+                'top_free_text' => '100% Fasilitas Kampus Bebas Biaya',
+                'brand_name' => 'Ruang BK',
+                'brand_campus' => 'UINSSC',
+                'brand_tagline' => 'Bimbingan & Konseling Terpadu',
+                'menu' => [
+                    ['label' => 'Layanan', 'href' => '#layanan'],
+                    ['label' => 'Topik Bimbingan', 'href' => '#masalah'],
+                    ['label' => 'Artikel', 'href' => '/artikel'],
+                    ['label' => 'Konselor Kami', 'href' => '#konselor'],
+                    ['label' => 'Cara Kerja', 'href' => '#cara-kerja'],
+                    ['label' => 'FAQ', 'href' => '#faq'],
+                ]
+            ],
+            'footer' => [
+                'brand_title' => 'Ruang BK UIN Siber Syekh Nurjati Cirebon',
+                'description' => 'Pusat Layanan Bimbingan Konseling & Pendampingan Psikologis Mahasiswa. Menghadirkan ruang aman digital yang inklusif untuk bertumbuh, merawat kesehatan mental, dan mendukung keberhasilan studi siber.',
+                'badge_text' => 'Layanan 100% Bebas Biaya bagi Seluruh Sivitas Akademika',
+                'hotline_title' => 'Hotline Darurat Kampus',
+                'hotline_desc' => 'Jika membutuhkan dukungan krisis psikologis segera:',
+                'hotline_number' => '119 Ext 8 (Sejiwa Kemenkes)',
+                'hotline_subtext' => 'Atau hubungi Tim Siaga Konseling UINSSC (0812-3456-7890)',
+                'office_location' => 'Gedung Pusat Layanan Kemahasiswaan Lt. 2, Kampus Siber UINSSC',
+                'contact_email' => 'bk-online@syekhnurjati.ac.id',
+                'copyright' => '© ' . date('Y') . ' UIN Siber Syekh Nurjati Cirebon (UINSSC). Hak Cipta Dilindungi.',
+                'confidentiality_notice' => 'Kerahasiaan data bimbingan konseling dijamin kode etik profesional.',
+                'quick_links' => [
+                    ['label' => 'Pilihan Layanan', 'href' => '#layanan'],
+                    ['label' => 'Topik Bimbingan', 'href' => '#masalah'],
+                    ['label' => 'Artikel Edukasi', 'href' => '/artikel'],
+                    ['label' => 'Daftar Konselor', 'href' => '#konselor'],
+                    ['label' => 'Masuk Akun', 'href' => '/login'],
+                ]
+            ]
+        ];
+    }
+
+    /**
+     * Get active landing content.
+     */
+    public function show(): JsonResponse
+    {
+        $setting = SystemSetting::where('key', 'landing_content')->first();
+        if ($setting && $setting->value) {
+            $content = json_decode($setting->value, true);
+            if (is_array($content)) {
+                $merged = array_replace_recursive(self::getDefaultContent(), $content);
+                return response()->json([
+                    'success' => true,
+                    'data' => $merged,
+                    'is_custom' => true,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => self::getDefaultContent(),
+            'is_custom' => false,
+        ]);
+    }
+
+    /**
+     * Update landing content (Admin only).
+     */
+    public function update(Request $request): JsonResponse
+    {
+        $request->validate([
+            'hero' => 'required|array',
+            'hero.title' => 'required|string|max:255',
+            'hero.subtitle' => 'required|string|max:1000',
+        ]);
+
+        $content = $request->all();
+
+        SystemSetting::updateOrCreate(
+            ['key' => 'landing_content'],
+            ['value' => json_encode($content)]
+        );
+
+        AuditLogService::log(
+            Auth::id(),
+            'update_landing_content',
+            'Konten landing page diperbarui oleh admin'
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Konten landing page berhasil diperbarui!',
+            'data' => $content,
+        ]);
+    }
+
+    /**
+     * Reset landing content to default.
+     */
+    public function resetDefault(): JsonResponse
+    {
+        SystemSetting::where('key', 'landing_content')->delete();
+
+        AuditLogService::log(
+            Auth::id(),
+            'reset_landing_content',
+            'Konten landing page di-reset ke pengaturan awal oleh admin'
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Konten landing page berhasil dikembalikan ke default.',
+            'data' => self::getDefaultContent(),
+        ]);
+    }
+}
