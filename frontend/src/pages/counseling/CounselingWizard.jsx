@@ -204,6 +204,27 @@ export const CounselingWizard = () => {
   const availableDates = Object.keys(groupedSlots);
   const slotsForActiveDate = selectedDate ? groupedSlots[selectedDate] || [] : [];
 
+  const formatSlotDateBadge = (dateStr) => {
+    if (!dateStr) return { dayName: '', dayDate: '', fullDate: '' };
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const d = new Date(year, month, day);
+        return {
+          dayName: d.toLocaleDateString('id-ID', { weekday: 'short' }),
+          dayDate: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          fullDate: d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        };
+      }
+    } catch (e) {
+      // fallback
+    }
+    return { dayName: '', dayDate: dateStr, fullDate: dateStr };
+  };
+
   // BOOKING SUCCESS CONFIRMATION SCREEN (Section 18 of prompt)
   if (bookingSuccessData) {
     return (
@@ -575,40 +596,55 @@ export const CounselingWizard = () => {
         {/* STEP 3: PILIH JADWAL */}
         {currentStep === 3 && (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+            className="space-y-3 sm:space-y-3.5"
           >
-            {/* Nara Guide Header for Step 3 */}
-            <div className="flex items-center gap-3.5 p-4 rounded-3xl bg-white border border-emerald-100/90 shadow-soft-xs">
-              <VirtualGuide mode="avatar" expression="neutral" size="sm" />
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <span className="text-xs sm:text-sm font-black text-emerald-950 block">
-                  Saya Nara, asisten virtual Anda.
-                </span>
-                <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                  Berikut jadwal yang tersedia untuk konselor Anda ({selectedCounselor.name.split(',')[0]}). Silakan tentukan waktu yang paling cocok.
+            {/* Main Section Header */}
+            <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-soft-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-black border border-emerald-200/70">
+                  <Calendar className="w-3 h-3 text-emerald-600" />
+                  <span>Langkah 3: Pilih Jadwal</span>
+                </div>
+                <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                  Pilih Jadwal Konseling
+                </h1>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed truncate sm:whitespace-normal">
+                  Pilih waktu temu bersama <span className="font-bold text-slate-800">{selectedCounselor.name}</span> sesuai ketersediaan slot.
                 </p>
               </div>
-            </div>
 
-            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-soft-sm space-y-1">
-              <h2 className="text-lg sm:text-xl font-black text-slate-900">
-                Pilih Jadwal Konselor
-              </h2>
-              <p className="text-xs text-slate-500">
-                Jadwal yang ditampilkan menyesuaikan ketersediaan metode{' '}
-                <span className="font-bold text-emerald-800 uppercase">{selectedMethod}</span> bersama {selectedCounselor.name}.
-              </p>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-700">
+                  {selectedMethod === 'ZOOM' ? (
+                    <Video className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  ) : selectedMethod === 'CHAT' ? (
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <Building2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                  )}
+                  <span>
+                    Metode:{' '}
+                    <strong className="text-slate-900 uppercase">
+                      {selectedMethod === 'ZOOM' ? 'Zoom Video' : selectedMethod === 'CHAT' ? 'Chat' : 'Tatap Muka'}
+                    </strong>
+                  </span>
+                </div>
+                <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50/70 border border-emerald-100 text-xs font-bold text-emerald-900">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Jadwal Real-Time</span>
+                </div>
+              </div>
             </div>
 
             {isLoadingSlots ? (
-              <div className="p-8 text-center bg-white rounded-3xl border border-slate-200">
+              <div className="p-8 text-center bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-soft-xs">
                 <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mx-auto mb-2" />
-                <p className="text-xs text-slate-500">Memuat slot jadwal ketersediaan konselor...</p>
+                <p className="text-xs text-slate-500 font-medium">Memuat slot jadwal ketersediaan konselor...</p>
               </div>
             ) : availableDates.length === 0 ? (
-              <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+              <div className="p-6 sm:p-8 text-center bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-soft-xs space-y-3">
                 <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
                 <h3 className="text-sm font-bold text-slate-800">Slot Belum Tersedia untuk Metode Ini</h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -617,48 +653,82 @@ export const CounselingWizard = () => {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold"
+                  className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800 transition-colors"
                 >
                   Ganti Pilihan Metode
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* Date Pills */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                  {availableDates.map((dateStr) => {
-                    const isSelected = selectedDate === dateStr;
-                    return (
-                      <button
-                        key={dateStr}
-                        type="button"
-                        onClick={() => {
-                          setSelectedDate(dateStr);
-                          setSelectedSlot(null);
-                        }}
-                        className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 transition-all flex flex-col items-center gap-0.5 ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white shadow-soft-xs'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span>{dateStr}</span>
-                        <span className="text-[10px] opacity-80">
-                          {groupedSlots[dateStr]?.length} Slot
-                        </span>
-                      </button>
-                    );
-                  })}
+              <div className="p-3.5 sm:p-4.5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-soft-xs space-y-3 sm:space-y-3.5">
+                {/* Date Selector Row */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between px-0.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-600 uppercase tracking-wider">
+                      <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Pilih Tanggal Sesi</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-semibold">
+                      {availableDates.length} Tanggal Tersedia
+                    </span>
+                  </div>
+
+                  {/* Horizontal Date Pills */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
+                    {availableDates.map((dateStr) => {
+                      const isSelected = selectedDate === dateStr;
+                      const dateMeta = formatSlotDateBadge(dateStr);
+                      const slotCount = groupedSlots[dateStr]?.length || 0;
+                      return (
+                        <button
+                          key={dateStr}
+                          type="button"
+                          onClick={() => {
+                            setSelectedDate(dateStr);
+                            setSelectedSlot(null);
+                          }}
+                          className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl text-xs font-bold shrink-0 transition-all flex flex-col items-center min-w-[85px] sm:min-w-[95px] border cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs ring-2 ring-emerald-600/20'
+                              : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                            {dateMeta.dayName || 'TGL'}
+                          </span>
+                          <span className="text-xs sm:text-sm font-black my-0.5">
+                            {dateMeta.dayDate || dateStr}
+                          </span>
+                          <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
+                            isSelected ? 'bg-emerald-800/90 text-emerald-100' : 'bg-slate-200/70 text-slate-600'
+                          }`}>
+                            {slotCount} Slot
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Slots Grid */}
-                <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-soft-sm space-y-3">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-emerald-700" />
-                    Jam Pertemuan Tersedia ({selectedDate})
-                  </h3>
+                {/* Divider */}
+                <div className="border-t border-slate-100" />
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {/* Time Slots Area */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-0.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-600 uppercase tracking-wider">
+                      <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>
+                        Jam Pertemuan Tersedia ({selectedDate ? formatSlotDateBadge(selectedDate).fullDate : ''})
+                      </span>
+                    </div>
+                    {selectedSlot && (
+                      <span className="hidden sm:inline-flex text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                        Dipilih: {selectedSlot.start_time?.substring(0, 5)} – {selectedSlot.end_time?.substring(0, 5)} WIB
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-2.5">
                     {slotsForActiveDate.map((slot) => {
                       const isSelected = selectedSlot?.id === slot.id;
                       const isBooked = slot.status === 'BOOKED';
@@ -668,19 +738,21 @@ export const CounselingWizard = () => {
                           type="button"
                           disabled={isBooked}
                           onClick={() => setSelectedSlot(slot)}
-                          className={`p-3.5 rounded-2xl border text-center transition-all ${
+                          className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border text-center transition-all cursor-pointer ${
                             isBooked
-                              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                              ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
                               : isSelected
-                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs'
-                              : 'bg-white border-slate-200 text-slate-800 hover:border-emerald-500'
+                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs ring-2 ring-emerald-600/30'
+                              : 'bg-white border-slate-200/90 text-slate-800 hover:border-emerald-500 hover:bg-emerald-50/20'
                           }`}
                         >
-                          <div className="text-sm font-black">
+                          <div className="text-xs sm:text-sm font-black tracking-tight">
                             {slot.start_time?.substring(0, 5)} – {slot.end_time?.substring(0, 5)}
                           </div>
-                          <div className="text-[10px] mt-1 font-semibold opacity-85">
-                            {isBooked ? 'Sudah Penuh' : 'Tersedia'}
+                          <div className={`text-[10px] mt-0.5 font-bold ${
+                            isSelected ? 'text-emerald-100' : isBooked ? 'text-slate-400' : 'text-emerald-600'
+                          }`}>
+                            {isBooked ? 'Penuh' : isSelected ? '✓ Terpilih' : 'Tersedia'}
                           </div>
                         </button>
                       );
@@ -690,24 +762,36 @@ export const CounselingWizard = () => {
               </div>
             )}
 
-            <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2">
+            {/* Bottom Actions */}
+            <div className="flex items-center justify-between gap-3 pt-0.5">
               <button
                 type="button"
                 onClick={() => setCurrentStep(2)}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs sm:text-sm font-bold hover:bg-slate-50 flex items-center justify-center gap-1.5 min-h-[44px]"
+                className="px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs sm:text-sm font-bold hover:bg-slate-50 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Kembali</span>
+                <span>Kembali ke Metode</span>
               </button>
-              <button
-                type="button"
-                disabled={!selectedSlot}
-                onClick={handleNextFromSchedule}
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-soft-xs flex items-center justify-center gap-2 min-h-[44px]"
-              >
-                <span>Lanjut: Konfirmasi</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-3">
+                {selectedSlot && (
+                  <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-600">
+                    <span className="text-slate-400">Jadwal:</span>
+                    <span className="font-bold text-slate-800">
+                      {formatSlotDateBadge(selectedDate).dayDate}, {selectedSlot.start_time?.substring(0, 5)} – {selectedSlot.end_time?.substring(0, 5)} WIB
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  disabled={!selectedSlot}
+                  onClick={handleNextFromSchedule}
+                  className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-soft-xs flex items-center gap-2 cursor-pointer transition-all hover:shadow-md"
+                >
+                  <span>Lanjut: Konfirmasi</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
