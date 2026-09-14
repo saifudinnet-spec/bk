@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
+  ArrowRight,
   Calendar,
   Clock,
   User,
@@ -40,7 +41,7 @@ export const ArticleDetailPage = () => {
     fetchContent();
   }, []);
 
-  const articles = content?.articles?.items || [
+  const fallbackArticles = [
     {
       id: 1,
       title: 'Strategi Praktis Mengatasi Prokrastinasi Skripsi & Tugas Akhir',
@@ -110,8 +111,12 @@ Jawabannya: **Tidak ada yang wajib disiapkan.** Anda tidak perlu membuat catatan
     }
   ];
 
+  const articles = (content?.articles?.items && Array.isArray(content.articles.items) && content.articles.items.length > 0)
+    ? content.articles.items
+    : fallbackArticles;
+
   const currentArticle = articles.find((a) => String(a.id) === String(id)) || articles[0];
-  const relatedArticles = articles.filter((a) => String(a.id) !== String(currentArticle.id)).slice(0, 2);
+  const relatedArticles = articles.filter((a) => String(a.id) !== String(currentArticle?.id)).slice(0, 2);
 
   const handleShare = () => {
     if (navigator.clipboard) {
