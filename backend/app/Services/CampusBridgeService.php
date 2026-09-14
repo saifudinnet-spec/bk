@@ -157,7 +157,7 @@ class CampusBridgeService
             'nim' => $nim,
             'program_study' => $portalData['program_study'] ?? null,
             'degree' => $portalData['degree'] ?? null,
-            'semester' => 1,
+            'semester' => null,
             'birth_place' => $portalData['birth_place'] ?? null,
             'birth_date' => $portalData['birth_date'] ?? null,
             'gender' => $portalData['gender'] ?? null,

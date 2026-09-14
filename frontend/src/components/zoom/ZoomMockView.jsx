@@ -12,16 +12,19 @@ import {
   Shield,
   Send,
   X,
-  Sparkles
+  Sparkles,
+  Stethoscope
 } from 'lucide-react';
 import Modal from '../common/Modal';
+import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
 
-export const ZoomMockView = ({ sessionData, onLeaveSession, isTutor = false }) => {
+export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTutor = false }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { sender: 'System', text: 'Ruang konseling terhubung. Sesi ini privat dan terlindungi.', time: '10:00' },
     { sender: isTutor ? sessionData.student_name : sessionData.tutor_name, text: 'Halo, suara saya terdengar jelas?', time: '10:01' },
@@ -70,6 +73,17 @@ export const ZoomMockView = ({ sessionData, onLeaveSession, isTutor = false }) =
         </div>
 
         <div className="flex items-center gap-2 text-xs">
+          {isTutor && session?.user && (
+            <button
+              type="button"
+              onClick={() => setShowDiagnosticModal(true)}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-soft-xs"
+              title="Lihat Data Konseli & Asesmen Lengkap"
+            >
+              <Stethoscope className="w-3.5 h-3.5 text-teal-200" />
+              <span>Data Konseli</span>
+            </button>
+          )}
           <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-xl text-[11px] font-mono">
             Mode SDK: Development
           </span>
@@ -284,6 +298,17 @@ export const ZoomMockView = ({ sessionData, onLeaveSession, isTutor = false }) =
           </button>
         </div>
       </Modal>
+
+      {/* Counselee Diagnostic Modal */}
+      {showDiagnosticModal && session?.user && (
+        <CounseleeDiagnosticModal
+          isOpen={showDiagnosticModal}
+          counseleeUser={session.user}
+          caseItem={session.counseling_case}
+          assessmentAnswers={session.counseling_case?.assessment_answers}
+          onClose={() => setShowDiagnosticModal(false)}
+        />
+      )}
     </div>
   );
 };

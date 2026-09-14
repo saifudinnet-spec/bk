@@ -80,8 +80,8 @@ export const Profile = () => {
                   <span className="font-bold text-slate-900 mt-0.5 block">{user?.profile?.degree || 'S1'}</span>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Semester</span>
-                  <span className="font-bold text-slate-900 mt-0.5 block">Semester {user?.profile?.semester || 1}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Status Akademik</span>
+                  <span className="font-bold text-emerald-800 mt-0.5 block">{user?.profile?.campus_status || 'Aktif'}</span>
                 </div>
               </div>
 

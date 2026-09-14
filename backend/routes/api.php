@@ -87,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cases/{id}/respond-method-suggestion', [CounselingCaseController::class, 'respondMethodSuggestion']);
 
     // Tutor Schedules & Sessions
+    Route::get('/tutor/students/{id}/diagnostics', [CounselingCaseController::class, 'studentDiagnostics']);
     Route::get('/tutor/my-profile', [TutorProfileController::class, 'getProfile']);
     Route::post('/tutor/my-profile', [TutorProfileController::class, 'updateProfile']);
     Route::put('/tutor/my-profile', [TutorProfileController::class, 'updateProfile']);

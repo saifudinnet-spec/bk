@@ -16,7 +16,8 @@ import {
   FileText,
   ArrowRight,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  Phone
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
@@ -180,11 +181,23 @@ export const CaseReviewModal = ({ isOpen, onClose, caseItem, onUpdated }) => {
                   {studentProfile.program_study && (
                     <p className="text-[11px] text-slate-700 font-medium mt-1 flex items-center gap-1">
                       <GraduationCap className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>{studentProfile.program_study} {studentProfile.semester ? `(Smtr ${studentProfile.semester})` : ''}</span>
+                      <span>{studentProfile.program_study}</span>
                     </p>
                   )}
                   {studentProfile.nim && (
                     <p className="text-[10px] font-mono text-slate-500">NIM: {studentProfile.nim}</p>
+                  )}
+                  {user.phone && (
+                    <p className="text-[10px] font-mono text-slate-600 flex items-center gap-1 mt-0.5">
+                      <Phone className="w-2.5 h-2.5 text-slate-400" />
+                      <span>{user.phone}</span>
+                    </p>
+                  )}
+                  {(studentProfile.gender || studentProfile.birth_date) && (
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      {studentProfile.gender === 'L' ? 'Laki-laki' : studentProfile.gender === 'P' ? 'Perempuan' : ''}
+                      {studentProfile.birth_date ? ` • Lahir: ${new Date(studentProfile.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                    </p>
                   )}
                 </div>
               </div>

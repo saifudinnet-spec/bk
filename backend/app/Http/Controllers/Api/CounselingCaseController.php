@@ -26,7 +26,7 @@ class CounselingCaseController extends Controller
 
         $query = CounselingCase::with([
             'user' => function ($q) {
-                $q->select('id', 'name', 'email', 'avatar', 'role')
+                $q->select('id', 'name', 'email', 'phone', 'avatar', 'role')
                   ->with(['studentProfile', 'generalProfile']);
             },
             'tutor:id,name,email,avatar',
@@ -229,6 +229,19 @@ class CounselingCaseController extends Controller
                     $session->note->makeHidden('private_note');
                 }
             }
+        }
+
+        // For tutors and admins, also load student's psychological screening questionnaire responses and detailed answers
+        if ($user->isTutor() || $user->isAdmin()) {
+            $case->user->load([
+                'questionnaireResponses' => function ($q) {
+                    $q->with([
+                        'questionnaire:id,title,version,description',
+                        'answers.question:id,question_text,category,order',
+                        'answers.option:id,label,score'
+                    ])->latest('submitted_at');
+                }
+            ]);
         }
 
         return response()->json([
@@ -460,6 +473,48 @@ class CounselingCaseController extends Controller
         return response()->json([
             'message' => 'Status kasus berhasil diperbarui.',
             'data' => $case,
+        ]);
+    }
+
+    /**
+     * Get comprehensive counselee diagnostic record for counselor/admin
+     */
+    public function studentDiagnostics(Request $request, $id)
+    {
+        $user = $request->user();
+        if (!$user->isTutor() && !$user->isAdmin()) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        $student = User::with([
+            'studentProfile',
+            'generalProfile',
+            'studentCases' => function ($q) {
+                $q->with([
+                    'topic:id,title',
+                    'sessions' => function ($sq) {
+                        $sq->with(['note', 'feedback'])->orderBy('start_at', 'desc');
+                    },
+                    'actionPlans' => function ($aq) {
+                        $aq->with('tutor:id,name')->latest();
+                    }
+                ])->latest();
+            },
+            'questionnaireResponses' => function ($q) {
+                $q->with([
+                    'questionnaire:id,title,version,description',
+                    'answers.question:id,question_text,category,order',
+                    'answers.option:id,label,score'
+                ])->latest('submitted_at');
+            }
+        ])->findOrFail($id);
+
+        AuditLogService::log('view_student_diagnostics', 'User', (string)$student->id, [
+            'viewed_by_tutor' => $user->id,
+        ], $user->id);
+
+        return response()->json([
+            'data' => $student,
         ]);
     }
 }

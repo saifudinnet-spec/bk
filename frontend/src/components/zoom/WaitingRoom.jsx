@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Video, Calendar, Clock, ShieldCheck, User, Info, ArrowRight } from 'lucide-react';
+import { Video, Calendar, Clock, ShieldCheck, User, Info, ArrowRight, Stethoscope } from 'lucide-react';
+import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
 
 export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [canJoin, setCanJoin] = useState(false);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -88,6 +90,18 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           </div>
         </div>
 
+        {/* Counselor Quick View Button */}
+        {isTutor && (
+          <button
+            type="button"
+            onClick={() => setShowDiagnosticModal(true)}
+            className="w-full py-2.5 px-3 rounded-2xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition-colors flex items-center justify-center gap-1.5 mb-4 shadow-soft-xs"
+          >
+            <Stethoscope className="w-3.5 h-3.5 text-teal-700" />
+            <span>Lihat Data & Asesmen Konseli</span>
+          </button>
+        )}
+
         {/* Countdown & Status */}
         <div className="mb-6 p-4 rounded-2xl bg-teal-50/50 border border-teal-100">
           <p className="text-[11px] text-teal-800 font-medium mb-1">Status Ruang Sesi:</p>
@@ -121,6 +135,17 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           <span>Sesi ini privat dan terjaga kerahasiaannya.</span>
         </div>
       </div>
+
+      {/* Counselee Diagnostic Modal */}
+      {showDiagnosticModal && (
+        <CounseleeDiagnosticModal
+          isOpen={showDiagnosticModal}
+          counseleeUser={session.user}
+          caseItem={session.counseling_case}
+          assessmentAnswers={session.counseling_case?.assessment_answers}
+          onClose={() => setShowDiagnosticModal(false)}
+        />
+      )}
     </div>
   );
 };

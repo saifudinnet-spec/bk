@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, ArrowRight, Sparkles, KeyRound, GraduationCap, ShieldCheck, Building2 } from 'lucide-react';
+import { Lock, User, ArrowRight, KeyRound, GraduationCap } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useCounselingFlow } from '../../store/CounselingFlowContext';
@@ -83,20 +83,6 @@ export const Login = () => {
           </div>
         )}
 
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-[11px] font-bold text-emerald-800 mb-2">
-            <Building2 className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Sistem Layanan Bimbingan & Konseling UINSSC</span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black text-darktext">Masuk ke Ruang BK</h2>
-          <p className="text-xs sm:text-sm text-mutedtext mt-1">
-            {loginRole === 'student'
-              ? 'Gunakan akun Portal Akademik Kampus resmi Anda'
-              : 'Gunakan Email, No. HP, atau akun staf Anda'}
-          </p>
-        </div>
-
         {/* Tab Role Switcher */}
         <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-gray-100/80 border border-gray-200/60 mb-6">
           <button
@@ -133,16 +119,6 @@ export const Login = () => {
             <span>Konselor / Umum / Staf</span>
           </button>
         </div>
-
-        {/* Informational Callout for Students */}
-        {loginRole === 'student' && (
-          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 mb-5 flex items-start gap-2.5 text-[11px] text-emerald-950">
-            <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-            <p className="leading-relaxed">
-              <strong>Terhubung Langsung:</strong> Masukkan <strong>NIM</strong> dan <strong>Kata Sandi Portal Kampus</strong> Anda. Data nama, TTL, jenjang, prodi, alamat, dan no. telepon akan disinkronkan otomatis secara resmi dari API kampus.
-            </p>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

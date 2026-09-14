@@ -9,6 +9,7 @@ import { CardSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
 import ActionPlanSection from '../../components/counseling/ActionPlanSection';
 import SessionFeedbackModal from '../../components/counseling/SessionFeedbackModal';
+import CounseleeDiagnosticCard from '../../components/counseling/CounseleeDiagnosticCard';
 
 export const CaseDetail = () => {
   const { id } = useParams();
@@ -78,77 +79,101 @@ export const CaseDetail = () => {
         <StatusBadge status={caseItem.status} />
       </div>
 
-      {/* Case Overview Card */}
-      <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
-        <div>
-          <span className="text-[11px] font-bold text-teal-700 tracking-wide uppercase">
-            Latar Belakang Permasalahan
-          </span>
-          <p className="text-xs sm:text-sm text-darktext leading-relaxed mt-1.5 whitespace-pre-wrap">
-            {caseItem.initial_reason}
-          </p>
-        </div>
-
-        <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 text-xs">
-          <div>
-            <span className="text-mutedtext block text-[10px]">Mahasiswa / Klien</span>
-            <span className="font-bold text-darktext">{caseItem.user?.name}</span>
-          </div>
-          <div>
-            <span className="text-mutedtext block text-[10px]">Konselor Pendamping</span>
-            <span className="font-bold text-darktext">
-              {caseItem.tutor?.name || 'Menunggu Penugasan'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Asesmen Awal Details */}
-      {caseItem.assessment_answers && Object.keys(caseItem.assessment_answers).length > 0 && (
-        <div className="p-6 rounded-3xl bg-emerald-50/40 border border-emerald-150 shadow-soft-sm space-y-4">
+      {/* If Counselor / Admin: Render Rich Counselee Diagnostic Card */}
+      {(isTutor || isAdmin) && caseItem.user ? (
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs sm:text-sm font-bold text-darktext flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-700" />
-              <span>Asesmen Awal Kondisi Klien</span>
+            <h3 className="text-xs font-bold text-darktext uppercase tracking-wider text-slate-500">
+              Rekam Diagnosa & Data Konseli
             </h3>
-            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
-              Metode: {caseItem.method || 'ZOOM'}
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Akses Khusus Konselor
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            {caseItem.assessment_answers.main_issue && (
-              <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs">
-                <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Kendala Utama:</span>
-                <p className="font-semibold text-darktext">{caseItem.assessment_answers.main_issue}</p>
-              </div>
-            )}
-            {caseItem.assessment_answers.duration && (
-              <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs">
-                <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Durasi Dirasakan:</span>
-                <p className="font-semibold text-darktext">{caseItem.assessment_answers.duration}</p>
-              </div>
-            )}
-            {caseItem.assessment_answers.impact_level && (
-              <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs sm:col-span-2">
-                <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Tingkat Gangguan Aktivitas:</span>
-                <p className="font-bold text-emerald-900">{caseItem.assessment_answers.impact_level} / 5</p>
-              </div>
-            )}
-            {caseItem.assessment_answers.previous_efforts && (
-              <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs sm:col-span-2">
-                <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Upaya yang Sudah Dilakukan:</span>
-                <p className="text-darktext">{caseItem.assessment_answers.previous_efforts}</p>
-              </div>
-            )}
-            {caseItem.assessment_answers.story && (
-              <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs sm:col-span-2">
-                <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Pesan / Cerita Utama:</span>
-                <p className="text-darktext italic">"{caseItem.assessment_answers.story}"</p>
-              </div>
-            )}
-          </div>
+          <CounseleeDiagnosticCard
+            counseleeUser={caseItem.user}
+            assessmentAnswers={caseItem.assessment_answers}
+            caseItem={caseItem}
+            initialExpanded={true}
+            defaultTab="assessment"
+          />
         </div>
+      ) : (
+        <>
+          {/* Case Overview Card for Student */}
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+            <div>
+              <span className="text-[11px] font-bold text-teal-700 tracking-wide uppercase">
+                Latar Belakang Permasalahan
+              </span>
+              <p className="text-xs sm:text-sm text-darktext leading-relaxed mt-1.5 whitespace-pre-wrap">
+                {caseItem.initial_reason}
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-mutedtext block text-[10px]">Mahasiswa / Klien</span>
+                <span className="font-bold text-darktext">{caseItem.user?.name}</span>
+              </div>
+              <div>
+                <span className="text-mutedtext block text-[10px]">Konselor Pendamping</span>
+                <span className="font-bold text-darktext">
+                  {caseItem.tutor?.name || 'Menunggu Penugasan'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Asesmen Awal Details */}
+          {caseItem.assessment_answers && Object.keys(caseItem.assessment_answers).length > 0 && (
+            <div className="p-6 rounded-3xl bg-emerald-50/40 border border-emerald-150 shadow-soft-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs sm:text-sm font-bold text-darktext flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-700" />
+                  <span>Asesmen Awal Kondisi Klien</span>
+                </h3>
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
+                  Metode: {caseItem.method || 'ZOOM'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {caseItem.assessment_answers.main_issue && (
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs">
+                    <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Kendala Utama:</span>
+                    <p className="font-semibold text-darktext">{caseItem.assessment_answers.main_issue}</p>
+                  </div>
+                )}
+                {caseItem.assessment_answers.duration && (
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs">
+                    <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Durasi Dirasakan:</span>
+                    <p className="font-semibold text-darktext">{caseItem.assessment_answers.duration}</p>
+                  </div>
+                )}
+                {caseItem.assessment_answers.impact_level && (
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs sm:col-span-2">
+                    <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Tingkat Gangguan Aktivitas:</span>
+                    <p className="font-bold text-emerald-900">{caseItem.assessment_answers.impact_level} / 5</p>
+                  </div>
+                )}
+                {caseItem.assessment_answers.previous_efforts && (
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs sm:col-span-2">
+                    <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Upaya yang Sudah Dilakukan:</span>
+                    <p className="text-darktext">{caseItem.assessment_answers.previous_efforts}</p>
+                  </div>
+                )}
+                {caseItem.assessment_answers.story && (
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 shadow-soft-xs sm:col-span-2">
+                    <span className="text-[10px] font-bold text-mutedtext block mb-0.5">Pesan / Cerita Utama:</span>
+                    <p className="text-darktext italic">"{caseItem.assessment_answers.story}"</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Tab Switcher */}

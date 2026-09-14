@@ -1485,7 +1485,7 @@ export const AdminDashboard = () => {
                             <div>
                               <span className="text-mutedtext block">Program Studi:</span>
                               <span className="font-semibold text-darktext truncate block">
-                                {u.student_profile?.program_study || 'Mahasiswa Aktif'} (Smt {u.student_profile?.semester || '-'})
+                                {u.student_profile?.program_study || 'Mahasiswa Aktif'}
                               </span>
                             </div>
                           </>
@@ -1695,9 +1695,9 @@ export const AdminDashboard = () => {
                           </span>
                         </div>
                         <div>
-                          <span className="text-[11px] text-mutedtext block">Jenjang & Semester:</span>
+                          <span className="text-[11px] text-mutedtext block">Jenjang Pendidikan:</span>
                           <span className="font-semibold text-darktext">
-                            {selectedUserDetail.student_profile.degree || 'S1'} - Semester {selectedUserDetail.student_profile.semester || '-'}
+                            {selectedUserDetail.student_profile.degree || 'S1'}
                           </span>
                         </div>
                         <div>

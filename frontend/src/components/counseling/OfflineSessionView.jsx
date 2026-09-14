@@ -13,14 +13,17 @@ import {
   Send,
   Navigation,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Stethoscope
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
+import CounseleeDiagnosticModal from './CounseleeDiagnosticModal';
 
 export const OfflineSessionView = ({ session, user, isTutor, onLeaveSession }) => {
   const { showSuccess, showError } = useToast();
   const [showChat, setShowChat] = useState(false);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -85,7 +88,19 @@ export const OfflineSessionView = ({ session, user, isTutor, onLeaveSession }) =
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">{caseNumber}</span>
           <h2 className="text-base sm:text-lg font-black text-slate-900">Sesi Konseling Tatap Muka</h2>
         </div>
-        <div className="w-10" />
+        {isTutor ? (
+          <button
+            type="button"
+            onClick={() => setShowDiagnosticModal(true)}
+            className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition-colors flex items-center gap-1.5"
+            title="Lihat Data Konseli & Asesmen"
+          >
+            <Stethoscope className="w-3.5 h-3.5 text-teal-700" />
+            <span className="hidden sm:inline">Data Konseli</span>
+          </button>
+        ) : (
+          <div className="w-10" />
+        )}
       </div>
 
       {/* Main Location Card */}
@@ -275,6 +290,17 @@ export const OfflineSessionView = ({ session, user, isTutor, onLeaveSession }) =
           </button>
         )}
       </div>
+
+      {/* Counselee Diagnostic Modal */}
+      {showDiagnosticModal && (
+        <CounseleeDiagnosticModal
+          isOpen={showDiagnosticModal}
+          counseleeUser={session.user}
+          caseItem={session.counseling_case}
+          assessmentAnswers={session.counseling_case?.assessment_answers}
+          onClose={() => setShowDiagnosticModal(false)}
+        />
+      )}
     </div>
   );
 };

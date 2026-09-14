@@ -11,10 +11,12 @@ import {
   ArrowLeft,
   FileText,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Stethoscope
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
+import CounseleeDiagnosticModal from './CounseleeDiagnosticModal';
 
 export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) => {
   const { showSuccess, showError } = useToast();
@@ -22,6 +24,7 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
   const messagesEndRef = useRef(null);
 
   const partner = isTutor ? session.user : session.tutor;
@@ -134,6 +137,18 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
             <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
               Sesi Selesai
             </span>
+          )}
+
+          {isTutor && (
+            <button
+              type="button"
+              onClick={() => setShowDiagnosticModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition-colors flex items-center gap-1.5"
+              title="Lihat Data Konseli & Asesmen"
+            >
+              <Stethoscope className="w-3.5 h-3.5 text-teal-700" />
+              <span className="hidden sm:inline">Data Konseli</span>
+            </button>
           )}
 
           <button
@@ -251,6 +266,17 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
           </motion.button>
         </div>
       </form>
+
+      {/* Counselee Diagnostic Modal */}
+      {showDiagnosticModal && (
+        <CounseleeDiagnosticModal
+          isOpen={showDiagnosticModal}
+          counseleeUser={session.user}
+          caseItem={session.counseling_case}
+          assessmentAnswers={session.counseling_case?.assessment_answers}
+          onClose={() => setShowDiagnosticModal(false)}
+        />
+      )}
     </div>
   );
 };

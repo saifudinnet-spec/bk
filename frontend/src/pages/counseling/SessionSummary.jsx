@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FileText, Lock, Sparkles, Check, ArrowRight, ArrowLeft, ShieldAlert, Star } from 'lucide-react';
+import { FileText, Lock, Sparkles, Check, ArrowRight, ArrowLeft, ShieldAlert, Star, Stethoscope } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import PageTransition from '../../components/common/PageTransition';
 import ActionPlanSection from '../../components/counseling/ActionPlanSection';
+import CounseleeDiagnosticCard from '../../components/counseling/CounseleeDiagnosticCard';
 
 export const SessionSummary = () => {
   const { id } = useParams();
@@ -55,6 +56,15 @@ export const SessionSummary = () => {
     fetchSessionAndNote();
   }, [id, showError]);
 
+  const handleCopyDiagnosticNote = (text) => {
+    if (privateNote.trim()) {
+      setPrivateNote((prev) => prev + '\n\n' + text);
+    } else {
+      setPrivateNote(text);
+    }
+    showSuccess('Rincian data konseli & asesmen berhasil disisipkan ke formulir diagnosa!');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!summary.trim() || !studentRecommendation.trim()) {
@@ -91,25 +101,34 @@ export const SessionSummary = () => {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div>
-          <h2 className="text-xl font-bold text-darktext">Catatan Pasca Konseling</h2>
+          <h2 className="text-xl font-bold text-darktext">Catatan Pasca Konseling & Diagnosa</h2>
           <p className="text-xs text-mutedtext">
-            Dokumentasi hasil konseling dan rekomendasi tindak lanjut bagi mahasiswa
+            Dokumentasi hasil konseling, diagnosa observasi klinis, dan rekomendasi tindak lanjut bagi konseli
           </p>
         </div>
       </div>
 
-      {session && (
-        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between text-xs">
-          <div>
-            <span className="text-mutedtext block text-[10px]">Klien / Mahasiswa:</span>
-            <span className="font-bold text-darktext">{session.user?.name}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-mutedtext block text-[10px]">Nomor Kasus:</span>
-            <span className="font-mono font-bold text-emerald-800">
-              {session.counseling_case?.case_number}
+      {/* Lembar Diagnosa & Asesmen Konseli */}
+      {session && session.user && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-bold text-darktext flex items-center gap-1.5">
+              <Stethoscope className="w-4 h-4 text-emerald-700" />
+              <span>Lembar Data Konseli & Jawaban Asesmen (Referensi Diagnosa)</span>
+            </span>
+            <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Acuan Diagnosa & Rencana Aksi
             </span>
           </div>
+
+          <CounseleeDiagnosticCard
+            counseleeUser={session.user}
+            assessmentAnswers={session.counseling_case?.assessment_answers}
+            caseItem={session.counseling_case}
+            onCopyDiagnosticNote={handleCopyDiagnosticNote}
+            initialExpanded={true}
+            defaultTab="assessment"
+          />
         </div>
       )}
 

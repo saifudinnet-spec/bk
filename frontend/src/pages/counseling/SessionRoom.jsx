@@ -134,6 +134,7 @@ export const SessionRoom = () => {
             >
               <ZoomMockView
                 sessionData={signatureData}
+                session={session}
                 isTutor={isTutor}
                 onLeaveSession={handleLeaveSession}
               />

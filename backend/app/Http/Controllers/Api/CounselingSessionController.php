@@ -169,7 +169,8 @@ class CounselingSessionController extends Controller
         $user = $request->user();
 
         $session = CounselingSession::with([
-            'counselingCase',
+            'counselingCase.topic',
+            'counselingCase.actionPlans',
             'user.studentProfile',
             'user.generalProfile',
             'tutor.tutorProfile',
@@ -180,6 +181,19 @@ class CounselingSessionController extends Controller
         // Security check
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        // For tutors and admins, load student's psychological screening responses & answers
+        if ($user->isTutor() || $user->isAdmin()) {
+            $session->user->load([
+                'questionnaireResponses' => function ($q) {
+                    $q->with([
+                        'questionnaire:id,title,version,description',
+                        'answers.question:id,question_text,category,order',
+                        'answers.option:id,label,score'
+                    ])->latest('submitted_at');
+                }
+            ]);
         }
 
         // Determine if ready to join (within 15 minutes of start_at)
