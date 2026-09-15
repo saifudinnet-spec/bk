@@ -17,9 +17,9 @@ class CounselingChatController extends Controller
         $user = $request->user();
         $session = CounselingSession::findOrFail($sessionId);
 
-        // Security check
-        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Akses ditolak.'], 403);
+        // Security check: Only participant student and assigned tutor can view chat
+        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id) {
+            return response()->json(['message' => 'Akses ditolak: Percakapan konseling bersifat rahasia dan hanya dapat diakses oleh konseli dan konselor terkait.'], 403);
         }
 
         // Mark unread messages sent by the other party as read
@@ -51,9 +51,9 @@ class CounselingChatController extends Controller
         $user = $request->user();
         $session = CounselingSession::findOrFail($sessionId);
 
-        // Security check
-        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Akses ditolak.'], 403);
+        // Security check: Only participant student and assigned tutor can send message
+        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id) {
+            return response()->json(['message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.'], 403);
         }
 
         $message = CounselingMessage::create([

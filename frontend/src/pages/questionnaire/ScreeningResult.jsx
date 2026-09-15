@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, MessageSquareHeart, ArrowRight, ShieldCheck, Sparkles, Home } from 'lucide-react';
 import api from '../../services/api';
+import { useCounselingFlow } from '../../store/CounselingFlowContext';
 import { CardSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
 
 export const ScreeningResult = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { startWithScreening } = useCounselingFlow();
   const [response, setResponse] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,6 +27,13 @@ export const ScreeningResult = () => {
     };
     fetchDetail();
   }, [id]);
+
+  const handleContinueToCounseling = () => {
+    if (response) {
+      startWithScreening(response);
+    }
+    navigate('/konselor');
+  };
 
   if (isLoading) {
     return <CardSkeleton height="h-64" />;
@@ -108,11 +117,11 @@ export const ScreeningResult = () => {
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
         <motion.button
           whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/app/counseling/new')}
+          onClick={handleContinueToCounseling}
           className="flex-1 py-3.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center justify-center gap-2 min-h-[48px] transition-all"
         >
           <MessageSquareHeart className="w-4 h-4" />
-          <span>Lanjut Ajukan Konseling</span>
+          <span>Lanjut Pilih Konselor</span>
           <ArrowRight className="w-4 h-4" />
         </motion.button>
 

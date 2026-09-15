@@ -100,29 +100,34 @@ class CounselingCaseController extends Controller
             ? 'Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2, Kampus Siber UINSSC'
             : null;
 
-        $case = CounselingCase::create([
-            'user_id' => $user->id,
-            'tutor_id' => $assignedTutorId,
-            'topic_id' => $topicId,
-            'custom_topic' => $customTopic,
-            'category' => $category,
-            'method' => $method,
-            'initial_reason' => $initialReason ?: "Pengajuan bimbingan konseling topik {$category}",
-            'assessment_answers' => $assessmentAnswers,
-            'priority' => 'MEDIUM',
-            'location' => $location,
-            'status' => 'WAITING_REVIEW',
-            'opened_at' => now(),
-        ]);
+        $createdData = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $assignedTutorId, $topicId, $customTopic, $category, $method, $initialReason, $assessmentAnswers, $location, $request) {
+            $case = CounselingCase::create([
+                'user_id' => $user->id,
+                'tutor_id' => $assignedTutorId,
+                'topic_id' => $topicId,
+                'custom_topic' => $customTopic,
+                'category' => $category,
+                'method' => $method,
+                'initial_reason' => $initialReason ?: "Pengajuan bimbingan konseling topik {$category}",
+                'assessment_answers' => $assessmentAnswers,
+                'priority' => 'MEDIUM',
+                'location' => $location,
+                'status' => 'WAITING_REVIEW',
+                'opened_at' => now(),
+            ]);
 
-        // If slot booking was selected, reserve slot and create session
-        $session = null;
-        if ($request->filled('availability_id')) {
-            $availability = TutorAvailability::where('id', $request->input('availability_id'))
-                ->where('status', 'AVAILABLE')
-                ->first();
+            // If slot booking was selected, reserve slot with pessimistic locking
+            $session = null;
+            if ($request->filled('availability_id')) {
+                $availability = TutorAvailability::where('id', $request->input('availability_id'))
+                    ->where('status', 'AVAILABLE')
+                    ->lockForUpdate()
+                    ->first();
 
-            if ($availability) {
+                if (!$availability) {
+                    abort(409, 'Slot jadwal yang dipilih baru saja dipesan oleh pengguna lain. Silakan pilih slot jam lain.');
+                }
+
                 $availability->status = 'BOOKED';
                 $availability->save();
 
@@ -163,7 +168,11 @@ class CounselingCaseController extends Controller
                 $case->tutor_id = $availability->tutor_id;
                 $case->save();
             }
-        }
+
+            return ['case' => $case, 'session' => $session];
+        });
+
+        $case = $createdData['case'];
 
         // Student Notification
         Notification::create([
@@ -216,14 +225,27 @@ class CounselingCaseController extends Controller
         ])->findOrFail($id);
 
         // Security authorization check
-        if (!$user->isTutor() && !$user->isAdmin() && $case->user_id !== $user->id) {
+        if ($user->isStudent() || $user->isGeneral()) {
+            if ($case->user_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Akses tidak diizinkan.',
+                ], 403);
+            }
+        } elseif ($user->isTutor()) {
+            // Tutor can only view if assigned to this case or if case is unassigned (waiting review)
+            if ($case->tutor_id !== null && $case->tutor_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Akses tidak diizinkan: Kasus ini ditangani oleh konselor lain.',
+                ], 403);
+            }
+        } elseif (!$user->isAdmin()) {
             return response()->json([
                 'message' => 'Akses tidak diizinkan.',
             ], 403);
         }
 
-        // Mask private notes if viewed by student
-        if ($user->isStudent() || $user->isGeneral()) {
+        // Mask private notes if viewed by student or admin
+        if ($user->isStudent() || $user->isGeneral() || $user->isAdmin()) {
             foreach ($case->sessions as $session) {
                 if ($session->note) {
                     $session->note->makeHidden('private_note');
@@ -231,8 +253,8 @@ class CounselingCaseController extends Controller
             }
         }
 
-        // For tutors and admins, also load student's psychological screening questionnaire responses and detailed answers
-        if ($user->isTutor() || $user->isAdmin()) {
+        // Only assigned tutors may load student's psychological screening questionnaire responses and detailed answers
+        if ($user->isTutor()) {
             $case->user->load([
                 'questionnaireResponses' => function ($q) {
                     $q->with([
@@ -482,8 +504,17 @@ class CounselingCaseController extends Controller
     public function studentDiagnostics(Request $request, $id)
     {
         $user = $request->user();
-        if (!$user->isTutor() && !$user->isAdmin()) {
-            return response()->json(['message' => 'Akses ditolak.'], 403);
+        if (!$user->isTutor()) {
+            return response()->json(['message' => 'Akses ditolak: Hanya konselor yang dapat mengakses rekam diagnostik.'], 403);
+        }
+
+        // Verify this tutor is assigned to at least one case of this student
+        $isAssigned = CounselingCase::where('user_id', $id)
+            ->where('tutor_id', $user->id)
+            ->exists();
+
+        if (!$isAssigned) {
+            return response()->json(['message' => 'Akses ditolak: Anda tidak memiliki penugasan kasus aktif dengan konseli ini.'], 403);
         }
 
         $student = User::with([

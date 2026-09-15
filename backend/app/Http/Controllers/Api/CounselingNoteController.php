@@ -94,8 +94,8 @@ class CounselingNoteController extends Controller
             return response()->json(['data' => null]);
         }
 
-        // Student privacy protection: NEVER expose private_note
-        if ($user->isStudent() || $user->isGeneral()) {
+        // Student & Admin privacy protection: NEVER expose private_note to Student or Admin
+        if ($user->isStudent() || $user->isGeneral() || $user->isAdmin()) {
             $note->makeHidden('private_note');
         } elseif ($user->isTutor() && $session->tutor_id === $user->id) {
             AuditLogService::log('view_sensitive_data', 'CounselingNote', (string)$note->id, [

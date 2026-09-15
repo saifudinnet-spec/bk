@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, ArrowRight, KeyRound, GraduationCap } from 'lucide-react';
+import { Lock, User, ArrowRight, KeyRound, GraduationCap, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useCounselingFlow } from '../../store/CounselingFlowContext';
 import PageTransition from '../../components/common/PageTransition';
 
 export const Login = () => {
-  const [loginRole, setLoginRole] = useState('student'); // 'student' | 'staff'
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'staff' ? 'staff' : 'student';
+  const [loginRole, setLoginRole] = useState(initialTab);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,6 +121,15 @@ export const Login = () => {
             <span>Konselor / Umum / Staf</span>
           </button>
         </div>
+
+        {loginRole === 'student' && (
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 mb-5 flex items-start gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+            <p className="text-xs text-emerald-950 leading-relaxed font-medium">
+              <strong>Login Otomatis Mahasiswa:</strong> Gunakan NIM dan kata sandi Portal Akademik kampus Anda. Akun konseling langsung aktif dan otomatis tersinkronisasi tanpa perlu mendaftar manual.
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

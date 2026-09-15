@@ -170,13 +170,13 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
       <div className="p-4 border-b border-softborder">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-soft-sm shrink-0">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-white border border-emerald-200/80 p-0.5 shadow-soft-xs flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="/logobk.png" alt="Logo Ruang BK" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-black text-darktext tracking-tight flex items-center gap-1.5">
-                Ruang BK
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+              <h2 className="text-sm font-extrabold text-[#164C53] tracking-wider uppercase flex items-center gap-1.5">
+                RUANG BK
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-800 border border-purple-200 normal-case tracking-normal">
                   CMS
                 </span>
               </h2>

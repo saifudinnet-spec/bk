@@ -121,17 +121,14 @@ export const ArticlesPage = () => {
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-100/80 px-4 sm:px-8 py-3.5 shadow-sm transition-all">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#047857] via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-soft-sm ring-2 ring-emerald-500/20">
-              <Sparkles className="w-5 h-5 text-amber-200" />
+            <div className="w-10 h-10 rounded-2xl bg-white border border-emerald-200/80 p-0.5 shadow-soft-xs flex items-center justify-center shrink-0 overflow-hidden ring-2 ring-emerald-500/10">
+              <img src="/logobk.png" alt="Logo Ruang BK" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="text-base sm:text-lg font-black text-darktext tracking-tight flex items-center gap-1.5">
-                Ruang BK
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-100 to-teal-50 text-emerald-900 border border-emerald-300/80">
-                  UINSSC
-                </span>
+              <span className="text-base sm:text-lg font-extrabold text-[#164C53] tracking-wider uppercase block">
+                RUANG BK
               </span>
-              <span className="text-[11px] text-mutedtext block leading-none">
+              <span className="text-[11px] text-mutedtext block leading-none mt-0.5">
                 Portal Artikel & Edukasi Mental
               </span>
             </div>

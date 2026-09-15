@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CounselingCase;
 use App\Models\Notification;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
@@ -117,17 +118,32 @@ class QuestionnaireController extends Controller
         $response = QuestionnaireResponse::with(['questionnaire', 'answers.question', 'answers.option', 'user.studentProfile'])
             ->findOrFail($id);
 
-        // Security check: Student can only view own; Tutor and Admin can view with log
-        if (!$user->isTutor() && !$user->isAdmin() && $response->user_id !== $user->id) {
-            return response()->json([
-                'message' => 'Akses ditolak ke data screening ini.',
-            ], 403);
-        }
+        // Security check: Student can only view own; Tutor can view only if assigned to this student's case; Admin cannot view individual raw psychological responses
+        if ($user->isStudent() || $user->isGeneral()) {
+            if ($response->user_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Akses ditolak ke data screening ini.',
+                ], 403);
+            }
+        } elseif ($user->isTutor()) {
+            $isAssigned = CounselingCase::where('user_id', $response->user_id)
+                ->where('tutor_id', $user->id)
+                ->exists();
 
-        if ($user->isTutor() || $user->isAdmin()) {
+            if (!$isAssigned) {
+                return response()->json([
+                    'message' => 'Akses ditolak: Anda bukan konselor yang ditugaskan untuk konseli ini.',
+                ], 403);
+            }
+
             AuditLogService::log('view_screening', 'QuestionnaireResponse', (string)$response->id, [
                 'target_user_id' => $response->user_id,
             ], $user->id);
+        } else {
+            // Admin or other role
+            return response()->json([
+                'message' => 'Akses ditolak: Administrator tidak memiliki wewenang membaca data asesmen psikologis personal konseli.',
+            ], 403);
         }
 
         return response()->json([

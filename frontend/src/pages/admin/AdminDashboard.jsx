@@ -49,7 +49,9 @@ import {
   UserX,
   HeartHandshake,
   Filter,
-  ChevronRight
+  ChevronRight,
+  Code,
+  Mic
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
@@ -114,13 +116,13 @@ export const AdminDashboard = () => {
   const [articleSearch, setArticleSearch] = useState('');
   const [articleCategoryFilter, setArticleCategoryFilter] = useState('all');
   const [previewArticle, setPreviewArticle] = useState(null);
+  const [articleEditorMode, setArticleEditorMode] = useState('text'); // 'text' | 'html' | 'preview'
 
   // User Management State (Filter Peran, Tab Konseli/Konselor/Admin, Sub-Filter, Pencarian, Modal)
   const [userRoleFilter, setUserRoleFilter] = useState('ALL'); // 'ALL' | 'COUNSELEE' | 'TUTOR' | 'ADMIN'
   const [counseleeSubFilter, setCounseleeSubFilter] = useState('ALL'); // 'ALL' | 'STUDENT' | 'GENERAL'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL'); // 'ALL' | 'active' | 'inactive'
-  const [showTerminologyNotice, setShowTerminologyNotice] = useState(true);
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
@@ -392,12 +394,49 @@ export const AdminDashboard = () => {
       content: '',
       status: 'published',
     });
+    setArticleEditorMode('text');
     setIsArticleModalOpen(true);
   };
 
   const handleOpenEditArticle = (art) => {
     setEditingArticle({ ...art });
+    // If article content contains HTML tags, auto-select 'html' mode
+    if (art.content && /<\/?[a-z][\s\S]*>/i.test(art.content)) {
+      setArticleEditorMode('html');
+    } else {
+      setArticleEditorMode('text');
+    }
     setIsArticleModalOpen(true);
+  };
+
+  const handleInsertHtmlTag = (openTag, closeTag = '') => {
+    const textarea = document.getElementById('article-content-textarea');
+    if (!textarea) {
+      setEditingArticle((prev) => ({
+        ...prev,
+        content: (prev?.content || '') + openTag + closeTag,
+      }));
+      return;
+    }
+
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const currentText = editingArticle?.content || '';
+    const selectedText = currentText.substring(start, end);
+
+    const replacement = openTag + selectedText + closeTag;
+    const newContent = currentText.substring(0, start) + replacement + currentText.substring(end);
+
+    setEditingArticle((prev) => ({
+      ...prev,
+      content: newContent,
+    }));
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = selectedText ? start + replacement.length : start + openTag.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 50);
   };
 
   const handleArticleFieldChange = (field, value) => {
@@ -1012,67 +1051,6 @@ export const AdminDashboard = () => {
       {/* 2. Users Tab (Kelola Pengguna: Konseli Mahasiswa & Umum, Konselor/Tutor, Administrator) */}
       {activeTab === 'users' && (
         <div className="space-y-6">
-          {/* Terminology Advisory Notice (Edukasi Terminologi: Mengapa Konseli/Klien, Bukan Pasien) */}
-          <div className="p-5 md:p-6 rounded-3xl bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/60 border border-indigo-100 shadow-soft-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-indigo-100/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs md:text-sm font-bold text-darktext flex items-center gap-2">
-                    Panduan Terminologi: Mengapa Menggunakan "Konseli" & "Klien", Bukan "Pasien"?
-                  </h4>
-                  <p className="text-[11px] text-mutedtext">
-                    Rekomendasi standar Asosiasi Bimbingan dan Konseling Indonesia (ABKIN) & Himpunan Psikologi Indonesia (HIMPSI).
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowTerminologyNotice(!showTerminologyNotice)}
-                className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors shrink-0 self-start sm:self-auto"
-              >
-                {showTerminologyNotice ? 'Sembunyikan Panduan' : 'Pelajari Standar Istilah'}
-              </button>
-            </div>
-
-            {showTerminologyNotice && (
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
-                <div className="p-3.5 rounded-2xl bg-white/90 border border-rose-100 shadow-sm space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-rose-700 font-bold text-xs">
-                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                    ❌ Hindari Istilah "Pasien"
-                  </div>
-                  <p className="text-[11px] text-mutedtext leading-relaxed">
-                    Istilah <strong>Pasien</strong> berakar dari ranah medis / psikiatri klinis ("orang sakit"). Menggunakannya berisiko memicu <strong>stigma sosial negatif</strong> (takut dicap tidak waras / gangguan mental) sehingga mahasiswa enggan datang mencari bantuan.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-white/90 border border-indigo-100 shadow-sm space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-indigo-700 font-bold text-xs">
-                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                    🎓 "Konseli" (Standar Kampus / ABKIN)
-                  </div>
-                  <p className="text-[11px] text-mutedtext leading-relaxed">
-                    Istilah resmi dan baku untuk mahasiswa adalah <strong>Konseli</strong> (<em>counselee</em>). Konseli dipandang sebagai <strong>individu sehat, berdaya, dan berpotensi</strong> yang sedang menavigasi dinamika akademik, karir, atau emosi bersama konselor.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-white/90 border border-purple-100 shadow-sm space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-purple-700 font-bold text-xs">
-                    <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                    🌐 "Klien" (Standar Profesional & Umum)
-                  </div>
-                  <p className="text-[11px] text-mutedtext leading-relaxed">
-                    Untuk pengguna masyarakat umum, istilah standar profesional adalah <strong>Klien</strong> (<em>client</em>). Menegaskan hubungan <strong>kemitraan profesional sejajar</strong>, saling menghormati, dan menjamin kerahasiaan tanpa prasangka medis.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Quick Metrics Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <button
@@ -4051,17 +4029,192 @@ export const AdminDashboard = () => {
               </div>
 
               {/* Isi Lengkap Artikel */}
-              <div>
-                <label className="block text-xs font-bold text-darktext mb-1">
-                  Isi Lengkap Artikel (Konten Utama)
-                </label>
-                <textarea
-                  rows={6}
-                  placeholder="Tuliskan isi pembahasan edukasi psikologi lengkap di sini..."
-                  value={editingArticle.content || ''}
-                  onChange={(e) => handleArticleFieldChange('content', e.target.value)}
-                  className="w-full p-3 rounded-xl border border-softborder bg-gray-50 text-xs text-darktext focus:bg-white focus:outline-none leading-relaxed"
-                />
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-xs font-bold text-darktext flex items-center gap-2">
+                    <span>Isi Lengkap Artikel (Konten Utama)</span>
+                    {articleEditorMode === 'html' && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-mono text-[10px] font-bold border border-amber-300/80">
+                        HTML Code Mode
+                      </span>
+                    )}
+                  </label>
+
+                  {/* Mode Switcher Tabs */}
+                  <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setArticleEditorMode('text')}
+                      className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                        articleEditorMode === 'text'
+                          ? 'bg-white text-emerald-800 shadow-2xs'
+                          : 'text-mutedtext hover:text-darktext'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Teks / Visual</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setArticleEditorMode('html')}
+                      className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                        articleEditorMode === 'html'
+                          ? 'bg-slate-900 text-emerald-400 shadow-2xs'
+                          : 'text-mutedtext hover:text-darktext'
+                      }`}
+                    >
+                      <Code className="w-3.5 h-3.5" />
+                      <span>Mode Kode (HTML)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setArticleEditorMode('preview')}
+                      className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                        articleEditorMode === 'preview'
+                          ? 'bg-emerald-700 text-white shadow-2xs'
+                          : 'text-mutedtext hover:text-darktext'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Preview</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick HTML Toolbar (When in HTML mode) */}
+                {articleEditorMode === 'html' && (
+                  <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-900 text-slate-200 rounded-xl border border-slate-800 text-[11px] font-mono">
+                    <span className="text-slate-400 text-[10px] px-1 font-sans">Tag Cepat:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<p>', '</p>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded border border-slate-700 transition-colors"
+                      title="Paragraf"
+                    >
+                      &lt;p&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<h3>', '</h3>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded border border-slate-700 transition-colors"
+                      title="Sub-judul (H3)"
+                    >
+                      &lt;h3&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<h2>', '</h2>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded border border-slate-700 transition-colors"
+                      title="Judul Bab (H2)"
+                    >
+                      &lt;h2&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<strong>', '</strong>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded border border-slate-700 transition-colors"
+                      title="Teks Tebal"
+                    >
+                      &lt;strong&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<em>', '</em>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded border border-slate-700 transition-colors"
+                      title="Teks Miring"
+                    >
+                      &lt;em&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<ul>\n  <li>', '</li>\n</ul>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded border border-slate-700 transition-colors"
+                      title="Daftar Bullet"
+                    >
+                      &lt;ul&gt;&lt;li&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<ol>\n  <li>', '</li>\n</ol>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded border border-slate-700 transition-colors"
+                      title="Daftar Nomor"
+                    >
+                      &lt;ol&gt;&lt;li&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<blockquote class="p-3 bg-emerald-50/50 border-l-4 border-emerald-600 rounded-r-xl italic my-3">\n', '\n</blockquote>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded border border-slate-700 transition-colors"
+                      title="Kutipan Khusus"
+                    >
+                      &lt;blockquote&gt;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertHtmlTag('<div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 my-3">\n  ', '\n</div>')}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded border border-slate-700 transition-colors"
+                      title="Kotak Info Callout"
+                    >
+                      &lt;callout&gt;
+                    </button>
+                  </div>
+                )}
+
+                {/* Editor View */}
+                {articleEditorMode === 'preview' ? (
+                  <div className="p-4 sm:p-6 rounded-2xl border border-slate-200 bg-white min-h-[200px] max-h-[350px] overflow-y-auto space-y-3">
+                    <div className="text-[11px] font-bold text-mutedtext pb-2 border-b border-gray-100 flex items-center justify-between">
+                      <span>Pratinjau Halaman Artikel:</span>
+                      <span className="text-emerald-700 font-medium">Tampilan Pengunjung</span>
+                    </div>
+                    {editingArticle.content?.trim() ? (
+                      /<\/?[a-z][\s\S]*>/i.test(editingArticle.content) ? (
+                        <div
+                          className="article-html-content text-slate-700 leading-relaxed text-xs sm:text-sm space-y-3 [&>h2]:text-lg [&>h2]:font-bold [&>h2]:text-slate-900 [&>h3]:text-base [&>h3]:font-bold [&>h3]:text-slate-900 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&>blockquote]:border-l-4 [&>blockquote]:border-emerald-600 [&>blockquote]:pl-3 [&>blockquote]:italic"
+                          dangerouslySetInnerHTML={{ __html: editingArticle.content }}
+                        />
+                      ) : (
+                        <div className="space-y-3 text-slate-700 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                          {editingArticle.content}
+                        </div>
+                      )
+                    ) : (
+                      <p className="text-xs text-mutedtext italic py-8 text-center">Belum ada konten artikel yang ditulis.</p>
+                    )}
+                  </div>
+                ) : articleEditorMode === 'html' ? (
+                  <div className="space-y-1.5">
+                    <textarea
+                      id="article-content-textarea"
+                      rows={8}
+                      placeholder="<h3>Sub Judul Artikel</h3>&#10;<p>Tuliskan paragraf pembahasan dengan format HTML di sini...</p>&#10;<ul>&#10;  <li>Poin pertama</li>&#10;  <li>Poin kedua</li>&#10;</ul>"
+                      value={editingArticle.content || ''}
+                      onChange={(e) => handleArticleFieldChange('content', e.target.value)}
+                      className="w-full p-4 rounded-2xl border border-slate-800 bg-slate-950 text-emerald-300 font-mono text-xs focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none leading-relaxed selection:bg-emerald-800"
+                    />
+                    <div className="flex items-center justify-between text-[11px] text-mutedtext px-1">
+                      <span>Mendukung tag HTML: &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;li&gt;, &lt;blockquote&gt;, &lt;div&gt;</span>
+                      <span className="font-mono text-[10px]">{(editingArticle.content || '').length} karakter</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <textarea
+                      id="article-content-textarea"
+                      rows={7}
+                      placeholder="Tuliskan isi pembahasan edukasi psikologi lengkap di sini (bisa gunakan baris baru atau markdown ### untuk sub-judul)..."
+                      value={editingArticle.content || ''}
+                      onChange={(e) => handleArticleFieldChange('content', e.target.value)}
+                      className="w-full p-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs sm:text-sm text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 leading-relaxed"
+                    />
+                    <div className="flex items-center justify-between text-[11px] text-mutedtext px-1">
+                      <span>Gunakan mode ini untuk teks biasa / markdown, atau beralih ke <strong>Mode Kode (HTML)</strong> untuk format HTML.</span>
+                      <span className="font-mono text-[10px]">{(editingArticle.content || '').length} karakter</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

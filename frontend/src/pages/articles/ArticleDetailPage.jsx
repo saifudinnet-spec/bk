@@ -20,6 +20,163 @@ import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
 import PageTransition from '../../components/common/PageTransition';
 
+// Helper function to render formatted article text with headings, lists, bold & italic styling
+const renderInlineMarkdown = (text) => {
+  if (!text) return null;
+  // Match bold (**text**) and italic (*text*)
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="font-bold text-slate-900">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return (
+        <em key={i} className="italic text-slate-800">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    return part;
+  });
+};
+
+const renderArticleContent = (rawText) => {
+  if (!rawText) return null;
+  const normalized = rawText.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+
+  const elements = [];
+  let currentList = [];
+  let listType = null; // 'ol' or 'ul'
+  let currentParagraph = [];
+
+  const flushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      const text = currentParagraph.join(' ').trim();
+      if (text) {
+        elements.push(
+          <p key={`p-${elements.length}`} className="text-slate-700 leading-relaxed text-xs sm:text-sm">
+            {renderInlineMarkdown(text)}
+          </p>
+        );
+      }
+      currentParagraph = [];
+    }
+  };
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      if (listType === 'ol') {
+        elements.push(
+          <ol key={`ol-${elements.length}`} className="space-y-3 my-4 list-none pl-0">
+            {currentList.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-3 text-slate-700 leading-relaxed text-xs sm:text-sm">
+                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                  {item.num}
+                </span>
+                <span className="flex-1">
+                  {renderInlineMarkdown(item.text)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        );
+      } else if (listType === 'ul') {
+        elements.push(
+          <ul key={`ul-${elements.length}`} className="space-y-2.5 my-4 list-none pl-0">
+            {currentList.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2.5 text-slate-700 leading-relaxed text-xs sm:text-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-2" />
+                <span className="flex-1">
+                  {renderInlineMarkdown(item.text)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      currentList = [];
+      listType = null;
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    // Heading 3: ### Heading
+    if (line.startsWith('### ')) {
+      flushParagraph();
+      flushList();
+      const headingText = line.replace(/^###\s+/, '');
+      elements.push(
+        <h3 key={`h3-${elements.length}`} className="text-base sm:text-lg font-bold text-slate-900 mt-6 mb-2 flex items-center gap-2">
+          <span className="w-1.5 h-4 sm:h-5 rounded-full bg-emerald-600 inline-block shrink-0" />
+          <span>{headingText}</span>
+        </h3>
+      );
+      continue;
+    }
+
+    // Heading 2: ## Heading
+    if (line.startsWith('## ')) {
+      flushParagraph();
+      flushList();
+      const headingText = line.replace(/^##\s+/, '');
+      elements.push(
+        <h2 key={`h2-${elements.length}`} className="text-lg sm:text-xl font-black text-slate-900 mt-7 mb-3">
+          {headingText}
+        </h2>
+      );
+      continue;
+    }
+
+    // Numbered list item: e.g. 1. Text
+    const olMatch = line.match(/^(\d+)\.\s+(.*)/);
+    if (olMatch) {
+      flushParagraph();
+      if (listType !== 'ol') {
+        flushList();
+        listType = 'ol';
+      }
+      currentList.push({ num: olMatch[1], text: olMatch[2] });
+      continue;
+    }
+
+    // Bullet list item: e.g. * Text or - Text
+    const ulMatch = line.match(/^(\*|-)\s+(.*)/);
+    if (ulMatch) {
+      flushParagraph();
+      if (listType !== 'ul') {
+        flushList();
+        listType = 'ul';
+      }
+      currentList.push({ text: ulMatch[2] });
+      continue;
+    }
+
+    // Regular line within a paragraph
+    if (listType) {
+      flushList();
+    }
+    currentParagraph.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+
+  return elements;
+};
+
 export const ArticleDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,17 +185,25 @@ export const ArticleDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchContent = async () => {
       try {
         const res = await api.get('/landing-content');
-        setContent(res.data || res);
+        if (isMounted) {
+          setContent(res.data || res);
+        }
       } catch (err) {
         console.error('Failed to load article:', err);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
     fetchContent();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const fallbackArticles = [
@@ -111,12 +276,28 @@ Jawabannya: **Tidak ada yang wajib disiapkan.** Anda tidak perlu membuat catatan
     }
   ];
 
-  const articles = (content?.articles?.items && Array.isArray(content.articles.items) && content.articles.items.length > 0)
+  const backendArticles = (content?.articles?.items && Array.isArray(content.articles.items) && content.articles.items.length > 0)
     ? content.articles.items
-    : fallbackArticles;
+    : [];
 
-  const currentArticle = articles.find((a) => String(a.id) === String(id)) || articles[0];
-  const relatedArticles = articles.filter((a) => String(a.id) !== String(currentArticle?.id)).slice(0, 2);
+  const allArticles = backendArticles.length > 0 ? backendArticles : fallbackArticles;
+
+  // Smart resolution for current article
+  const fallbackArticle = fallbackArticles.find((a) => String(a.id) === String(id)) || fallbackArticles[0];
+  const backendArticle = backendArticles.find((a) => String(a.id) === String(id));
+
+  const currentArticle = backendArticle
+    ? {
+        ...fallbackArticle,
+        ...backendArticle,
+        // If backend content is too short (< 200 chars) while fallback has rich content, retain full content
+        content: (backendArticle.content && backendArticle.content.trim().length > 200)
+          ? backendArticle.content
+          : (fallbackArticle?.content || backendArticle.content || backendArticle.snippet || ''),
+      }
+    : (allArticles.find((a) => String(a.id) === String(id)) || fallbackArticle);
+
+  const relatedArticles = allArticles.filter((a) => String(a.id) !== String(currentArticle?.id)).slice(0, 2);
 
   const handleShare = () => {
     if (navigator.clipboard) {
@@ -142,12 +323,12 @@ Jawabannya: **Tidak ada yang wajib disiapkan.** Anda tidak perlu membuat catatan
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-100/80 px-4 sm:px-8 py-3.5 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#047857] to-teal-500 flex items-center justify-center text-white shadow-soft-xs">
-              <Sparkles className="w-4 h-4 text-amber-200" />
+            <div className="w-9 h-9 rounded-2xl bg-white border border-emerald-200/80 p-0.5 shadow-soft-xs flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="/logobk.png" alt="Logo Ruang BK" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="text-sm font-black text-darktext tracking-tight">Ruang BK UINSSC</span>
-              <span className="text-[10px] text-mutedtext block">Artikel Edukasi</span>
+              <span className="text-sm font-extrabold text-[#164C53] tracking-wider uppercase block">RUANG BK</span>
+              <span className="text-[10px] text-mutedtext block leading-none mt-0.5">Artikel Edukasi</span>
             </div>
           </Link>
 
@@ -227,9 +408,16 @@ Jawabannya: **Tidak ada yang wajib disiapkan.** Anda tidak perlu membuat catatan
             "{currentArticle.snippet}"
           </div>
 
-          {/* Formatted Content Paragraphs */}
-          <div className="space-y-4 pt-2 whitespace-pre-wrap">
-            {currentArticle.content}
+          {/* Formatted Content Paragraphs / HTML Content */}
+          <div className="space-y-4 pt-2">
+            {/<\/?[a-z][\s\S]*>/i.test(currentArticle.content || '') ? (
+              <div
+                className="article-html-content text-slate-700 leading-relaxed text-xs sm:text-sm space-y-4 [&>h2]:text-xl [&>h2]:font-black [&>h2]:text-slate-900 [&>h2]:mt-7 [&>h2]:mb-3 [&>h3]:text-base [&>h3]:sm:text-lg [&>h3]:font-bold [&>h3]:text-slate-900 [&>h3]:mt-6 [&>h3]:mb-2 [&>h3]:flex [&>h3]:items-center [&>h3]:gap-2 [&>p]:leading-relaxed [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2.5 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:space-y-2.5 [&>blockquote]:border-l-4 [&>blockquote]:border-emerald-600 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:bg-emerald-50/50 [&>blockquote]:p-3 [&>blockquote]:rounded-r-xl [&>img]:rounded-2xl [&>img]:my-4 [&>a]:text-emerald-700 [&>a]:underline"
+                dangerouslySetInnerHTML={{ __html: currentArticle.content }}
+              />
+            ) : (
+              renderArticleContent(currentArticle.content)
+            )}
           </div>
         </div>
 

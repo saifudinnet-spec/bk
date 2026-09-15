@@ -21,7 +21,8 @@ export const CounselingFlowProvider = ({ children }) => {
       assessmentData: null,
       selectedMethod: 'ZOOM', // 'CHAT' | 'ZOOM' | 'OFFLINE'
       selectedSlot: null,
-      entryPath: null, // 'topic' | 'counselor'
+      entryPath: null, // 'topic' | 'counselor' | 'screening'
+      screeningResponse: null,
     };
   });
 
@@ -53,6 +54,38 @@ export const CounselingFlowProvider = ({ children }) => {
       selectedTopic: null,
       customTopic: '',
       entryPath: 'counselor',
+    }));
+  }, []);
+
+  // Jalur C: Start with Screening Assessment Result
+  const startWithScreening = useCallback((screeningData, matchedTopic = null) => {
+    const topCategory = screeningData?.category_scores?.[0]?.category || 'Akademik & Skripsi';
+    const primaryTopic = matchedTopic || {
+      id: 1,
+      title: topCategory,
+      tag: 'Hasil Evaluasi Screening',
+    };
+
+    const impactVal = screeningData?.category_scores?.[0]?.level === 'Tinggi' ? 4 : (screeningData?.category_scores?.[0]?.level === 'Sedang' ? 3 : 2);
+
+    const assessment = {
+      topic: topCategory,
+      main_issue: `Asesmen Kebutuhan: ${topCategory}`,
+      duration: '1–4 minggu',
+      impact_level: impactVal,
+      previous_efforts: 'Pengisian screening evaluasi mandiri',
+      story: `Berdasarkan pengisian instrumen evaluasi mandiri (${screeningData?.questionnaire?.title || 'Screening Kebutuhan Mahasiswa'}). Area bimbingan utama: ${topCategory} (Tingkat: ${screeningData?.category_scores?.[0]?.level || 'Perlu Pendampingan'}).`,
+      screening_response_id: screeningData?.id || null,
+    };
+
+    setFlowState((prev) => ({
+      ...prev,
+      selectedTopic: primaryTopic,
+      selectedCounselor: null,
+      customTopic: '',
+      assessmentData: assessment,
+      entryPath: 'screening',
+      screeningResponse: screeningData,
     }));
   }, []);
 
@@ -102,6 +135,7 @@ export const CounselingFlowProvider = ({ children }) => {
       selectedMethod: 'ZOOM',
       selectedSlot: null,
       entryPath: null,
+      screeningResponse: null,
     };
     setFlowState(fresh);
     try {
@@ -120,6 +154,7 @@ export const CounselingFlowProvider = ({ children }) => {
         hasActiveBooking,
         startWithTopic,
         startWithCounselor,
+        startWithScreening,
         setSelectedTopic,
         setSelectedCounselor,
         setAssessmentData,

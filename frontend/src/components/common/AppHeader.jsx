@@ -77,8 +77,9 @@ export const AppHeader = ({ title, subtitle, showGreeting = true }) => {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setShowNotificationsModal(true)}
-              className="relative w-10 h-10 rounded-2xl bg-white border border-softborder flex items-center justify-center text-darktext hover:bg-gray-50 transition-colors shadow-soft-sm"
+              className="relative w-10 h-10 rounded-2xl bg-white border border-softborder flex items-center justify-center text-darktext hover:bg-gray-50 transition-colors shadow-soft-sm cursor-pointer"
               title="Notifikasi"
             >
               <Bell className="w-4 h-4 text-mutedtext" />

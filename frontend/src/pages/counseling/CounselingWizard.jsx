@@ -44,6 +44,8 @@ export const CounselingWizard = () => {
     customTopic,
     selectedMethod,
     selectedSlot,
+    assessmentData: contextAssessmentData,
+    screeningResponse,
     setSelectedMethod,
     setSelectedSlot,
     resetFlow,
@@ -51,8 +53,11 @@ export const CounselingWizard = () => {
 
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Form State for Asesmen Awal (collected via GuidedAssessment)
+  // Form State for Asesmen Awal (collected via GuidedAssessment or from screening)
   const [assessmentData, setAssessmentData] = useState(() => {
+    if (contextAssessmentData) {
+      return contextAssessmentData;
+    }
     try {
       const saved = sessionStorage.getItem('ruangbk_guided_assessment_draft_v1');
       if (saved) {
@@ -71,6 +76,21 @@ export const CounselingWizard = () => {
     }
     return null;
   });
+
+  const [useConnectedScreening, setUseConnectedScreening] = useState(() => {
+    return Boolean(contextAssessmentData?.screening_response_id || screeningResponse);
+  });
+  const [additionalStoryNotes, setAdditionalStoryNotes] = useState('');
+
+  // Sync state if contextAssessmentData becomes available later
+  useEffect(() => {
+    if (contextAssessmentData && !assessmentData) {
+      setAssessmentData(contextAssessmentData);
+      if (contextAssessmentData.screening_response_id || screeningResponse) {
+        setUseConnectedScreening(true);
+      }
+    }
+  }, [contextAssessmentData, assessmentData, screeningResponse]);
 
   const [mainIssue, setMainIssue] = useState('');
   const [customMainIssue, setCustomMainIssue] = useState('');
@@ -398,8 +418,157 @@ export const CounselingWizard = () => {
 
       <div className="space-y-3">
 
-        {/* STEP 1: GUIDED CONVERSATIONAL SCREENING (NARA) */}
-        {currentStep === 1 && (
+        {/* STEP 1: ASESMEN AWAL (Screening Terhubung vs Nara Conversational) */}
+        {currentStep === 1 && useConnectedScreening && (assessmentData || contextAssessmentData) ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-3 sm:space-y-4"
+          >
+            {/* Header Banner */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-soft-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-black border border-emerald-200/70">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Hasil Evaluasi Mandiri Terhubung</span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Hasil Skrining Siap Diteruskan
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
+                  Data evaluasi mandiri Anda telah terhubung secara otomatis ke sesi konseling bersama{' '}
+                  <span className="font-bold text-slate-800">{selectedCounselor?.name}</span>. Anda tidak perlu mengulang pengisian formulir keluhan dari awal.
+                </p>
+              </div>
+
+              <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-emerald-900 text-xs font-bold shrink-0">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Data Rahasia & Terenkripsi</span>
+              </div>
+            </div>
+
+            {/* Assessment Result Summary Card */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-soft-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                    Instrumen Skrining
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {screeningResponse?.questionnaire?.title || 'Screening Kebutuhan Mahasiswa & DASS-21'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tanggal Evaluasi:{' '}
+                    {screeningResponse?.completed_at
+                      ? new Date(screeningResponse.completed_at).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : 'Baru saja'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-100/70 text-emerald-800 font-bold text-xs border border-emerald-200">
+                    {assessmentData?.main_issue || activeTopicTitle}
+                  </span>
+                </div>
+              </div>
+
+              {/* Category Breakdown if available */}
+              {screeningResponse?.category_scores && screeningResponse.category_scores.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-slate-700 block">
+                    Area yang Memerlukan Perhatian:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {screeningResponse.category_scores.map((cat, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between"
+                      >
+                        <span className="text-xs font-semibold text-slate-800">{cat.category}</span>
+                        <span
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${
+                            cat.level === 'Tinggi'
+                              ? 'bg-rose-100 text-rose-800'
+                              : cat.level === 'Sedang'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {cat.level}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pre-filled summary / story */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/40 border border-emerald-100/70 space-y-1">
+                <span className="text-[11px] font-bold text-emerald-900 block">
+                  Ringkasan Kebutuhan Konseling:
+                </span>
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {assessmentData?.story || 'Klien membutuhkan pendampingan konseling berdasarkan hasil asesmen psikologis.'}
+                </p>
+              </div>
+
+              {/* Optional Additional Story Notes */}
+              <div className="pt-2 space-y-1.5">
+                <label className="block text-xs font-bold text-slate-800">
+                  Catatan Tambahan untuk Konselor <span className="text-slate-400 font-normal">(Opsional)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={additionalStoryNotes}
+                  onChange={(e) => setAdditionalStoryNotes(e.target.value)}
+                  placeholder="Ceritakan hal penting lain yang ingin Anda sampaikan sebelum sesi bimbingan dimulai..."
+                  className="w-full p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 focus:bg-white text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                />
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setUseConnectedScreening(false)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 underline order-2 sm:order-1 cursor-pointer"
+                >
+                  Saya ingin mengisi asesmen cerita manual (Nara)
+                </button>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/konselor')}
+                    className="px-4 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    Ubah Konselor
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (additionalStoryNotes.trim()) {
+                        const baseStory = assessmentData?.story || '';
+                        const mergedStory = `${baseStory}\n\nCatatan Tambahan Mahasiswa: ${additionalStoryNotes.trim()}`.trim();
+                        setAssessmentData((prev) => ({ ...prev, story: mergedStory }));
+                      }
+                      setCurrentStep(2);
+                    }}
+                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs sm:text-sm font-bold shadow-soft-sm flex items-center justify-center gap-2 transition-colors min-h-[44px] cursor-pointer"
+                  >
+                    <span>Gunakan Data Ini & Lanjut ke Metode</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ) : currentStep === 1 && (
           <GuidedAssessment
             selectedTopic={selectedTopic}
             selectedCounselor={selectedCounselor}

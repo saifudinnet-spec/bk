@@ -27,13 +27,12 @@ class ActionPlanController extends Controller
         if ($user->isStudent() || $user->isGeneral()) {
             $query->where('user_id', $user->id);
         } elseif ($user->isTutor()) {
-            // Tutor can view tasks they assigned or for cases assigned to them
+            // Tutor can only view tasks they assigned or are responsible for
+            $query->where('tutor_id', $user->id);
             if ($request->has('case_id')) {
                 $query->where('counseling_case_id', $request->query('case_id'));
             } elseif ($request->has('user_id')) {
                 $query->where('user_id', $request->query('user_id'));
-            } else {
-                $query->where('tutor_id', $user->id);
             }
         } elseif ($user->isAdmin()) {
             if ($request->has('case_id')) {

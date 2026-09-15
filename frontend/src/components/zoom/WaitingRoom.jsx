@@ -1,12 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Video, Calendar, Clock, ShieldCheck, User, Info, ArrowRight, Stethoscope } from 'lucide-react';
+import {
+  Video,
+  Calendar,
+  Clock,
+  ShieldCheck,
+  User,
+  Info,
+  ArrowRight,
+  Stethoscope,
+  Sparkles,
+  Volume2,
+  Headphones,
+  CheckCircle2
+} from 'lucide-react';
 import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
 
 export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [canJoin, setCanJoin] = useState(false);
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
+  const [isPlayingTestSound, setIsPlayingTestSound] = useState(false);
+  const [checklist, setChecklist] = useState({
+    headset: false,
+    quietRoom: false,
+    stableNetwork: true,
+  });
+
+  const toggleChecklist = (key) => {
+    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const playTestAudio = () => {
+    try {
+      setIsPlayingTestSound(true);
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) {
+        setIsPlayingTestSound(false);
+        return;
+      }
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+      setTimeout(() => setIsPlayingTestSound(false), 500);
+    } catch {
+      setIsPlayingTestSound(false);
+    }
+  };
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -42,10 +91,10 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
   const partnerRole = isTutor ? 'Klien / Mahasiswa' : 'Konselor Bimbingan Konseling';
 
   return (
-    <div className="max-w-md mx-auto w-full px-4 py-6">
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-softborder shadow-soft-lg text-center">
+    <div className="max-w-xl mx-auto w-full px-4 py-6">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-soft-lg text-center">
         {/* Animated Icon */}
-        <div className="w-16 h-16 rounded-3xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center mx-auto mb-4 shadow-soft-sm">
+        <div className="w-16 h-16 rounded-3xl bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center mx-auto mb-4 shadow-soft-sm">
           <Video className="w-8 h-8" />
         </div>
 
@@ -53,35 +102,47 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           Ruang Tunggu Konseling Online
         </span>
 
-        <h2 className="text-xl font-bold text-darktext mt-1 mb-2">
+        <h2 className="text-xl font-bold text-slate-900 mt-1 mb-2">
           {session.counseling_case?.category ? `Konseling ${session.counseling_case.category}` : 'Konseling Online'}
         </h2>
 
-        <p className="text-xs text-mutedtext mb-6">
+        <p className="text-xs text-slate-500 mb-6">
           Sesi konseling privat terenkripsi melalui Zoom Meeting SDK.
         </p>
 
-        {/* Schedule & Tutor Card */}
-        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 text-left space-y-3 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">
-              {partnerName?.charAt(0) || 'U'}
+        {/* Counselor Readiness Status Card */}
+        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-left mb-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-700 text-white font-bold flex items-center justify-center text-sm shadow-soft-xs">
+                  {partnerName?.charAt(0) || 'K'}
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 truncate">{partnerName || 'Konselor BK'}</p>
+                <p className="text-[11px] text-emerald-800 font-medium truncate">{partnerRole}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-darktext truncate">{partnerName || 'Tutor Konseling'}</p>
-              <p className="text-[11px] text-mutedtext">{partnerRole}</p>
-            </div>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-white text-emerald-800 border border-emerald-200 shadow-soft-xs shrink-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{canJoin ? 'Siap di Ruang Sesi' : 'Konselor Terjadwal'}</span>
+            </span>
           </div>
+        </div>
 
-          <div className="pt-3 border-t border-gray-200/60 flex items-center justify-between text-xs text-mutedtext">
+        {/* Schedule & Timing Card */}
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-left space-y-3 mb-5">
+          <div className="flex items-center justify-between text-xs text-slate-600 flex-wrap gap-2">
             <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-emerald-600" />
+              <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
                 {startDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-teal-600" />
+              <Clock className="w-4 h-4 text-teal-600 shrink-0" />
               <span>
                 {startDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} -{' '}
                 {endDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
@@ -95,19 +156,78 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           <button
             type="button"
             onClick={() => setShowDiagnosticModal(true)}
-            className="w-full py-2.5 px-3 rounded-2xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition-colors flex items-center justify-center gap-1.5 mb-4 shadow-soft-xs"
+            className="w-full py-2.5 px-3 rounded-2xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition-colors flex items-center justify-center gap-1.5 mb-5 shadow-soft-xs"
           >
             <Stethoscope className="w-3.5 h-3.5 text-teal-700" />
             <span>Lihat Data & Asesmen Konseli</span>
           </button>
         )}
 
+        {/* Pre-Session Preparation Checklist */}
+        <div className="p-4 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-left mb-6 space-y-2.5">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Tips Persiapan Konseling</span>
+            </span>
+            <button
+              type="button"
+              onClick={playTestAudio}
+              disabled={isPlayingTestSound}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100/80 px-2.5 py-1 rounded-xl border border-teal-200 transition-colors"
+            >
+              <Volume2 className={`w-3.5 h-3.5 ${isPlayingTestSound ? 'animate-bounce text-emerald-600' : ''}`} />
+              <span>{isPlayingTestSound ? 'Memutar...' : 'Tes Audio'}</span>
+            </button>
+          </div>
+
+          <p className="text-[11px] text-slate-500 mb-2 leading-relaxed">
+            Centang hal-hal berikut agar sesi konseling Anda berjalan optimal:
+          </p>
+
+          <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-700 select-none">
+            <input
+              type="checkbox"
+              checked={checklist.headset}
+              onChange={() => toggleChecklist('headset')}
+              className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500/20 w-4 h-4"
+            />
+            <span className="leading-snug">
+              <strong>Gunakan earphone/headset</strong> agar percakapan lebih jernih dan menjaga privasi Anda.
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-700 select-none">
+            <input
+              type="checkbox"
+              checked={checklist.quietRoom}
+              onChange={() => toggleChecklist('quietRoom')}
+              className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500/20 w-4 h-4"
+            />
+            <span className="leading-snug">
+              <strong>Pilih tempat yang privat & tenang</strong> tanpa gangguan agar nyaman bercerita.
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-700 select-none">
+            <input
+              type="checkbox"
+              checked={checklist.stableNetwork}
+              onChange={() => toggleChecklist('stableNetwork')}
+              className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500/20 w-4 h-4"
+            />
+            <span className="leading-snug">
+              <strong>Koneksi internet memadai</strong> untuk kelancaran video & audio tatap layar.
+            </span>
+          </label>
+        </div>
+
         {/* Countdown & Status */}
-        <div className="mb-6 p-4 rounded-2xl bg-teal-50/50 border border-teal-100">
+        <div className="mb-6 p-4 rounded-2xl bg-teal-50/60 border border-teal-100">
           <p className="text-[11px] text-teal-800 font-medium mb-1">Status Ruang Sesi:</p>
-          <p className="text-base font-bold text-teal-900">{timeLeft}</p>
+          <p className="text-base font-bold text-teal-950">{timeLeft}</p>
           {!canJoin && (
-            <p className="text-[10px] text-mutedtext mt-1">
+            <p className="text-[10px] text-slate-500 mt-1">
               Tombol masuk sesi akan aktif otomatis 15 menit sebelum waktu konseling.
             </p>
           )}
@@ -121,7 +241,7 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           className={`w-full py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-soft-md transition-all min-h-[48px] ${
             canJoin
               ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 animate-pulse'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+              : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
           }`}
         >
           <Video className="w-5 h-5" />
@@ -130,7 +250,7 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
         </motion.button>
 
         {/* Privacy Note */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-mutedtext mt-4">
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mt-4">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>Sesi ini privat dan terjaga kerahasiaannya.</span>
         </div>

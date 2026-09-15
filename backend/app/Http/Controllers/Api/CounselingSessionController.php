@@ -11,6 +11,7 @@ use App\Models\TutorAvailability;
 use App\Services\AuditLogService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CounselingSessionController extends Controller
 {
@@ -82,77 +83,82 @@ class CounselingSessionController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        $availability = TutorAvailability::where('id', $request->input('availability_id'))
-            ->where('status', 'AVAILABLE')
-            ->first();
+        $session = DB::transaction(function () use ($request, $case, $user) {
+            $availability = TutorAvailability::where('id', $request->input('availability_id'))
+                ->where('status', 'AVAILABLE')
+                ->lockForUpdate()
+                ->first();
 
-        if (!$availability) {
-            return response()->json(['message' => 'Slot jadwal ini sudah tidak tersedia.'], 409);
-        }
+            if (!$availability) {
+                abort(409, 'Slot jadwal yang dipilih baru saja dipesan oleh pengguna lain. Silakan pilih slot jam lain.');
+            }
 
-        $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time);
-        $endAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time);
+            $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time);
+            $endAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time);
 
-        // Mark slot as booked
-        $availability->status = 'BOOKED';
-        $availability->save();
+            // Mark slot as booked
+            $availability->status = 'BOOKED';
+            $availability->save();
 
-        // Generate meeting identifiers
-        $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
-        $meetingPassword = 'bk' . rand(1000, 9999);
-        $meetingUrl = null;
-        $sessionMethod = ($case->method || 'ZOOM');
+            // Generate meeting identifiers
+            $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
+            $meetingPassword = 'bk' . rand(1000, 9999);
+            $meetingUrl = null;
+            $sessionMethod = ($case->method || 'ZOOM');
 
-        if (strtoupper($sessionMethod) === 'ZOOM') {
-            $topic = "Bimbingan Konseling: {$case->category} - " . ($case->user->name ?? 'Mahasiswa');
-            $duration = max(15, $startAt->diffInMinutes($endAt));
-            $zoomResult = \App\Services\ZoomApiService::createMeeting($topic, $startAt->toIso8601String(), $duration);
+            if (strtoupper($sessionMethod) === 'ZOOM') {
+                $topic = "Bimbingan Konseling: {$case->category} - " . ($case->user->name ?? 'Mahasiswa');
+                $duration = max(15, $startAt->diffInMinutes($endAt));
+                $zoomResult = \App\Services\ZoomApiService::createMeeting($topic, $startAt->toIso8601String(), $duration);
 
-            $meetingNumber = $zoomResult['id'] ?? $meetingNumber;
-            $meetingPassword = $zoomResult['password'] ?? $meetingPassword;
-            $meetingUrl = $zoomResult['join_url'] ?? null;
-        }
+                $meetingNumber = $zoomResult['id'] ?? $meetingNumber;
+                $meetingPassword = $zoomResult['password'] ?? $meetingPassword;
+                $meetingUrl = $zoomResult['join_url'] ?? null;
+            }
 
-        // Create Counseling Session
-        $session = CounselingSession::create([
-            'counseling_case_id' => $case->id,
-            'user_id' => $case->user_id,
-            'tutor_id' => $availability->tutor_id,
-            'start_at' => $startAt,
-            'end_at' => $endAt,
-            'method' => $sessionMethod,
-            'status' => 'SCHEDULED',
-            'meeting_provider' => 'zoom',
-            'meeting_number' => $meetingNumber,
-            'meeting_password' => $meetingPassword,
-            'meeting_url' => $meetingUrl,
-            'zoom_meeting_id' => $meetingNumber,
-        ]);
+            // Create Counseling Session
+            $session = CounselingSession::create([
+                'counseling_case_id' => $case->id,
+                'user_id' => $case->user_id,
+                'tutor_id' => $availability->tutor_id,
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'method' => $sessionMethod,
+                'status' => 'SCHEDULED',
+                'meeting_provider' => 'zoom',
+                'meeting_number' => $meetingNumber,
+                'meeting_password' => $meetingPassword,
+                'meeting_url' => $meetingUrl,
+                'zoom_meeting_id' => $meetingNumber,
+            ]);
 
-        // Update case status and assign tutor
-        $case->tutor_id = $availability->tutor_id;
-        $case->status = 'SCHEDULED';
-        $case->save();
+            // Update case status and assign tutor
+            $case->tutor_id = $availability->tutor_id;
+            $case->status = 'SCHEDULED';
+            $case->save();
+
+            return $session;
+        });
 
         // Create notification for student
         Notification::create([
             'user_id' => $case->user_id,
             'type' => 'booking_confirmed',
             'title' => 'Jadwal Konseling Terkonfirmasi',
-            'message' => "Sesi Anda dijadwalkan pada " . $startAt->translatedFormat('d F Y, H:i') . " WIB.",
+            'message' => "Sesi Anda dijadwalkan pada " . $session->start_at->translatedFormat('d F Y, H:i') . " WIB.",
         ]);
 
         // Notification for tutor
         Notification::create([
-            'user_id' => $availability->tutor_id,
+            'user_id' => $session->tutor_id,
             'type' => 'tutor_booking_received',
             'title' => 'Jadwal Konseling Baru',
-            'message' => "Anda memiliki sesi konseling baru pada " . $startAt->translatedFormat('d F Y, H:i') . " WIB.",
+            'message' => "Anda memiliki sesi konseling baru pada " . $session->start_at->translatedFormat('d F Y, H:i') . " WIB.",
         ]);
 
         AuditLogService::log('book_session', 'CounselingSession', (string)$session->id, [
             'case_number' => $case->case_number,
-            'start_at' => $startAt->toIso8601String(),
+            'start_at' => $session->start_at->toIso8601String(),
         ], $user->id);
 
         return response()->json([
@@ -183,8 +189,8 @@ class CounselingSessionController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // For tutors and admins, load student's psychological screening responses & answers
-        if ($user->isTutor() || $user->isAdmin()) {
+        // Only assigned tutor can load student's psychological screening questionnaire responses (Admin excluded)
+        if ($user->isTutor() && $session->tutor_id === $user->id) {
             $session->user->load([
                 'questionnaireResponses' => function ($q) {
                     $q->with([
@@ -204,10 +210,9 @@ class CounselingSessionController extends Controller
         $canJoin = $now->between($startTime->copy()->subMinutes(15), $endTime);
         $minutesUntilStart = $now->lt($startTime) ? $now->diffInMinutes($startTime) : 0;
 
-        if ($user->isStudent() || $user->isGeneral()) {
-            if ($session->note) {
-                $session->note->makeHidden('private_note');
-            }
+        // Mask private_note for student, general user, and admin
+        if ($session->note && ($user->isStudent() || $user->isGeneral() || $user->isAdmin())) {
+            $session->note->makeHidden('private_note');
         }
 
         return response()->json([

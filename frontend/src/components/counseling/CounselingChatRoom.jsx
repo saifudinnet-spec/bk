@@ -26,6 +26,7 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
   const messagesEndRef = useRef(null);
+  const prevMessagesLengthRef = useRef(0);
 
   const partner = isTutor ? session.user : session.tutor;
   const partnerRole = isTutor ? 'Mahasiswa / Klien' : 'Konselor BK';
@@ -44,6 +45,30 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const playNotificationSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.22);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([30, 40, 30]);
+      }
+    } catch {
+      // Audio context autoplay limitations
+    }
+  };
+
   const fetchMessages = async () => {
     try {
       const res = await api.get(`/sessions/${session.id}/messages`);
@@ -56,16 +81,48 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
     }
   };
 
+  // Adaptive visibility-aware polling: saves battery & bandwidth on background tabs
   useEffect(() => {
     fetchMessages();
-    // Poll messages every 3.5 seconds
-    const interval = setInterval(fetchMessages, 3500);
-    return () => clearInterval(interval);
+
+    let intervalId = null;
+    const startPolling = (ms) => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(fetchMessages, ms);
+    };
+
+    // Active polling every 3.5s
+    startPolling(3500);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Battery saver: slow down to 20s when user switches tab or locks screen
+        startPolling(20000);
+      } else {
+        // Immediately fetch and resume 3.5s polling upon returning
+        fetchMessages();
+        startPolling(3500);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [session.id]);
 
   useEffect(() => {
+    if (messages.length > prevMessagesLengthRef.current) {
+      const latest = messages[messages.length - 1];
+      if (latest && latest.sender_id !== user?.id && prevMessagesLengthRef.current > 0) {
+        playNotificationSound();
+      }
+      prevMessagesLengthRef.current = messages.length;
+    }
     scrollToBottom();
-  }, [messages]);
+  }, [messages, user?.id]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -92,9 +149,9 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col h-[82vh] bg-white rounded-3xl border border-slate-200/90 shadow-soft-md overflow-hidden">
+    <div className="w-full max-w-3xl mx-auto flex flex-col h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] sm:h-[82vh] sm:max-h-[82vh] bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-soft-md overflow-hidden">
       {/* Chat Room Header */}
-      <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+      <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={onLeaveSession}
@@ -252,6 +309,8 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
+            onFocus={() => setTimeout(scrollToBottom, 250)}
+            autoComplete="off"
             placeholder="Tulis pesan konseling Anda di sini..."
             className="flex-1 h-11 px-4 text-xs sm:text-sm bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-slate-800"
           />

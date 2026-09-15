@@ -2,22 +2,10 @@
 
 @import "tailwindcss";
 
-/* Responsive Root Font Size: 1 step larger on Web View (Desktop & Tablet) */
+/* Standard Root Font Size: Base 16px for crisp, balanced Desktop & Mobile UI scale */
 html {
-  font-size: 16px; /* Base 16px for Mobile (standard readable app scale) */
+  font-size: 16px;
   overflow-x: clip;
-}
-
-@media screen and (min-width: 768px) {
-  html {
-    font-size: 17px; /* +6.25% larger for Tablet / Small Desktop */
-  }
-}
-
-@media screen and (min-width: 1024px) {
-  html {
-    font-size: 18px; /* 1 tingkat penuh lebih besar (+12.5%) untuk Web View Desktop */
-  }
 }
 
 :root {

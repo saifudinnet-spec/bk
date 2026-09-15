@@ -52,43 +52,112 @@ const iconMap = {
 
 const problemPalettes = [
   {
-    cardBg: 'from-white to-slate-50/70',
-    border: 'border-slate-200/90 hover:border-emerald-500/60',
+    counselorLabel: '4 Konselor Akademik',
+    orbBg: 'bg-gradient-to-br from-[#047857] via-emerald-600 to-teal-600',
+    orbShadow: 'shadow-[0_10px_22px_-4px_rgba(5,150,105,0.38),inset_0_2px_4px_rgba(255,255,255,0.6)]',
+    orbBottomBorder: 'border-emerald-900/30',
+    orbHalo: 'bg-emerald-500/20',
+    cardBg: 'from-white to-slate-50/50',
+    border: 'border-emerald-100/90 hover:border-emerald-400/80',
     glowTop: 'bg-emerald-500/5',
     glowBottom: 'bg-teal-500/5',
-    topBar: 'from-emerald-600 to-teal-500',
-    iconBox: 'bg-emerald-50 text-emerald-800 border border-emerald-200/80',
-    tag: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    titleHover: 'group-hover:text-emerald-900',
-    descColor: 'text-mutedtext',
+    topBar: 'from-[#047857] via-emerald-600 to-teal-500',
+    tag: 'bg-emerald-50/90 text-emerald-800 border-emerald-200/80',
+    titleHover: 'group-hover:text-emerald-950',
+    descColor: 'text-slate-600',
     link: 'text-emerald-800 group-hover:text-emerald-950',
-    buttonArrow: 'bg-white border-emerald-200 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent',
+    buttonArrow: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_6px_14px_rgba(5,150,105,0.35)]',
+    cardHoverShadow: 'hover:shadow-[0_20px_35px_-8px_rgba(5,150,105,0.14)]',
   },
   {
-    cardBg: 'from-white to-slate-50/70',
-    border: 'border-slate-200/90 hover:border-teal-500/60',
+    counselorLabel: '3 Psikolog Klinis',
+    orbBg: 'bg-gradient-to-br from-[#047857] via-emerald-600 to-teal-600',
+    orbShadow: 'shadow-[0_10px_22px_-4px_rgba(5,150,105,0.38),inset_0_2px_4px_rgba(255,255,255,0.6)]',
+    orbBottomBorder: 'border-emerald-900/30',
+    orbHalo: 'bg-emerald-500/20',
+    cardBg: 'from-white to-slate-50/50',
+    border: 'border-emerald-100/90 hover:border-emerald-400/80',
+    glowTop: 'bg-emerald-500/5',
+    glowBottom: 'bg-teal-500/5',
+    topBar: 'from-[#047857] via-emerald-600 to-teal-500',
+    tag: 'bg-emerald-50/90 text-emerald-800 border-emerald-200/80',
+    titleHover: 'group-hover:text-emerald-950',
+    descColor: 'text-slate-600',
+    link: 'text-emerald-800 group-hover:text-emerald-950',
+    buttonArrow: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_6px_14px_rgba(5,150,105,0.35)]',
+    cardHoverShadow: 'hover:shadow-[0_20px_35px_-8px_rgba(5,150,105,0.14)]',
+  },
+  {
+    counselorLabel: '4 Konselor Relaksasi',
+    orbBg: 'bg-gradient-to-br from-[#047857] via-emerald-600 to-teal-600',
+    orbShadow: 'shadow-[0_10px_22px_-4px_rgba(5,150,105,0.38),inset_0_2px_4px_rgba(255,255,255,0.6)]',
+    orbBottomBorder: 'border-emerald-900/30',
+    orbHalo: 'bg-emerald-500/20',
+    cardBg: 'from-white to-slate-50/50',
+    border: 'border-emerald-100/90 hover:border-emerald-400/80',
+    glowTop: 'bg-emerald-500/5',
+    glowBottom: 'bg-teal-500/5',
+    topBar: 'from-[#047857] via-emerald-600 to-teal-500',
+    tag: 'bg-emerald-50/90 text-emerald-800 border-emerald-200/80',
+    titleHover: 'group-hover:text-emerald-950',
+    descColor: 'text-slate-600',
+    link: 'text-emerald-800 group-hover:text-emerald-950',
+    buttonArrow: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_6px_14px_rgba(5,150,105,0.35)]',
+    cardHoverShadow: 'hover:shadow-[0_20px_35px_-8px_rgba(5,150,105,0.14)]',
+  },
+  {
+    counselorLabel: '3 Konselor Sosial',
+    orbBg: 'bg-gradient-to-br from-[#047857] via-emerald-600 to-teal-600',
+    orbShadow: 'shadow-[0_10px_22px_-4px_rgba(5,150,105,0.38),inset_0_2px_4px_rgba(255,255,255,0.6)]',
+    orbBottomBorder: 'border-emerald-900/30',
+    orbHalo: 'bg-emerald-500/20',
+    cardBg: 'from-white to-slate-50/50',
+    border: 'border-emerald-100/90 hover:border-emerald-400/80',
+    glowTop: 'bg-emerald-500/5',
+    glowBottom: 'bg-teal-500/5',
+    topBar: 'from-[#047857] via-emerald-600 to-teal-500',
+    tag: 'bg-emerald-50/90 text-emerald-800 border-emerald-200/80',
+    titleHover: 'group-hover:text-emerald-950',
+    descColor: 'text-slate-600',
+    link: 'text-emerald-800 group-hover:text-emerald-950',
+    buttonArrow: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_6px_14px_rgba(5,150,105,0.35)]',
+    cardHoverShadow: 'hover:shadow-[0_20px_35px_-8px_rgba(5,150,105,0.14)]',
+  },
+  {
+    counselorLabel: '3 Konselor Keluarga',
+    orbBg: 'bg-gradient-to-br from-[#047857] via-emerald-600 to-teal-800',
+    orbShadow: 'shadow-[0_10px_22px_-4px_rgba(5,150,105,0.38),inset_0_2px_4px_rgba(255,255,255,0.6)]',
+    orbBottomBorder: 'border-emerald-950/30',
+    orbHalo: 'bg-emerald-500/20',
+    cardBg: 'from-white to-slate-50/50',
+    border: 'border-emerald-100/90 hover:border-emerald-400/80',
+    glowTop: 'bg-emerald-500/5',
+    glowBottom: 'bg-teal-500/5',
+    topBar: 'from-[#047857] via-emerald-600 to-teal-500',
+    tag: 'bg-emerald-50/90 text-emerald-800 border-emerald-200/80',
+    titleHover: 'group-hover:text-emerald-950',
+    descColor: 'text-slate-600',
+    link: 'text-emerald-800 group-hover:text-emerald-950',
+    buttonArrow: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_6px_14px_rgba(5,150,105,0.35)]',
+    cardHoverShadow: 'hover:shadow-[0_20px_35px_-8px_rgba(5,150,105,0.14)]',
+  },
+  {
+    counselorLabel: '4 Konselor Karier',
+    orbBg: 'bg-gradient-to-br from-teal-600 via-emerald-600 to-[#047857]',
+    orbShadow: 'shadow-[0_10px_22px_-4px_rgba(5,150,105,0.38),inset_0_2px_4px_rgba(255,255,255,0.6)]',
+    orbBottomBorder: 'border-teal-900/30',
+    orbHalo: 'bg-teal-500/20',
+    cardBg: 'from-white to-slate-50/50',
+    border: 'border-emerald-100/90 hover:border-teal-400/80',
     glowTop: 'bg-teal-500/5',
     glowBottom: 'bg-emerald-500/5',
-    topBar: 'from-teal-600 to-emerald-500',
-    iconBox: 'bg-teal-50 text-teal-800 border border-teal-200/80',
-    tag: 'bg-teal-50 text-teal-800 border-teal-200',
-    titleHover: 'group-hover:text-teal-900',
-    descColor: 'text-mutedtext',
-    link: 'text-teal-800 group-hover:text-teal-950',
-    buttonArrow: 'bg-white border-teal-200 text-teal-800 group-hover:bg-teal-700 group-hover:text-white group-hover:border-transparent',
-  },
-  {
-    cardBg: 'from-white to-slate-50/70',
-    border: 'border-slate-200/90 hover:border-emerald-500/60',
-    glowTop: 'bg-emerald-500/5',
-    glowBottom: 'bg-slate-500/5',
-    topBar: 'from-[#047857] to-teal-600',
-    iconBox: 'bg-emerald-50 text-emerald-800 border border-emerald-200/80',
-    tag: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    topBar: 'from-teal-600 via-emerald-600 to-[#047857]',
+    tag: 'bg-emerald-50/90 text-emerald-800 border-emerald-200/80',
     titleHover: 'group-hover:text-emerald-950',
-    descColor: 'text-mutedtext',
+    descColor: 'text-slate-600',
     link: 'text-emerald-800 group-hover:text-emerald-950',
-    buttonArrow: 'bg-white border-emerald-200 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent',
+    buttonArrow: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 group-hover:bg-emerald-700 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_6px_14px_rgba(5,150,105,0.35)]',
+    cardHoverShadow: 'hover:shadow-[0_20px_35px_-8px_rgba(5,150,105,0.14)]',
   },
 ];
 
@@ -134,21 +203,21 @@ export const LandingPage = () => {
   const handleSelectCategory = (type) => {
     setShowCategorySheet(false);
     if (type === 'student') {
-      navigate('/register/student');
+      navigate('/login?tab=student');
     } else {
       navigate('/register/general');
     }
   };
 
   const hero = content?.hero || {
-    tagline: 'Layanan Bimbingan Konseling & Pendampingan Psikologis',
-    title: "Beri Ruang untuk Dirimu.\nCeritakan, Pulihkan, Lanjutkan.",
-    subtitle: 'Akses layanan konseling profesional tanpa biaya untuk sivitas akademika. Ceritamu aman dan rahasia bersama kami',
+    tagline: '',
+    title: "Ada Hal yang Sedang Membebani Pikiranmu?",
+    subtitle: 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya bagi seluruh mahasiswa & sivitas akademika UINSSC. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
     image_url: '/images/banner1.jpg',
-    online_card_title: 'Konseling Online via Zoom',
-    online_card_desc: 'Sesi video privat dari mana saja, fleksibel dengan jadwal perkuliahanmu.',
-    offline_card_title: 'Konseling Offline di Kampus',
-    offline_card_desc: 'Pertemuan tatap muka langsung di Ruang Layanan BK Gedung Pusat Mahasiswa.',
+    online_card_title: 'Konseling Online via Zoom & Chat',
+    online_card_desc: 'Sesi privat fleksibel dari mana saja, aman dan nyaman.',
+    offline_card_title: 'Konseling Tatap Muka di Kampus',
+    offline_card_desc: 'Pertemuan langsung di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2.',
   };
 
   const trustBadges = content?.trust_badges || [
@@ -415,15 +484,16 @@ export const LandingPage = () => {
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-100/80 px-4 sm:px-8 py-3.5 shadow-sm transition-all">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#047857] via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-soft-sm ring-2 ring-emerald-500/20">
-              <Sparkles className="w-5 h-5 text-amber-200" />
+            <div className="w-10 h-10 rounded-2xl bg-white border border-emerald-200/80 p-0.5 shadow-soft-xs flex items-center justify-center shrink-0 overflow-hidden ring-2 ring-emerald-500/10">
+              <img
+                src={navbar.logo_url || '/logobk.png'}
+                alt={navbar.brand_name || 'Ruang BK'}
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
-              <span className="text-base sm:text-lg font-black text-darktext tracking-tight flex items-center gap-1.5">
-                {navbar.brand_name || 'Ruang BK'}
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-100 to-teal-50 text-emerald-900 border border-emerald-300/80 shadow-2xs">
-                  {navbar.brand_campus || 'UINSSC'}
-                </span>
+              <span className="text-base sm:text-lg font-extrabold text-[#164C53] tracking-wider uppercase block">
+                {(navbar.brand_name || 'RUANG BK').toUpperCase()}
               </span>
               <span className="text-xs text-mutedtext block leading-none mt-0.5">
                 {navbar.brand_tagline || 'Bimbingan & Konseling Terpadu'}
@@ -456,28 +526,29 @@ export const LandingPage = () => {
 
             <motion.button
               whileTap={{ scale: 0.97 }}
-              onClick={() => setShowCategorySheet(true)}
-              className="px-4 sm:px-5 py-2.5 bg-gradient-to-r from-[#047857] to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-bold shadow-soft-sm flex items-center gap-1.5 transition-all min-h-[40px] ring-2 ring-emerald-600/20"
+              onClick={() => navigate('/konselor')}
+              className="px-4 sm:px-5 py-2.5 bg-gradient-to-r from-[#047857] to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-bold shadow-soft-sm flex items-center gap-1.5 transition-all min-h-[40px] ring-2 ring-emerald-600/20 cursor-pointer"
             >
-              <span>Mulai Konseling</span>
+              <span>Jelajahi Konselor</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </motion.button>
           </div>
         </div>
       </nav>
 
-      {/* 3. Hero Section - Banner Foto Bersih di Atas & Teks/Pilihan Layanan di Bawahnya */}
+      {/* 3. Hero Section - Banner Foto Memanjang Bersih di Atas & Teks/Pilihan Layanan di Bawahnya */}
       <section className="relative overflow-hidden bg-white border-b border-emerald-100">
 
-        {/* Foto Banner Penuh & Bersih di Atas - Kedua orang terlihat 100% utuh */}
+        {/* Foto Banner Manusia Penuh & Bersih di Atas - Melebar ke Samping */}
         <ScrollReveal direction="none" delay={0.05} duration={0.8}>
-          <div className="relative w-full h-[240px] sm:h-[320px] lg:h-[380px] overflow-hidden bg-gray-100 border-b border-emerald-100/60">
+          <div className="relative w-full h-[240px] sm:h-[320px] lg:h-[390px] overflow-hidden bg-slate-100 border-b border-emerald-100/60">
             <img
-              src={hero.image_url || '/images/banner1.jpg'}
+              src={(!hero.image_url || hero.image_url.includes('hero_counseling')) ? '/images/banner1.jpg' : hero.image_url}
               alt="Konseling Kampus Ruang BK"
               className="w-full h-full object-cover object-center"
+              loading="eager"
             />
-            {/* Badge kecil resmi mengambang di pojok kanan bawah foto */}
+            {/* Badge resmi mengambang di pojok kanan bawah foto */}
             <div className="absolute bottom-3 right-4 sm:right-8 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-emerald-200/90 shadow-soft-sm">
               <ShieldCheck className="w-4 h-4 text-emerald-700" />
               <span className="text-[11px] font-bold text-darktext">Fasilitas Resmi UINSSC • 100% Bebas Biaya</span>
@@ -485,26 +556,49 @@ export const LandingPage = () => {
           </div>
         </ScrollReveal>
 
-        {/* Konten Hero (Tagline, Judul, Deskripsi & Pilihan Layanan) Berada Bersih di Bawah Banner */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-7 lg:py-9">
+        {/* Konten Hero (Tagline, Judul, Deskripsi, Tombol Aksi & Pilihan Layanan) Berada Bersih di Bawah Banner */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-7 lg:py-10">
           <div className="grid lg:grid-cols-12 gap-8 items-center">
 
-            {/* Kolom Kiri: Teks Headline */}
-            <ScrollReveal direction="up" delay={0.1} className="lg:col-span-7 space-y-3.5 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-950 text-xs font-bold border border-emerald-300 shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                <span>{hero.tagline}</span>
-              </div>
+            {/* Kolom Kiri: Teks Headline & Tombol Aksi */}
+            <ScrollReveal direction="up" delay={0.1} className="lg:col-span-7 space-y-4 text-center lg:text-left">
+              {hero.tagline && !hero.tagline.includes('Bebas Penghakiman') && (
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-950 text-xs font-bold border border-emerald-300 shadow-2xs">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>{hero.tagline}</span>
+                </div>
+              )}
 
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-darktext tracking-tight leading-snug whitespace-pre-line">
-                {hero.title?.includes('Ceritakan, Pulihkan, Lanjutkan') && !hero.title.includes('\n')
-                  ? hero.title.replace('Ceritakan, Pulihkan, Lanjutkan', '\nCeritakan, Pulihkan, Lanjutkan')
-                  : hero.title}
+                {(hero.title || 'Ada Hal yang Sedang Membebani Pikiranmu?')
+                  .replace(/\n?Kamu Tidak Harus Menghadapinya Sendirian\.?/i, '')
+                  .trim()}
               </h1>
 
               <p className="text-xs sm:text-sm lg:text-base text-darktext/80 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
                 {hero.subtitle}
               </p>
+
+              {/* Action Buttons: Discovery First */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/konselor')}
+                  className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-[#047857] to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-soft-sm flex items-center justify-center gap-2 transition-all ring-2 ring-emerald-600/20 cursor-pointer min-h-[44px]"
+                >
+                  <span>Pilih Konselor & Mulai</span>
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/app/screening')}
+                  className="w-full sm:w-auto px-5 py-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-2xl text-xs sm:text-sm font-bold shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
+                >
+                  <Brain className="w-4 h-4 text-emerald-700" />
+                  <span>Evaluasi Mandiri (Skrining)</span>
+                </motion.button>
+              </div>
             </ScrollReveal>
 
             {/* Kolom Kanan: Pilihan Layanan Konseling */}
@@ -522,11 +616,11 @@ export const LandingPage = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setSelectedServiceMode('online');
-                      setShowCategorySheet(true);
+                      navigate('/konselor');
                     }}
                     className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all shadow-soft-sm flex items-center justify-between ${selectedServiceMode === 'online'
-                        ? 'border-emerald-600 bg-white ring-2 ring-emerald-500/20 shadow-emerald-600/10'
-                        : 'border-emerald-200/70 bg-white hover:border-emerald-400'
+                      ? 'border-emerald-600 bg-white ring-2 ring-emerald-500/20 shadow-emerald-600/10'
+                      : 'border-emerald-200/70 bg-white hover:border-emerald-400'
                       }`}
                   >
                     <div className="space-y-1">
@@ -550,11 +644,11 @@ export const LandingPage = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setSelectedServiceMode('offline');
-                      setShowCategorySheet(true);
+                      navigate('/konselor');
                     }}
                     className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all shadow-soft-sm flex items-center justify-between ${selectedServiceMode === 'offline'
-                        ? 'border-teal-600 bg-white ring-2 ring-teal-500/20 shadow-teal-600/10'
-                        : 'border-emerald-200/70 bg-white hover:border-teal-400'
+                      ? 'border-teal-600 bg-white ring-2 ring-teal-500/20 shadow-teal-600/10'
+                      : 'border-emerald-200/70 bg-white hover:border-teal-400'
                       }`}
                   >
                     <div className="space-y-1">
@@ -606,29 +700,30 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* 5. "Sedang Menghadapi Masalah Apa?" (With Emerald Mesh Accent Background) */}
-      <section id="masalah" className="py-14 sm:py-18 px-4 sm:px-8 max-w-6xl mx-auto w-full relative">
+      {/* 5. "Sedang Menghadapi Masalah Apa?" (Clean 3D White Ceramic & Signature Emerald Glass) */}
+      <section id="masalah" className="py-16 sm:py-20 px-4 sm:px-8 max-w-6xl mx-auto w-full relative">
 
-        {/* Subtle Ambient Emerald Glow Orbs */}
-        <div className="absolute top-0 right-1/4 w-72 h-72 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 left-10 w-80 h-80 bg-teal-300/10 rounded-full blur-3xl pointer-events-none" />
+        {/* Subtle Ambient Emerald & Teal Mesh Glows */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[350px] bg-gradient-to-r from-emerald-300/10 via-teal-300/10 to-emerald-300/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 left-6 w-80 h-80 bg-emerald-200/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-6 w-80 h-80 bg-teal-200/10 rounded-full blur-3xl pointer-events-none" />
 
         <ScrollReveal direction="up" delay={0.08}>
-          <div className="text-center max-w-2xl mx-auto mb-10 relative z-10">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-              Area Pendampingan
+          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-14 relative z-10">
+            <span className="inline-flex items-center gap-2 text-xs font-bold text-emerald-800 uppercase tracking-widest px-4 py-1.5 rounded-full bg-white shadow-soft-sm border border-emerald-200/80 mb-3">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+              Area Pendampingan & Konseling
             </span>
-            <h2 className="text-xl sm:text-3xl font-black text-darktext">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-darktext tracking-tight">
               {content?.problems?.title || 'Sedang Menghadapi Masalah Apa?'}
             </h2>
-            <p className="text-xs sm:text-sm text-mutedtext mt-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-mutedtext mt-2.5 max-w-xl mx-auto leading-relaxed">
               {content?.problems?.subtitle || 'Setiap tantangan memiliki jalan keluar. Temukan konselor dengan keahlian yang tepat untuk mendampingimu:'}
             </p>
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7 relative z-10">
           {problems.map((prob, idx) => {
             const IconComponent = iconMap[prob.icon] || Sparkles;
             const palette = problemPalettes[idx % problemPalettes.length];
@@ -636,47 +731,90 @@ export const LandingPage = () => {
               <ScrollReveal
                 key={prob.id}
                 direction="up"
-                delay={(idx % 3) * 0.1}
+                delay={(idx % 3) * 0.08}
                 className="h-full"
               >
                 <motion.div
-                  whileHover={{ y: -6, scale: 1.01 }}
-                  transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                  whileHover={{ y: -8, scale: 1.015 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 24 }}
                   onClick={() => {
                     startWithTopic(prob);
                     navigate(`/konselor?topic_id=${prob.id}`);
                   }}
-                  className={`group p-6 rounded-3xl bg-gradient-to-br ${palette.cardBg} border ${palette.border} shadow-soft-md transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden h-full`}
+                  className={`group p-6 sm:p-7 rounded-[26px] bg-gradient-to-br ${palette.cardBg} border ${palette.border} shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_25px_-5px_rgba(0,0,0,0.03)] ${palette.cardHoverShadow} transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden h-full`}
                 >
+                  {/* Glossy light sheen sweep on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
+
                   {/* Mood-Boosting Dual Glowing Flares */}
-                  <div className={`absolute -top-10 -right-10 w-36 h-36 rounded-full ${palette.glowTop} blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700`} />
-                  <div className={`absolute -bottom-8 -left-8 w-28 h-28 rounded-full ${palette.glowBottom} blur-xl pointer-events-none group-hover:scale-110 transition-transform duration-700`} />
+                  <div className={`absolute -top-12 -right-12 w-40 h-40 rounded-full ${palette.glowTop} blur-2xl pointer-events-none group-hover:scale-130 transition-transform duration-700`} />
+                  <div className={`absolute -bottom-10 -left-10 w-36 h-36 rounded-full ${palette.glowBottom} blur-xl pointer-events-none group-hover:scale-120 transition-transform duration-700`} />
 
-                  {/* Top Colorful Accent Strip */}
-                  <div className={`h-1.5 w-12 rounded-full bg-gradient-to-r ${palette.topBar} mb-4 group-hover:w-24 transition-all duration-300 shadow-2xs`} />
-
+                  {/* Card Content Top */}
                   <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`w-12 h-12 rounded-2xl ${palette.iconBox} flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-soft-md`}>
-                        <IconComponent className="w-6 h-6" />
-                      </div>
-                      <span className={`text-[11px] font-bold px-3 py-1 rounded-full border backdrop-blur-xs ${palette.tag}`}>
+                    {/* Header Row: Top Bar Accent + Category Pill */}
+                    <div className="flex items-center justify-between mb-5">
+                      <div className={`h-1.5 w-10 rounded-full bg-gradient-to-r ${palette.topBar} group-hover:w-20 transition-all duration-400 shadow-2xs`} />
+                      <span className={`text-[11px] font-bold px-3 py-1 rounded-full border shadow-2xs backdrop-blur-md ${palette.tag}`}>
                         {prob.tag}
                       </span>
+                    </div>
+
+                    {/* 3D Floating Glass Orb for Icon */}
+                    <div className="mb-5 flex items-center">
+                      <div className="relative">
+                        {/* Ambient soft glow halo behind orb */}
+                        <div className={`absolute -inset-1 rounded-2xl ${palette.orbHalo} blur-md opacity-40 group-hover:opacity-90 transition-opacity duration-300`} />
+                        {/* 3D Glass Orb with Glossy Highlight */}
+                        <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl ${palette.orbBg} ${palette.orbShadow} flex items-center justify-center relative transform-gpu transition-all duration-300 group-hover:scale-108 group-hover:-rotate-2 border-t border-l border-white/60 border-b border-r ${palette.orbBottomBorder}`}>
+                          {/* Specular 3D Reflection overlay */}
+                          <div className="absolute top-0.5 left-0.5 right-0.5 h-1/2 rounded-t-xl bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
+                          <IconComponent className="w-6 h-6 sm:w-6.5 sm:h-6.5 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] relative z-10" />
+                        </div>
+                      </div>
                     </div>
 
                     <h3 className={`text-base sm:text-lg font-black text-darktext mb-2 ${palette.titleHover} transition-colors tracking-tight`}>
                       {prob.title}
                     </h3>
-                    <p className={`text-xs ${palette.descColor} leading-relaxed font-medium`}>
+                    <p className={`text-xs sm:text-[13px] ${palette.descColor} leading-relaxed font-medium`}>
                       {prob.desc}
                     </p>
                   </div>
 
-                  <div className="pt-4 mt-4 border-t border-black/[0.06] flex items-center justify-between text-xs font-bold relative z-10">
-                    <span className={`${palette.link} font-bold transition-colors`}>Konsultasikan Topik Ini</span>
-                    <div className={`w-7 h-7 rounded-full border shadow-2xs flex items-center justify-center ${palette.buttonArrow} group-hover:translate-x-1 transition-all duration-200`}>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                  {/* Card Content Bottom: Counselor Mini-Stack + CTA Action */}
+                  <div className="relative z-10 mt-5">
+                    {/* Counselor Mini Presence Stack */}
+                    <div className="pt-3.5 border-t border-black/[0.05] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="flex -space-x-2 overflow-hidden">
+                          {displayTutors.slice(0, 3).map((tutor, tIdx) => (
+                            <img
+                              key={tIdx}
+                              src={tutor.photo || '/images/counselor_ahmad.jpg'}
+                              alt={tutor.name}
+                              className="inline-block w-6 h-6 rounded-full ring-2 ring-white object-cover shadow-2xs"
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[11px] font-semibold text-slate-600">
+                          {palette.counselorLabel}
+                        </span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-[10.5px] font-bold text-emerald-700 bg-emerald-50/90 border border-emerald-200/80 px-2 py-0.5 rounded-full shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Tersedia
+                      </span>
+                    </div>
+
+                    {/* Bottom CTA Link & Arrow Button */}
+                    <div className="pt-3 mt-2.5 border-t border-dashed border-black/[0.05] flex items-center justify-between text-xs font-bold">
+                      <span className={`${palette.link} font-bold transition-colors flex items-center gap-1`}>
+                        Konsultasikan Topik Ini
+                      </span>
+                      <div className={`w-8 h-8 rounded-full border shadow-2xs flex items-center justify-center ${palette.buttonArrow} group-hover:translate-x-0.5 transition-all duration-300`}>
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1106,9 +1244,13 @@ export const LandingPage = () => {
         <ScrollReveal direction="up" delay={0.08}>
           <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-3 md:col-span-2">
-              <div className="flex items-center gap-2 text-white font-bold text-base">
-                <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center text-amber-300">
-                  <Sparkles className="w-4 h-4" />
+              <div className="flex items-center gap-2.5 text-white font-bold text-base">
+                <div className="w-8 h-8 rounded-xl bg-white p-0.5 shadow-soft-xs flex items-center justify-center shrink-0 overflow-hidden">
+                  <img
+                    src="/logobk.png"
+                    alt="Logo Ruang BK"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <span>{footer.brand_title || 'Ruang BK UIN Siber Syekh Nurjati Cirebon'}</span>
               </div>

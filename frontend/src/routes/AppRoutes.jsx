@@ -68,7 +68,8 @@ export const AppRoutes = () => {
         {/* Auth Pages */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
-          <Route path="/register/student" element={<RegisterStudent />} />
+          <Route path="/register" element={<Navigate to="/login?tab=student" replace />} />
+          <Route path="/register/student" element={<Navigate to="/login?tab=student" replace />} />
           <Route path="/register/general" element={<RegisterGeneral />} />
         </Route>
 

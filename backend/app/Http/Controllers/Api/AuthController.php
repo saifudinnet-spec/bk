@@ -225,15 +225,15 @@ class AuthController extends Controller
     public function registerGeneral(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nik' => 'required|string|min:16|max:20',
             'name' => 'required|string|max:150',
-            'birth_place' => 'required|string|max:100',
-            'birth_date' => 'required|date',
-            'gender' => 'required|string|in:Laki-laki,Perempuan',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:20',
-            'address' => 'required|string',
             'password' => 'required|string|min:6|confirmed',
+            'nik' => 'nullable|string|max:20',
+            'birth_place' => 'nullable|string|max:100',
+            'birth_date' => 'nullable|date',
+            'gender' => 'nullable|string|in:Laki-laki,Perempuan',
+            'address' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -256,11 +256,11 @@ class AuthController extends Controller
 
         GeneralProfile::create([
             'user_id' => $user->id,
-            'nik' => trim($request->input('nik')),
-            'birth_place' => trim($request->input('birth_place')),
-            'birth_date' => $request->input('birth_date'),
-            'gender' => $request->input('gender'),
-            'address' => trim($request->input('address')),
+            'nik' => $request->filled('nik') ? trim($request->input('nik')) : null,
+            'birth_place' => $request->filled('birth_place') ? trim($request->input('birth_place')) : null,
+            'birth_date' => $request->filled('birth_date') ? $request->input('birth_date') : null,
+            'gender' => $request->filled('gender') ? $request->input('gender') : 'Laki-laki',
+            'address' => $request->filled('address') ? trim($request->input('address')) : null,
         ]);
 
         Notification::create([

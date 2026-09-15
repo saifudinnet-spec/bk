@@ -18,15 +18,15 @@ class LandingContentController extends Controller
     {
         return [
             'hero' => [
-                'tagline' => 'Layanan Bimbingan Konseling & Pendampingan Psikologis',
-                'title' => "Beri Ruang untuk Dirimu.\nCeritakan, Pulihkan, Lanjutkan.",
-                'subtitle' => 'Akses layanan konseling profesional tanpa biaya untuk sivitas akademika. Ceritamu aman dan rahasia bersama kami',
+                'tagline' => '',
+                'title' => "Ada Hal yang Sedang Membebani Pikiranmu?",
+                'subtitle' => 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya bagi seluruh mahasiswa & sivitas akademika UINSSC. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
                 'image_url' => '/images/banner1.jpg',
-                'layout_style' => 'banner_full',
-                'online_card_title' => 'Konseling Online',
-                'online_card_desc' => 'Sesi video privat via Zoom dari mana saja, fleksibel dengan jadwal kuliahmu.',
-                'offline_card_title' => 'Konseling Offline (Tatap Muka)',
-                'offline_card_desc' => 'Pertemuan tatap muka langsung di Ruang Konseling Gedung Pusat Kemahasiswaan.',
+                'layout_style' => 'banner_wide',
+                'online_card_title' => 'Konseling Online via Zoom & Chat',
+                'online_card_desc' => 'Sesi privat fleksibel dari mana saja, aman dan nyaman.',
+                'offline_card_title' => 'Konseling Tatap Muka di Kampus',
+                'offline_card_desc' => 'Pertemuan langsung di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2.',
             ],
             'trust_badges' => [
                 ['icon' => 'ShieldCheck', 'text' => 'Bebas Biaya'],
@@ -194,14 +194,14 @@ class LandingContentController extends Controller
                 'items' => [
                     [
                         'id' => 1,
-                        'title' => '5 Trik Mengatasi Burnout & Prokrastinasi Saat Menyusun Skripsi',
-                        'category' => 'Tips Akademik',
+                        'title' => 'Strategi Praktis Mengatasi Prokrastinasi Skripsi & Tugas Akhir',
+                        'category' => 'Akademik',
                         'read_time' => '4 min baca',
                         'date' => '02 Sep 2026',
                         'author' => 'Tim Konselor UINSSC',
                         'image_url' => '/images/banner1.jpg',
                         'snippet' => 'Rasa jenuh dan kebuntuan tugas akhir adalah respons alami otak saat mengalami kelelahan mental. Kenali teknik micro-stepping untuk mengembalikan motivasi belajar.',
-                        'content' => 'Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi. Kunci utamanya adalah membagi target besar menjadi langkah-langkah mikro (micro-stepping) yang hanya membutuhkan waktu 15 menit setiap sesinya.'
+                        'content' => "Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi.\n\nKetika kita memandang skripsi sebagai satu buku tebal utuh dengan ratusan halaman, otak kita secara psikologis mempersepsikannya sebagai \"ancaman besar\". Reaksi defensif alami kita adalah menghindari pekerjaan tersebut dengan mencari distraksi seperti membuka media sosial atau bermain game.\n\n### Mengapa Kita Menunda? (Procrastination vs Laziness)\nPenelitian psikologi pendidikan menunjukkan bahwa prokrastinasi adalah masalah regulasi emosi, bukan manajemen waktu semata. Kita menunda karena ingin menghindari perasaan tidak nyaman: takut salah, takut revisi berulang, atau cemas akan respons dosen pembimbing.\n\n### Teknik Praktis Micro-Stepping (Langkah Mikro):\n1. **Pecah Target Menjadi Potongan Sangat Kecil:** Alih-alih menulis \"Selesaikan Bab 2 hari ini\", ubah menjadi \"Tulis 2 paragraf pengantar teori hari ini\".\n2. **Gunakan Prinsip 15 Menit:** Berjanjilah pada diri sendiri untuk hanya duduk dan mengetik selama 15 menit. Jika setelah 15 menit ingin berhenti, Anda boleh berhenti. Seringkali setelah 15 menit berjalan, momentum positif akan terbentuk secara otomatis.\n3. **Turunkan Standar Draf Pertama:** Draf pertama dibuat untuk dievaluasi, bukan untuk langsung sempurna. Izinkan diri Anda menulis dengan bebas tanpa self-censorship.\n4. **Jadwalkan Konsultasi Rutin:** Jangan menunggu tulisan rapi untuk menemui Dosen Pembimbing Akademik atau Konselor. Mendiskusikan kerangka berpikir justru menghemat waktu berbulan-bulan."
                     ],
                     [
                         'id' => 2,
@@ -212,7 +212,7 @@ class LandingContentController extends Controller
                         'author' => 'Psikolog Dian P., M.Psi.',
                         'image_url' => '/images/hero_counseling.jpg',
                         'snippet' => 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
-                        'content' => 'Rasa cemas sebelum ujian atau presentasi sidang adalah wajar dan membantu kita tetap waspada. Namun jika kekhawatiran itu terjadi terus menerus tanpa pemicu yang jelas hingga mengganggu pola tidur dan makan, saatnya berkonsultasi dengan konselor atau psikolog profesional.'
+                        'content' => "Kecemasan adalah sistem alarm alami tubuh kita yang dirancang untuk menjaga kita tetap aman dan waspada. Namun ketika alarm tersebut terus berbunyi tanpa henti padahal tidak ada bahaya nyata di depan mata, kita mulai memasuki fase overthinking yang menguras energi.\n\n### Cemas Wajar vs Cemas Berlebihan\n* **Cemas Wajar:** Membantu kita bersiap menghadapi ujian, memotivasi kita belajar, dan mereda begitu situasi telah selesai dihadapi.\n* **Overthinking Berlebihan:** Pikiran berputar pada skenario terburuk (\"Bagaimana jika saya gagal total? Bagaimana jika semua orang menertawakan saya?\"), memicu gejala fisik seperti jantung berdebar, insomnia, dan asam lambung naik.\n\n### Pertolongan Pertama: Teknik Grounding 5-4-3-2-1\nSaat Anda merasa pikiran mulai melayang ke mana-mana, tarik napas dalam-dalam dan sebutkan di sekitar Anda:\n* **5 hal** yang bisa Anda lihat dengan mata.\n* **4 hal** yang bisa Anda raba/sentuh fisiknya.\n* **3 suara** yang bisa Anda dengar saat ini.\n* **2 aroma** yang bisa Anda cium.\n* **1 rasa** di lidah Anda atau 1 hal baik tentang diri Anda.\n\nTeknik ini memaksa otak rasional Anda kembali ke momen masa kini (*here and now*) dan menurunkan aktivitas sistem saraf simpatik."
                     ],
                     [
                         'id' => 3,
@@ -223,7 +223,7 @@ class LandingContentController extends Controller
                         'author' => 'Ahmad Fauzi, S.Psi.',
                         'image_url' => '/images/banner1.jpg',
                         'snippet' => 'Merasa gugup sebelum konseling adalah hal yang lumrah. Ruang konseling adalah tempat yang aman tanpa penghakiman untuk membagikan cerita Anda.',
-                        'content' => 'Ruang konseling adalah zona aman tanpa penilaian. Anda tidak perlu menyusun cerita secara rapi atau runtut. Cukup sampaikan apa yang paling membebani pikiran Anda saat ini. Konselor kampus kami siap mendengarkan dan membantu Anda menemukan perspektif baru.'
+                        'content' => "Banyak mahasiswa yang ragu berkonsultasi karena membayangkan sesi konseling itu seperti \"diinterogasi\" atau \"dihakimi\". Faktanya, konseling modern adalah ruang dialog setara yang hangat dan penuh penerimaan.\n\n### Mitos Umum Seputar Bimbingan Konseling:\n1. **Mitos:** \"Hanya mahasiswa yang bermasalah berat atau sakit jiwa yang ke BK.\"\n   * **Fakta:** Lebih dari 80% mahasiswa datang untuk konsultasi perencanaan karier, manajemen stres skripsi, atau sekadar membutuhkan teman bicara netral yang objektif.\n2. **Mitos:** \"Cerita saya nanti bocor ke dosen penguji atau fakultas.\"\n   * **Fakta:** Kerahasiaan konseling dilindungi undang-undang dan kode etik psikologi. Tidak ada informasi yang dibagikan tanpa izin tertulis dari Anda.\n\n### Apa yang Harus Dipersiapkan?\nJawabannya: **Tidak ada yang wajib disiapkan.** Anda tidak perlu membuat catatan rapi atau menghafalkan kronologi masalah. Datanglah apa adanya. Konselor kami yang berpengalaman akan membimbing percakapan dengan ritme yang membuat Anda merasa aman dan nyaman."
                     ]
                 ]
             ],

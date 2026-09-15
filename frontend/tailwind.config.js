@@ -44,7 +44,7 @@ export default {
           700: '#0369a1',
         },
         darktext: '#1F2937',
-        mutedtext: '#6B7280',
+        mutedtext: '#4B5563', // Slate-600: >= 4.5:1 WCAG AA compliant on light backgrounds
         softborder: '#E5E7EB',
       },
       fontFamily: {

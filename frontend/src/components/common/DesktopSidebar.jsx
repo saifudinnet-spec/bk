@@ -52,11 +52,11 @@ export const DesktopSidebar = () => {
     <aside className="hidden md:flex flex-col w-64 h-screen sticky top-0 bg-white border-r border-softborder p-5 z-20">
       {/* Brand */}
       <div className="flex items-center gap-3 px-2 py-3 mb-6">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-soft-sm">
-          <Sparkles className="w-5 h-5" />
+        <div className="w-10 h-10 rounded-2xl bg-white border border-emerald-200/80 p-0.5 shadow-soft-xs flex items-center justify-center shrink-0 overflow-hidden">
+          <img src="/logobk.png" alt="Logo Ruang BK" className="w-full h-full object-contain" />
         </div>
         <div>
-          <h2 className="text-base font-bold text-darktext leading-none">Ruang BK</h2>
+          <h2 className="text-base font-extrabold text-[#164C53] tracking-wider uppercase leading-none">RUANG BK</h2>
           <span className="text-[11px] text-mutedtext mt-1 block">Bimbingan Konseling</span>
         </div>
       </div>
