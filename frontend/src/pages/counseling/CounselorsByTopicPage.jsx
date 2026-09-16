@@ -229,7 +229,15 @@ export const CounselorsByTopicPage = () => {
                     {/* Header Photo & Availability */}
                     <div className="relative h-48 bg-slate-100 overflow-hidden">
                       <img
-                        src={counselor.avatar || (idx === 0 ? '/images/counselor_ahmad.jpg' : '/images/counselor_dian.jpg')}
+                        src={
+                          counselor.photo ||
+                          counselor.avatar ||
+                          ((counselor.name?.toLowerCase().includes('nurlina') || counselor.name?.toLowerCase().includes('dian'))
+                            ? '/images/counselor_dian.jpg'
+                            : (counselor.name?.toLowerCase().includes('bambang')
+                              ? '/images/counselor_bambang.jpg'
+                              : '/images/counselor_ahmad.jpg'))
+                        }
                         alt={counselor.name}
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       />

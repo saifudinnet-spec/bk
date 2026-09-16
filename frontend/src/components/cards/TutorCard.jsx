@@ -15,9 +15,17 @@ export const TutorCard = ({ tutor, onSelect, isSelected = false }) => {
       <div>
         <div className="flex items-start gap-3.5 mb-3">
           <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-tr from-teal-500 to-emerald-600 text-white font-bold text-lg flex items-center justify-center shadow-soft-sm shrink-0 border border-emerald-100">
-            {tutor.photo ? (
+            {tutor.photo || tutor.avatar ? (
               <img
-                src={tutor.photo}
+                src={
+                  tutor.photo ||
+                  tutor.avatar ||
+                  ((tutor.name?.toLowerCase().includes('nurlina') || tutor.name?.toLowerCase().includes('dian'))
+                    ? '/images/counselor_dian.jpg'
+                    : (tutor.name?.toLowerCase().includes('bambang')
+                      ? '/images/counselor_bambang.jpg'
+                      : '/images/counselor_ahmad.jpg'))
+                }
                 alt={tutor.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {

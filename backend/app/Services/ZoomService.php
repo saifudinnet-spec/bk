@@ -20,7 +20,7 @@ class ZoomService
     /**
      * Generate Zoom Meeting SDK JWT signature with rigorous security & ownership checks
      */
-    public static function generateSignature(User $user, CounselingSession $session): array
+    public static function generateSignature(User $user, CounselingSession $session, bool $forceTest = false): array
     {
         // 1. Authorization: Only the assigned student or tutor may join
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
@@ -32,14 +32,17 @@ class ZoomService
             throw new \Exception('Sesi konseling ini sudah selesai atau telah dibatalkan.', 400);
         }
 
-        // 3. Time Window Validation: Can join up to 15 minutes before start
+        // 3. Time Window Validation: Can join up to 15 minutes before start (bypassed if forceTest or test session)
         $now = Carbon::now();
         $startTime = Carbon::parse($session->start_at);
         $endTime = Carbon::parse($session->end_at);
 
-        if ($now->lt($startTime->copy()->subMinutes(15))) {
-            $diffMins = $now->diffInMinutes($startTime);
-            throw new \Exception("Ruang konseling baru dibuka 15 menit sebelum jadwal (mulai dalam {$diffMins} menit lagi).", 400);
+        $isTestSession = str_starts_with($session->counselingCase?->case_number ?? '', 'TEST');
+        if (!$forceTest && !$isTestSession && !self::isMockMode()) {
+            if ($now->lt($startTime->copy()->subMinutes(15))) {
+                $diffMins = $now->diffInMinutes($startTime);
+                throw new \Exception("Ruang konseling baru dibuka 15 menit sebelum jadwal (mulai dalam {$diffMins} menit lagi).", 400);
+            }
         }
 
         // Determine role: 1 for tutor (host), 0 for student (attendee)

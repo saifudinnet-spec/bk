@@ -206,7 +206,15 @@ export const CounselorDetailPage = () => {
                 <div className="-mt-16 sm:-mt-20 shrink-0 relative z-10">
                   <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-3xl bg-white p-2 shadow-xl ring-4 ring-white border border-slate-200/90 overflow-hidden">
                     <img
-                      src={counselor.avatar || '/images/counselor_ahmad.jpg'}
+                      src={
+                        counselor.photo ||
+                        counselor.avatar ||
+                        ((counselor.name?.toLowerCase().includes('nurlina') || counselor.name?.toLowerCase().includes('dian'))
+                          ? '/images/counselor_dian.jpg'
+                          : (counselor.name?.toLowerCase().includes('bambang')
+                            ? '/images/counselor_bambang.jpg'
+                            : '/images/counselor_ahmad.jpg'))
+                      }
                       alt={counselor.name}
                       className="w-full h-full object-cover object-top rounded-2xl"
                     />

@@ -17,8 +17,8 @@ export const BottomNav = () => {
   const { user, isTutor, isAdmin } = useAuth();
   const location = useLocation();
 
-  if (isAdmin) {
-    // Admin has desktop sidebar or minimal nav
+  if (isAdmin || location.pathname.includes('/counseling/session')) {
+    // Admin or live session room has minimal nav
     return null;
   }
 

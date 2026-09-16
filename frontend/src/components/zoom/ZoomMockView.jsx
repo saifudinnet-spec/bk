@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
@@ -13,7 +13,8 @@ import {
   Send,
   X,
   Sparkles,
-  Stethoscope
+  Stethoscope,
+  AlertCircle
 } from 'lucide-react';
 import Modal from '../common/Modal';
 import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
@@ -25,12 +26,233 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
   const [showChat, setShowChat] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+  const [hasWebcam, setHasWebcam] = useState(false);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [seconds, setSeconds] = useState(0);
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'System', text: 'Ruang konseling terhubung. Sesi ini privat dan terlindungi.', time: '10:00' },
-    { sender: isTutor ? sessionData.student_name : sessionData.tutor_name, text: 'Halo, suara saya terdengar jelas?', time: '10:01' },
+    {
+      sender: 'Sistem BK',
+      text: 'Selamat datang di ruang konseling daring.',
+      time: 'Baru saja',
+    },
   ]);
   const [inputMsg, setInputMsg] = useState('');
-  const [seconds, setSeconds] = useState(0);
+
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const streamRef = useRef(null);
+  const peerConnectionRef = useRef(null);
+  const broadcastChannelRef = useRef(null);
+  const myPeerId = useRef('peer_' + Math.random().toString(36).slice(2, 9) + '_' + (isTutor ? 'tutor' : 'student'));
+
+  const channelName = 'bk_meeting_' + (session?.id || sessionData?.meeting_number || 'default');
+
+  // Automatically attach remoteStream to remote video element when available
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  }, [remoteStream]);
+
+  // Initialize and request user webcam/mic
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        setCameraError('Peramban tidak mendukung akses kamera.');
+        setIsVideoOff(true);
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        audio: true,
+      });
+      streamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      setHasWebcam(true);
+      setIsVideoOff(false);
+
+      // Add tracks to active WebRTC connection if ready
+      if (peerConnectionRef.current) {
+        stream.getTracks().forEach((track) => {
+          const senders = peerConnectionRef.current.getSenders();
+          const alreadyAdded = senders.some((s) => s.track && s.track.kind === track.kind);
+          if (!alreadyAdded) {
+            peerConnectionRef.current.addTrack(track, stream);
+          }
+        });
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.postMessage({ type: 'PEER_HELLO', sender: myPeerId.current });
+        }
+      }
+    } catch (err) {
+      console.warn('Webcam stream unavailable or permission denied:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Izin akses kamera belum diizinkan di browser.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setCameraError('Perangkat webcam/kamera tidak ditemukan.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setCameraError('Kamera fisik sedang digunakan oleh tab atau aplikasi lain.');
+      } else {
+        setCameraError('Kamera tidak dapat diakses (' + (err.message || err.name) + ')');
+      }
+      setIsVideoOff(true);
+      setHasWebcam(false);
+    }
+  };
+
+  useEffect(() => {
+    startCamera();
+
+    // Setup WebRTC Inter-Tab Video Bridge (same device / multi-tab / local network)
+    if (typeof BroadcastChannel !== 'undefined') {
+      const channel = new BroadcastChannel(channelName);
+      broadcastChannelRef.current = channel;
+
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' },
+        ],
+      });
+      peerConnectionRef.current = pc;
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => {
+          pc.addTrack(track, streamRef.current);
+        });
+      }
+
+      pc.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          const s = event.streams[0];
+          setRemoteStream(s);
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = s;
+            remoteVideoRef.current.play().catch(() => {});
+          }
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          channel.postMessage({
+            type: 'ICE_CANDIDATE',
+            sender: myPeerId.current,
+            candidate: event.candidate,
+          });
+        }
+      };
+
+      const sendOffer = async () => {
+        try {
+          if (pc.signalingState !== 'closed') {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            channel.postMessage({
+              type: 'OFFER',
+              sender: myPeerId.current,
+              sdp: pc.localDescription,
+            });
+          }
+        } catch (e) {
+          console.warn('WebRTC offer creation error:', e);
+        }
+      };
+
+      channel.onmessage = async (event) => {
+        const data = event.data;
+        if (!data || data.sender === myPeerId.current) return;
+
+        if (data.type === 'PEER_HELLO') {
+          await sendOffer();
+        } else if (data.type === 'OFFER') {
+          try {
+            if (pc.signalingState !== 'closed') {
+              await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              channel.postMessage({
+                type: 'ANSWER',
+                sender: myPeerId.current,
+                sdp: pc.localDescription,
+              });
+            }
+          } catch (e) {
+            console.warn('WebRTC offer handling error:', e);
+          }
+        } else if (data.type === 'ANSWER') {
+          try {
+            if (pc.signalingState === 'have-local-offer') {
+              await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            }
+          } catch (e) {
+            console.warn('WebRTC answer handling error:', e);
+          }
+        } else if (data.type === 'ICE_CANDIDATE') {
+          try {
+            if (data.candidate && pc.remoteDescription) {
+              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+          } catch (e) {
+            console.warn('WebRTC ICE candidate error:', e);
+          }
+        } else if (data.type === 'CHAT_MSG') {
+          setChatMessages((prev) => [...prev, data.payload]);
+        }
+      };
+
+      // Announce arrival to existing peers in room
+      channel.postMessage({ type: 'PEER_HELLO', sender: myPeerId.current });
+    }
+
+    return () => {
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.close();
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [channelName]);
+
+  const handleToggleVideo = async () => {
+    if (isVideoOff) {
+      if (streamRef.current && streamRef.current.getVideoTracks().length > 0) {
+        streamRef.current.getVideoTracks().forEach((track) => {
+          track.enabled = true;
+        });
+        setIsVideoOff(false);
+      } else {
+        await startCamera();
+      }
+    } else {
+      if (streamRef.current) {
+        streamRef.current.getVideoTracks().forEach((track) => {
+          track.stop(); // Stop hardware track so another tab can use it
+        });
+      }
+      setHasWebcam(false);
+      setIsVideoOff(true);
+    }
+  };
+
+  const handleToggleAudio = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    if (streamRef.current) {
+      streamRef.current.getAudioTracks().forEach((track) => {
+        track.enabled = !nextMuted;
+      });
+    }
+  };
 
   // Call duration counter
   useEffect(() => {
@@ -51,10 +273,19 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
     if (!inputMsg.trim()) return;
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    setChatMessages((prev) => [
-      ...prev,
-      { sender: isTutor ? sessionData.tutor_name : sessionData.student_name, text: inputMsg.trim(), time: timeStr },
-    ]);
+    const newMsg = {
+      sender: isTutor ? sessionData.tutor_name : sessionData.student_name,
+      text: inputMsg.trim(),
+      time: timeStr,
+    };
+    setChatMessages((prev) => [...prev, newMsg]);
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.postMessage({
+        type: 'CHAT_MSG',
+        sender: myPeerId.current,
+        payload: newMsg,
+      });
+    }
     setInputMsg('');
   };
 
@@ -84,8 +315,8 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
               <span>Data Konseli</span>
             </button>
           )}
-          <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-xl text-[11px] font-mono">
-            Mode SDK: Development
+          <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-xl text-[11px] font-mono border border-slate-700">
+            Mode SDK: Development (Simulator WebRTC)
           </span>
         </div>
       </div>
@@ -93,63 +324,139 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       {/* Main Video Stage */}
       <div className="relative flex-1 p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 overflow-hidden bg-slate-900">
         {/* Remote Participant (Tutor or Student) */}
-        <div className="relative flex items-center justify-center bg-slate-950 rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-inner">
-          <div className="flex flex-col items-center justify-center p-6 text-center">
-            <motion.div
-              animate={{ scale: [1, 1.03, 1] }}
-              transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center text-white text-3xl font-black shadow-xl mb-3 border-2 border-emerald-400/40"
-            >
-              {(isTutor ? sessionData.student_name : sessionData.tutor_name)?.charAt(0) || 'P'}
-            </motion.div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-100">
-              {isTutor ? sessionData.student_name : sessionData.tutor_name}
-            </h3>
-            <p className="text-xs text-emerald-400 mt-0.5">
-              {isTutor ? 'Klien Konseling' : 'Konselor Bimbingan Konseling'}
-            </p>
+        {(() => {
+          const remoteName = isTutor ? sessionData.student_name : sessionData.tutor_name;
+          const remotePhoto = !isTutor
+            ? (session?.tutor?.tutor_profile?.photo || session?.tutor?.avatar || '/images/counselor_ahmad.jpg')
+            : (session?.user?.avatar || null);
 
-            {/* Audio Waveform Indicator */}
-            <div className="flex items-center gap-1 mt-4">
-              {[40, 75, 55, 90, 60, 45, 80, 50].map((h, i) => (
-                <motion.div
-                  key={i}
-                  animate={{ height: [`${h * 0.3}px`, `${h * 0.7}px`, `${h * 0.3}px`] }}
-                  transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }}
-                  className="w-1 bg-emerald-500 rounded-full"
-                />
-              ))}
+          return (
+            <div className="relative flex items-center justify-center bg-slate-950 rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-inner w-full h-full min-h-[300px]">
+              {/* Remote Real Video Stream from WebRTC */}
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  remoteStream ? 'block' : 'hidden'
+                }`}
+              />
+
+              {/* Fallback avatar card when remote camera stream is not yet active */}
+              {!remoteStream && (
+                <div className="flex flex-col items-center justify-center p-6 text-center">
+                  {remotePhoto ? (
+                    <div className="relative mb-3">
+                      <img
+                        src={remotePhoto}
+                        alt={remoteName}
+                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover shadow-xl border-2 border-emerald-400/50"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900 animate-pulse" />
+                    </div>
+                  ) : (
+                    <motion.div
+                      animate={{ scale: [1, 1.03, 1] }}
+                      transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center text-white text-3xl font-black shadow-xl mb-3 border-2 border-emerald-400/40"
+                    >
+                      {remoteName?.charAt(0) || 'P'}
+                    </motion.div>
+                  )}
+
+                  <h3 className="text-sm sm:text-base font-bold text-slate-100">
+                    {remoteName}
+                  </h3>
+                  <p className="text-xs text-emerald-400 mt-0.5 font-medium">
+                    {isTutor ? 'Klien Konseling' : 'Konselor Bimbingan Konseling'}
+                  </p>
+
+                  {/* Audio Waveform Indicator */}
+                  <div className="flex items-center gap-1 mt-4">
+                    {[40, 75, 55, 90, 60, 45, 80, 50].map((h, i) => (
+                      <motion.div
+                        key={i}
+                        animate={{ height: [`${h * 0.3}px`, `${h * 0.7}px`, `${h * 0.3}px`] }}
+                        transition={{ repeat: Infinity, duration: 0.8 + (i % 3) * 0.2, ease: 'easeInOut' }}
+                        className="w-1 bg-emerald-500 rounded-full"
+                      />
+                    ))}
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 mt-3 max-w-[240px]">
+                    Menghubungkan video inter-tab WebRTC...
+                  </p>
+                </div>
+              )}
+
+              {/* Status Badge */}
+              <div className="absolute bottom-3 left-3 px-3 py-1 rounded-xl bg-slate-900/80 backdrop-blur-md text-xs font-semibold text-slate-200 border border-slate-800 flex items-center gap-2 z-10">
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{remoteName}</span>
+                {remoteStream && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    LIVE VIDEO
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          );
+        })()}
 
-          <div className="absolute bottom-3 left-3 px-3 py-1 rounded-xl bg-slate-900/80 backdrop-blur-md text-xs font-semibold text-slate-200 border border-slate-800 flex items-center gap-2">
-            <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{isTutor ? sessionData.student_name : sessionData.tutor_name}</span>
-          </div>
-        </div>
+        {/* Local Self Video (Real Webcam Support) */}
+        <div className="relative flex items-center justify-center bg-slate-950 rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-inner w-full h-full min-h-[300px]">
+          {/* Real Device Webcam Video Feed */}
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-300 ${
+              !isVideoOff && hasWebcam ? 'block' : 'hidden'
+            }`}
+          />
 
-        {/* Local Self Video */}
-        <div className="relative flex items-center justify-center bg-slate-950 rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-inner">
-          {isVideoOff ? (
-            <div className="flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-800 text-slate-400 flex items-center justify-center text-2xl font-bold mb-2">
+          {/* Fallback avatar when camera is off or not accessible */}
+          {(isVideoOff || !hasWebcam) && (
+            <div className="flex flex-col items-center justify-center p-6 text-center max-w-sm">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-800 text-slate-400 flex items-center justify-center text-2xl font-bold mb-2 shadow-md">
                 {sessionData.user_name?.charAt(0) || 'Y'}
               </div>
-              <p className="text-xs text-slate-400">Kamera dinonaktifkan</p>
-            </div>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-xl mb-3">
-                  {sessionData.user_name?.charAt(0) || 'A'}
+              <p className="text-xs font-bold text-slate-300">
+                {isVideoOff ? 'Kamera Dinonaktifkan' : (cameraError || 'Kamera Tidak Terdeteksi')}
+              </p>
+
+              {cameraError && cameraError.includes('tab atau aplikasi lain') && (
+                <div className="mt-3 text-[11px] text-amber-300 bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20 text-left space-y-1">
+                  <p className="font-semibold flex items-center gap-1 text-amber-400">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    Info Kamera (1 Laptop):
+                  </p>
+                  <p className="text-amber-200/90 leading-relaxed text-[11px]">
+                    Webcam fisik laptop sedang aktif di Tab Klien. Pada 1 laptop, webcam tidak bisa dipakai oleh 2 tab secara bersamaan.
+                  </p>
+                  <p className="text-emerald-400 font-medium text-[10px] pt-1">
+                    ✓ Video Klien tetap tampil live di layar kiri via WebRTC.
+                  </p>
                 </div>
-                <h4 className="text-sm font-bold text-slate-200">{sessionData.user_name} (Anda)</h4>
-                <span className="text-[11px] text-slate-400 mt-0.5">Video Kamera Aktif</span>
-              </div>
+              )}
+
+              {cameraError && (
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="mt-3 text-[11px] font-bold text-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/30 px-3.5 py-1.5 rounded-xl border border-emerald-500/30 transition-colors inline-flex items-center gap-1.5 shadow-soft-xs"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>Coba Nyalakan Kamera</span>
+                </button>
+              )}
             </div>
           )}
 
-          <div className="absolute bottom-3 left-3 px-3 py-1 rounded-xl bg-slate-900/80 backdrop-blur-md text-xs font-semibold text-slate-200 border border-slate-800 flex items-center gap-2">
+          <div className="absolute bottom-3 left-3 px-3 py-1 rounded-xl bg-slate-900/80 backdrop-blur-md text-xs font-semibold text-slate-200 border border-slate-800 flex items-center gap-2 z-10">
             <span>{sessionData.user_name} (Anda)</span>
             {isMuted && <MicOff className="w-3.5 h-3.5 text-rose-400" />}
           </div>
@@ -178,24 +485,38 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
                 </button>
               </div>
 
-              <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                {chatMessages.map((msg, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex items-center justify-between text-[10px] text-slate-400">
-                      <span className="font-semibold text-emerald-400">{msg.sender}</span>
-                      <span>{msg.time}</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-800 text-xs text-slate-200 leading-relaxed border border-slate-700/60">
+              {/* Chat history */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs">
+                {chatMessages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`flex flex-col ${
+                      msg.sender === (isTutor ? sessionData.tutor_name : sessionData.student_name)
+                        ? 'items-end'
+                        : 'items-start'
+                    }`}
+                  >
+                    <span className="text-[10px] text-slate-400 mb-0.5">
+                      {msg.sender} • {msg.time}
+                    </span>
+                    <div
+                      className={`p-2.5 rounded-2xl max-w-[85%] ${
+                        msg.sender === (isTutor ? sessionData.tutor_name : sessionData.student_name)
+                          ? 'bg-emerald-600 text-white rounded-br-none'
+                          : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'
+                      }`}
+                    >
                       {msg.text}
                     </div>
                   </div>
                 ))}
               </div>
 
+              {/* Input */}
               <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-800 flex gap-2">
                 <input
                   type="text"
-                  placeholder="Ketik pesan..."
+                  placeholder="Ketik pesan di ruang rapat..."
                   value={inputMsg}
                   onChange={(e) => setInputMsg(e.target.value)}
                   className="flex-1 bg-slate-800 text-white text-xs px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -216,7 +537,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       <div className="px-4 py-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-center gap-3 sm:gap-4 z-10">
         {/* Mic toggle */}
         <button
-          onClick={() => setIsMuted(!isMuted)}
+          onClick={handleToggleAudio}
           className={`flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all ${
             isMuted ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
           }`}
@@ -227,7 +548,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
 
         {/* Video camera toggle */}
         <button
-          onClick={() => setIsVideoOff(!isVideoOff)}
+          onClick={handleToggleVideo}
           className={`flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all ${
             isVideoOff ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
           }`}

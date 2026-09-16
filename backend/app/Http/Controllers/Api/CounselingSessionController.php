@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CounselingCase;
+use App\Models\CounselingMessage;
 use App\Models\CounselingNote;
 use App\Models\CounselingSession;
+use App\Models\CounselingTopic;
 use App\Models\Notification;
 use App\Models\TutorAvailability;
+use App\Models\User;
 use App\Services\AuditLogService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -168,6 +171,136 @@ class CounselingSessionController extends Controller
     }
 
     /**
+     * Create an instant counseling session for testing right now (no scheduling wait needed)
+     */
+    public function createInstantSession(Request $request)
+    {
+        $request->validate([
+            'method' => 'nullable|in:CHAT,ZOOM,OFFLINE',
+            'tutor_id' => 'nullable|exists:users,id',
+            'topic_id' => 'nullable|exists:counseling_topics,id',
+            'initial_reason' => 'nullable|string|max:500',
+        ]);
+
+        $user = $request->user();
+        $method = strtoupper($request->input('method', 'CHAT'));
+
+        // Determine student and tutor
+        if ($user->isTutor()) {
+            // Tutor is testing: find a student user to pair with
+            $tutorId = $user->id;
+            $studentUser = User::where('role', 'STUDENT')->first() 
+                ?? User::where('id', '!=', $user->id)->first() 
+                ?? $user;
+            $studentId = $studentUser->id;
+        } else {
+            // Student/General/Admin is testing
+            $studentId = $user->id;
+            if ($request->filled('tutor_id')) {
+                $tutorId = (int)$request->input('tutor_id');
+            } else {
+                // Pick an active tutor
+                $tutorUser = User::where('role', 'TUTOR')->where(function($q) {
+                        $q->where('status', 'ACTIVE')->orWhereNull('status');
+                    })->first()
+                    ?? User::where('role', 'TUTOR')->first()
+                    ?? User::where('id', '!=', $user->id)->first();
+                $tutorId = $tutorUser ? $tutorUser->id : $user->id;
+            }
+        }
+
+        // Pick topic
+        $topic = null;
+        if ($request->filled('topic_id')) {
+            $topic = CounselingTopic::find($request->input('topic_id'));
+        }
+        if (!$topic) {
+            $topic = CounselingTopic::first();
+        }
+
+        $session = DB::transaction(function () use ($request, $user, $studentId, $tutorId, $topic, $method) {
+            // Create a test CounselingCase
+            $case = CounselingCase::create([
+                'case_number' => 'TEST-' . strtoupper(substr(uniqid(), -6)),
+                'user_id' => $studentId,
+                'tutor_id' => $tutorId,
+                'topic_id' => $topic ? $topic->id : null,
+                'category' => $topic ? $topic->title : 'Uji Coba Langsung',
+                'status' => 'SCHEDULED',
+                'method' => $method,
+                'initial_reason' => $request->input('initial_reason', "Pengujian langsung sesi {$method} di jam saat ini."),
+                'assessment_answers' => [
+                    'main_issue' => 'Uji coba fitur ' . ($method === 'ZOOM' ? 'Video Zoom' : 'Chat Konseling'),
+                    'duration' => 'Saat ini (Real-time)',
+                    'impact_level' => 1,
+                    'story' => 'Testing instan tanpa menunggu slot jadwal lama.',
+                ],
+            ]);
+
+            // Set start_at to 2 minutes ago and end_at to 2 hours from now so it's currently active!
+            $startAt = Carbon::now()->subMinutes(2);
+            $endAt = Carbon::now()->addHours(2);
+
+            $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
+            $meetingPassword = 'bk' . rand(1000, 9999);
+            $meetingUrl = null;
+
+            if ($method === 'ZOOM') {
+                $studentName = User::find($studentId)?->name ?? 'Mahasiswa';
+                $topicTitle = $topic ? $topic->title : 'Konseling';
+                $zoomResult = \App\Services\ZoomApiService::createMeeting(
+                    "Sesi Uji Coba: {$topicTitle} - {$studentName}",
+                    $startAt->toIso8601String(),
+                    60
+                );
+
+                $meetingNumber = $zoomResult['id'] ?? $meetingNumber;
+                $meetingPassword = $zoomResult['password'] ?? $meetingPassword;
+                $meetingUrl = $zoomResult['join_url'] ?? null;
+            }
+
+            $sess = CounselingSession::create([
+                'counseling_case_id' => $case->id,
+                'user_id' => $studentId,
+                'tutor_id' => $tutorId,
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'method' => $method,
+                'status' => 'SCHEDULED',
+                'meeting_provider' => 'zoom',
+                'meeting_number' => $meetingNumber,
+                'meeting_password' => $meetingPassword,
+                'meeting_url' => $meetingUrl,
+                'zoom_meeting_id' => $meetingNumber,
+            ]);
+
+            // If CHAT method, add an initial friendly greeting message from the counselor
+            if ($method === 'CHAT') {
+                $tutorName = User::find($tutorId)?->name ?? 'Konselor BK';
+                CounselingMessage::create([
+                    'session_id' => $sess->id,
+                    'sender_id' => $tutorId,
+                    'message' => "Halo! Sesi konseling instan ({$method}) sudah aktif di jam saat ini. Selamat datang di ruang chat konsultasi rahasia Anda bersama {$tutorName}.",
+                    'is_read' => false,
+                ]);
+            }
+
+            return $sess;
+        });
+
+        AuditLogService::log('create_instant_test_session', 'CounselingSession', (string)$session->id, [
+            'method' => $method,
+            'case_number' => $session->counselingCase?->case_number,
+        ], $user->id);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Sesi {$method} instan berhasil dibuat. Anda dapat langsung mengujinya sekarang.",
+            'data' => $session->load(['counselingCase', 'user:id,name,email,avatar,role', 'tutor:id,name,email,avatar,role']),
+        ], 201);
+    }
+
+    /**
      * Show session detail for Waiting Room
      */
     public function show(Request $request, $id)
@@ -208,6 +341,10 @@ class CounselingSessionController extends Controller
         $endTime = Carbon::parse($session->end_at);
 
         $canJoin = $now->between($startTime->copy()->subMinutes(15), $endTime);
+        // If testing mode / force_test or test case, bypass time constraint
+        if ($request->boolean('force_test') || str_starts_with($session->counselingCase?->case_number ?? '', 'TEST')) {
+            $canJoin = true;
+        }
         $minutesUntilStart = $now->lt($startTime) ? $now->diffInMinutes($startTime) : 0;
 
         // Mask private_note for student, general user, and admin
@@ -219,7 +356,7 @@ class CounselingSessionController extends Controller
             'data' => $session,
             'can_join' => $canJoin,
             'minutes_until_start' => $minutesUntilStart,
-            'is_in_time_window' => $now->lte($endTime),
+            'is_in_time_window' => $now->lte($endTime) || $request->boolean('force_test'),
         ]);
     }
 

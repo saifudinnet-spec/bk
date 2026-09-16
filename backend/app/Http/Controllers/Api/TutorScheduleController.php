@@ -66,11 +66,20 @@ class TutorScheduleController extends Controller
                 }
             }
 
+            $photo = $tProfile?->photo ?: $tutor->avatar ?: (
+                (stripos($tutor->name, 'nurlina') !== false || stripos($tutor->name, 'dian') !== false)
+                    ? '/images/counselor_dian.jpg'
+                    : (stripos($tutor->name, 'bambang') !== false
+                        ? '/images/counselor_bambang.jpg'
+                        : '/images/counselor_ahmad.jpg')
+            );
+
             return [
                 'id' => $tutor->id,
                 'name' => $tutor->name,
                 'email' => $tutor->email,
-                'avatar' => $tutor->avatar,
+                'avatar' => $photo,
+                'photo' => $photo,
                 'nip' => $tProfile ? $tProfile->nip : null,
                 'specialization' => $tProfile ? $tProfile->specialization : 'Konselor Umum',
                 'bio' => $tProfile ? $tProfile->bio : 'Siap mendengarkan dan mendampingi proses konseling Anda.',
@@ -138,11 +147,20 @@ class TutorScheduleController extends Controller
 
         $nextSlot = $user->availabilities->first();
 
+        $photo = $tProfile?->photo ?: $user->avatar ?: (
+            (stripos($user->name, 'nurlina') !== false || stripos($user->name, 'dian') !== false)
+                ? '/images/counselor_dian.jpg'
+                : (stripos($user->name, 'bambang') !== false
+                    ? '/images/counselor_bambang.jpg'
+                    : '/images/counselor_ahmad.jpg')
+        );
+
         $counselor = [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'avatar' => $user->avatar,
+            'avatar' => $photo,
+            'photo' => $photo,
             'nip' => $tProfile ? $tProfile->nip : null,
             'specialization' => $tProfile ? $tProfile->specialization : 'Konselor Kampus',
             'bio' => $tProfile ? $tProfile->bio : 'Konselor profesional siap mendengarkan cerita dan mendampingi pemulihan Anda.',

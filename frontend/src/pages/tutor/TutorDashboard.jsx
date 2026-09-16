@@ -11,10 +11,14 @@ import {
   ChevronRight,
   Sparkles,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  MessageSquare,
+  Zap,
+  Loader2
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
+import { useToast } from '../../store/ToastContext';
 import StatCard from '../../components/cards/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
 import AppointmentCard from '../../components/cards/AppointmentCard';
@@ -24,12 +28,31 @@ import CaseReviewModal from '../../components/counseling/CaseReviewModal';
 
 export const TutorDashboard = () => {
   const { user } = useAuth();
+  const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
   const [cases, setCases] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCaseForReview, setSelectedCaseForReview] = useState(null);
+  const [isStartingInstant, setIsStartingInstant] = useState(false);
+  const [instantMethodType, setInstantMethodType] = useState(null);
+
+  const handleStartInstantSession = async (method) => {
+    setIsStartingInstant(true);
+    setInstantMethodType(method);
+    try {
+      const res = await api.post('/sessions/instant', { method });
+      const sessionData = res.data?.data || res.data;
+      showSuccess(`Sesi ${method === 'ZOOM' ? 'Zoom' : 'Chat'} instan berhasil disiapkan! Mengalihkan ke ruang konseling...`);
+      navigate(`/counseling/session/${sessionData.id}`);
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Gagal memulai sesi instan.');
+    } finally {
+      setIsStartingInstant(false);
+      setInstantMethodType(null);
+    }
+  };
 
   const fetchTutorData = async () => {
     try {
@@ -107,6 +130,76 @@ export const TutorDashboard = () => {
         {/* Decorative background glow orbs */}
         <div className="absolute -right-12 -top-12 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-12 -bottom-12 w-64 h-64 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+      </section>
+
+      {/* 1.5 Quick Instant Testing Bar for Tutor */}
+      <section className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 text-white shadow-soft-md border border-emerald-500/30 relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 w-52 h-52 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-10 -bottom-10 w-52 h-52 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/40 backdrop-blur-sm">
+                <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+                <span>Uji Coba Konselor (Testing Sesi Instan)</span>
+              </span>
+              <span className="text-[11px] text-emerald-200/70 font-mono">
+                Jam Sekarang: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+              Uji Coba Ruang Chat atau Video Zoom sebagai Konselor
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Mulai sesi simulasi langsung tanpa menunggu jadwal temu mahasiswa. Anda dapat memeriksa fungsionalitas ruang interaktif secara langsung.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+            {/* Tombol Chat Sekarang */}
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              disabled={isStartingInstant}
+              onClick={() => handleStartInstantSession('CHAT')}
+              className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
+            >
+              {isStartingInstant && instantMethodType === 'CHAT' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Menyiapkan Chat...</span>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="w-4 h-4 text-emerald-100" />
+                  <span>💬 Uji Chat Sekarang</span>
+                </>
+              )}
+            </motion.button>
+
+            {/* Tombol Zoom Sekarang */}
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              disabled={isStartingInstant}
+              onClick={() => handleStartInstantSession('ZOOM')}
+              className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
+            >
+              {isStartingInstant && instantMethodType === 'ZOOM' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Menyiapkan Zoom...</span>
+                </>
+              ) : (
+                <>
+                  <Video className="w-4 h-4 text-teal-100" />
+                  <span>📹 Uji Zoom Sekarang</span>
+                </>
+              )}
+            </motion.button>
+          </div>
+        </div>
       </section>
 
       {/* 2. Vibrant Metrics Row */}

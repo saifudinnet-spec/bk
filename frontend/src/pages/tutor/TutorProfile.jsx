@@ -45,8 +45,9 @@ const TOPIC_ICONS = {
 
 // Preset avatar options for counselors
 const PRESET_AVATARS = [
-  { id: 'counselor_dian', label: 'Psikolog Dian (Hijab Formal)', url: '/images/counselor_dian.jpg' },
+  { id: 'counselor_dian', label: 'Nurlina Permata (Hijab Formal)', url: '/images/counselor_dian.jpg' },
   { id: 'counselor_ahmad', label: 'Ahmad Fauzi (Jas Kampus)', url: '/images/counselor_ahmad.jpg' },
+  { id: 'counselor_bambang', label: 'Bambang Sudarsono (Batik & Blazer)', url: '/images/counselor_bambang.jpg' },
   { id: 'nara_formal', label: 'Nara (Blazer & Hijab)', url: '/images/guidance/nara_intro.jpg' },
   { id: 'hero_counseling', label: 'Ruang Konseling UINSSC', url: '/images/hero_counseling.jpg' },
 ];

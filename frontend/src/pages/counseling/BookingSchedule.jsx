@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Check, ArrowRight, ArrowLeft, Video, ShieldCheck } from 'lucide-react';
+import { Calendar, Clock, Check, ArrowRight, ArrowLeft, Video, ShieldCheck, Zap } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
 import { ListSkeleton } from '../../components/common/LoadingSkeleton';
@@ -22,6 +22,23 @@ export const BookingSchedule = () => {
 
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
+
+  const handleStartNow = async () => {
+    setIsBooking(true);
+    try {
+      const res = await api.post('/sessions/instant', {
+        tutor_id: selectedTutorId,
+        initial_reason: 'Sesi langsung dijadwalkan pada jam saat ini.',
+      });
+      const sessionData = res.data?.data || res.data;
+      showSuccess('Sesi konseling jam ini berhasil disiapkan!');
+      navigate(`/counseling/session/${sessionData.id}`);
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Gagal memulai sesi saat ini.');
+    } finally {
+      setIsBooking(false);
+    }
+  };
 
   // Load tutors
   useEffect(() => {
@@ -131,6 +148,33 @@ export const BookingSchedule = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Quick Instant Session Option for Testing / Real-time */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 shadow-soft-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 shadow-soft-xs">
+                <Zap className="w-5 h-5 text-emerald-600 fill-emerald-600" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                  Butuh Sesi / Ingin Uji Coba di Jam Sekarang?
+                </h4>
+                <p className="text-xs text-emerald-800 mt-0.5">
+                  Mulai konsultasi saat ini juga ({new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB) tanpa harus memilih slot tanggal lain.
+                </p>
+              </div>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              disabled={isBooking}
+              onClick={handleStartNow}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-soft-sm whitespace-nowrap transition-all flex items-center justify-center gap-2 self-end sm:self-center min-h-[40px]"
+            >
+              <Clock className="w-4 h-4" />
+              <span>Mulai Sesi Sekarang (Instan)</span>
+            </motion.button>
           </div>
 
           {/* Date Picker Buttons */}

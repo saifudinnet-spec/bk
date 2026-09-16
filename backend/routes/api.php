@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/sessions', [CounselingSessionController::class, 'index']);
     Route::post('/sessions/book', [CounselingSessionController::class, 'book']);
+    Route::post('/sessions/instant', [CounselingSessionController::class, 'createInstantSession']);
     Route::get('/sessions/{id}', [CounselingSessionController::class, 'show']);
     Route::get('/sessions/{sessionId}/messages', [CounselingChatController::class, 'getMessages']);
     Route::post('/sessions/{sessionId}/messages', [CounselingChatController::class, 'sendMessage']);

@@ -39,18 +39,18 @@ export const SessionRoom = () => {
     fetchSession();
   }, [id, showError]);
 
-  const handleJoinMeeting = async () => {
+  const handleJoinMeeting = async (forceTest = false) => {
     setIsJoining(true);
     try {
       // Obtain secure Zoom SDK signature from backend
-      const res = await api.post('/zoom/signature', { session_id: id });
+      const res = await api.post('/zoom/signature', { session_id: id, force_test: forceTest });
       if (res.data) {
         setSignatureData(res.data);
         setIsInMeeting(true);
         showSuccess('Terhubung ke ruang konseling Zoom.');
       }
     } catch (err) {
-      showError(err.message || 'Gagal memulai ruang konseling.');
+      showError(err.response?.data?.message || err.message || 'Gagal memulai ruang konseling.');
     } finally {
       setIsJoining(false);
     }
@@ -88,7 +88,7 @@ export const SessionRoom = () => {
   const method = (session.method || session.counseling_case?.method || 'ZOOM').toUpperCase();
 
   return (
-    <PageTransition className="w-full">
+    <PageTransition className="w-full h-full flex-1 flex flex-col overflow-hidden">
       {/* 1. CHAT METHOD */}
       {method === 'CHAT' && (
         <CounselingChatRoom

@@ -425,22 +425,25 @@ export const LandingPage = () => {
       specialization: 'Kesehatan Mental, Adaptasi Kampus & Regulasi Emosi',
       bio: 'Konselor psikologi berpengalaman mendampingi mahasiswa dalam mengelola stres akademik, overthinking, dan krisis adaptasi.',
       photo: '/images/counselor_ahmad.jpg',
+      avatar: '/images/counselor_ahmad.jpg',
       alumni: 'Psikolog Klinis Terlisensi',
     },
     {
       id: 2,
-      name: 'Dian Permata, M.Psi., Psikolog',
+      name: 'Nurlina Permata, S.Pd., M.Kons.',
       specialization: 'Bimbingan Karier, Motivasi Belajar & Perencanaan Masa Depan',
       bio: 'Fokus pada eksplorasi potensi diri, kesiapan karier, dan mengatasi kecemasan quarter-life crisis masa depan.',
       photo: '/images/counselor_dian.jpg',
+      avatar: '/images/counselor_dian.jpg',
       alumni: 'Konselor Pengembangan Diri',
     },
     {
       id: 3,
-      name: 'Bambang Sudarsono, M.A., Konselor',
+      name: 'Bambang Sudarsono, M.A.',
       specialization: 'Hubungan Sosial, Resolusi Konflik Keluarga & Pribadi',
       bio: 'Pendekatan humanistik yang ramah, hangat, dan mengedepankan ruang aman tanpa penghakiman.',
-      photo: '/images/counselor_ahmad.jpg',
+      photo: '/images/counselor_bambang.jpg',
+      avatar: '/images/counselor_bambang.jpg',
       alumni: 'Konselor Interpersonal & Sosial',
     }
   ];
@@ -791,7 +794,7 @@ export const LandingPage = () => {
                           {displayTutors.slice(0, 3).map((tutor, tIdx) => (
                             <img
                               key={tIdx}
-                              src={tutor.photo || '/images/counselor_ahmad.jpg'}
+                              src={tutor.photo || tutor.avatar || (tIdx === 1 ? '/images/counselor_dian.jpg' : (tIdx === 2 ? '/images/counselor_bambang.jpg' : '/images/counselor_ahmad.jpg'))}
                               alt={tutor.name}
                               className="inline-block w-6 h-6 rounded-full ring-2 ring-white object-cover shadow-2xs"
                             />
@@ -862,7 +865,15 @@ export const LandingPage = () => {
                     {/* Photo Header */}
                     <div className="relative h-56 bg-gray-100 overflow-hidden">
                       <img
-                        src={tutor.photo || '/images/counselor_ahmad.jpg'}
+                        src={
+                          tutor.photo ||
+                          tutor.avatar ||
+                          ((tutor.name?.toLowerCase().includes('nurlina') || tutor.name?.toLowerCase().includes('dian') || idx === 1)
+                            ? '/images/counselor_dian.jpg'
+                            : ((tutor.name?.toLowerCase().includes('bambang') || idx === 2)
+                              ? '/images/counselor_bambang.jpg'
+                              : '/images/counselor_ahmad.jpg'))
+                        }
                         alt={tutor.name}
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       />

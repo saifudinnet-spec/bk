@@ -12,7 +12,9 @@ import {
   Sparkles,
   Volume2,
   Headphones,
-  CheckCircle2
+  CheckCircle2,
+  Zap,
+  ExternalLink
 } from 'lucide-react';
 import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
 
@@ -64,7 +66,12 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
       const end = new Date(session.end_at).getTime();
       const fifteenMinsBefore = start - 15 * 60 * 1000;
 
-      if (now >= fifteenMinsBefore && now <= end) {
+      const isTestCase = Boolean(
+        session.counseling_case?.case_number?.startsWith('TEST-') ||
+        session.counseling_case?.category?.toLowerCase().includes('uji')
+      );
+
+      if (isTestCase || (now >= fifteenMinsBefore && now <= end)) {
         setCanJoin(true);
         setTimeLeft('Sesi siap dimulai!');
       } else if (now > end) {
@@ -237,7 +244,7 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
         <motion.button
           whileTap={{ scale: 0.98 }}
           disabled={!canJoin}
-          onClick={onJoin}
+          onClick={() => onJoin(false)}
           className={`w-full py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-soft-md transition-all min-h-[48px] ${
             canJoin
               ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 animate-pulse'
@@ -248,6 +255,40 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           <span>{canJoin ? 'Masuk Sesi Konseling Sekarang' : 'Menunggu Jadwal Sesi'}</span>
           {canJoin && <ArrowRight className="w-4 h-4" />}
         </motion.button>
+
+        {/* Testing Bypass Button (Active if session is outside scheduled time window) */}
+        {!canJoin && (
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            type="button"
+            onClick={() => onJoin(true)}
+            className="mt-3 w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors shadow-soft-xs"
+          >
+            <Zap className="w-3.5 h-3.5 text-teal-600 fill-teal-600" />
+            <span>⚡ Masuk Sekarang (Bypass Jadwal untuk Testing)</span>
+          </motion.button>
+        )}
+
+        {/* Official Zoom Meeting URL Link (if generated) */}
+        {session.meeting_url && (
+          <div className="mt-4 pt-3.5 border-t border-slate-100 text-center space-y-1.5">
+            <span className="text-[11px] text-slate-500 font-medium block">
+              Tersedia juga tautan resmi Zoom Meeting:
+            </span>
+            <a
+              href={session.meeting_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-xl border border-blue-200 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Buka di Aplikasi Zoom Eksternal</span>
+            </a>
+            <p className="text-[10px] text-slate-400 font-mono">
+              Meeting ID: {session.meeting_number || session.zoom_meeting_id} {session.meeting_password ? `| Passcode: ${session.meeting_password}` : ''}
+            </p>
+          </div>
+        )}
 
         {/* Privacy Note */}
         <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mt-4">

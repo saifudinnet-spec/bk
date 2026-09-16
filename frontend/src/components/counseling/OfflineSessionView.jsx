@@ -39,7 +39,12 @@ export const OfflineSessionView = ({ session, user, isTutor, onLeaveSession }) =
   const fetchMessages = async () => {
     try {
       const res = await api.get(`/sessions/${session.id}/messages`);
-      setMessages(res.data?.data || []);
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data)
+          ? res.data.data
+          : (Array.isArray(res) ? res : []));
+      setMessages(list);
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -63,8 +68,12 @@ export const OfflineSessionView = ({ session, user, isTutor, onLeaveSession }) =
       const res = await api.post(`/sessions/${session.id}/messages`, {
         message: text,
       });
-      if (res.data?.data) {
-        setMessages((prev) => [...prev, res.data.data]);
+      const newMsg = res.data?.data || res.data || res;
+      if (newMsg && newMsg.id) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
       }
     } catch (err) {
       showError('Gagal mengirim pesan administratif.');

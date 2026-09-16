@@ -55,6 +55,7 @@ class DatabaseSeeder extends Seeder
                 'nip' => '198205142010121001',
                 'specialization' => 'Kesehatan Mental, Adaptasi Kampus & Regulasi Emosi',
                 'bio' => 'Konselor psikologi dengan pengalaman lebih dari 10 tahun mendampingi mahasiswa dan masyarakat umum dalam mengelola stres akademik dan kecemasan.',
+                'photo' => '/images/counselor_ahmad.jpg',
             ],
             [
                 'name' => 'Nurlina Permata, S.Pd., M.Kons.',
@@ -63,6 +64,7 @@ class DatabaseSeeder extends Seeder
                 'nip' => '198708222015042002',
                 'specialization' => 'Bimbingan Karier, Motivasi Belajar & Perencanaan Masa Depan',
                 'bio' => 'Fokus pada bimbingan karier terstruktur, eksplorasi potensi diri, serta kesiapan transisi dari dunia perkuliahan ke dunia kerja.',
+                'photo' => '/images/counselor_dian.jpg',
             ],
             [
                 'name' => 'Bambang Sudarsono, M.A.',
@@ -71,6 +73,7 @@ class DatabaseSeeder extends Seeder
                 'nip' => '199003112019031003',
                 'specialization' => 'Hubungan Sosial, Resolusi Konflik Keluarga & Pribadi',
                 'bio' => 'Konselor interpersonal dengan pendekatan humanistik yang ramah, hangat, dan mengedepankan ruang aman tanpa penghakiman.',
+                'photo' => '/images/counselor_bambang.jpg',
             ],
         ];
 
@@ -81,6 +84,7 @@ class DatabaseSeeder extends Seeder
                 'name' => $tData['name'],
                 'email' => $tData['email'],
                 'phone' => $tData['phone'],
+                'avatar' => $tData['photo'],
                 'password' => $commonPassword,
                 'role' => 'TUTOR',
                 'user_type' => 'tutor',
@@ -93,6 +97,7 @@ class DatabaseSeeder extends Seeder
                 'nip' => $tData['nip'],
                 'specialization' => $tData['specialization'],
                 'bio' => $tData['bio'],
+                'photo' => $tData['photo'],
                 'is_available' => true,
             ]);
 

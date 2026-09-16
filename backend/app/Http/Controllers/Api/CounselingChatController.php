@@ -17,8 +17,8 @@ class CounselingChatController extends Controller
         $user = $request->user();
         $session = CounselingSession::findOrFail($sessionId);
 
-        // Security check: Only participant student and assigned tutor can view chat
-        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id) {
+        // Security check: Only participant student and assigned tutor can view chat (or admin)
+        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
             return response()->json(['message' => 'Akses ditolak: Percakapan konseling bersifat rahasia dan hanya dapat diakses oleh konseli dan konselor terkait.'], 403);
         }
 
@@ -51,8 +51,8 @@ class CounselingChatController extends Controller
         $user = $request->user();
         $session = CounselingSession::findOrFail($sessionId);
 
-        // Security check: Only participant student and assigned tutor can send message
-        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id) {
+        // Security check: Only participant student and assigned tutor can send message (or admin)
+        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
             return response()->json(['message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.'], 403);
         }
 

@@ -72,7 +72,11 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
   const fetchMessages = async () => {
     try {
       const res = await api.get(`/sessions/${session.id}/messages`);
-      const list = res.data?.data || [];
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data)
+          ? res.data.data
+          : (Array.isArray(res) ? res : []));
       setMessages(list);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
@@ -116,7 +120,7 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
   useEffect(() => {
     if (messages.length > prevMessagesLengthRef.current) {
       const latest = messages[messages.length - 1];
-      if (latest && latest.sender_id !== user?.id && prevMessagesLengthRef.current > 0) {
+      if (latest && Number(latest.sender_id) !== Number(user?.id) && prevMessagesLengthRef.current > 0) {
         playNotificationSound();
       }
       prevMessagesLengthRef.current = messages.length;
@@ -136,12 +140,16 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
       const res = await api.post(`/sessions/${session.id}/messages`, {
         message: text,
       });
-      if (res.data?.data) {
-        setMessages((prev) => [...prev, res.data.data]);
-        scrollToBottom();
+      const newMsg = res.data?.data || res.data || res;
+      if (newMsg && newMsg.id) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+        setTimeout(scrollToBottom, 50);
       }
     } catch (err) {
-      showError(err.response?.data?.message || 'Gagal mengirim pesan.');
+      showError(err.response?.data?.message || err.message || 'Gagal mengirim pesan.');
       setInputText(text); // Restore unsent text
     } finally {
       setIsSending(false);
@@ -149,9 +157,9 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] sm:h-[82vh] sm:max-h-[82vh] bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-soft-md overflow-hidden">
+    <div className="w-full h-full flex-1 flex flex-col bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-soft-md overflow-hidden min-h-0">
       {/* Chat Room Header */}
-      <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+      <div className="px-4 sm:px-5 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={onLeaveSession}
@@ -218,7 +226,7 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
       </div>
 
       {/* Schedule Info Notice Banner */}
-      <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
+      <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-600 shrink-0">
         <div className="flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 text-emerald-700" />
           <span>
@@ -233,64 +241,71 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
         </div>
       </div>
 
-      {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-slate-50/40">
-        {/* Welcome message */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 text-center max-w-md mx-auto shadow-soft-xs space-y-1">
-          <Sparkles className="w-4 h-4 text-emerald-600 mx-auto" />
-          <h4 className="text-xs font-bold text-slate-800">Ruang Chat Konseling Pribadi</h4>
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            Percakapan ini bersifat rahasia antara Anda dan konselor. Riwayat chat akan tetap tersimpan sebagai catatan riwayat konseling.
-          </p>
+      {/* Messages Scroll Area with WhatsApp Doodle Wallpaper Background */}
+      <div
+        className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-2.5 relative selection:bg-[#d9fdd3]"
+        style={{
+          backgroundColor: '#efeae2',
+          backgroundImage: `url('/images/wa-chat-bg.svg')`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '380px',
+        }}
+      >
+        {/* WhatsApp End-to-End Privacy / Security Pill */}
+        <div className="flex justify-center my-1.5">
+          <div className="bg-[#ffeecd]/95 text-[#54656f] text-[11px] px-3.5 py-1.5 rounded-lg shadow-xs border border-amber-200/60 flex items-center gap-2 max-w-md text-center leading-snug">
+            <Shield className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+            <span>Pesan dalam sesi ini bersifat rahasia dan terenkripsi antara Anda dan konselor.</span>
+          </div>
         </div>
 
         {isBefore && (
-          <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-center max-w-sm mx-auto text-xs text-amber-900 flex items-center justify-center gap-1.5">
-            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
-            <span>Sesi konseling belum dimulai. Anda tetap dapat menuliskan salam atau pesan awal di sini.</span>
+          <div className="flex justify-center my-1.5">
+            <div className="bg-amber-50/90 border border-amber-200/80 rounded-xl px-3.5 py-1.5 text-center max-w-sm text-xs text-amber-900 flex items-center justify-center gap-1.5 shadow-xs">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Sesi konseling belum dimulai. Anda tetap dapat menuliskan salam atau pesan awal di sini.</span>
+            </div>
           </div>
         )}
 
         {messages.map((msg) => {
-          const isMe = msg.sender_id === user?.id;
+          const isMe = Number(msg.sender_id) === Number(user?.id);
           const msgTime = new Date(msg.created_at);
 
           return (
             <div
               key={msg.id}
-              className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
+              className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}
             >
               {!isMe && (
-                <div className="w-7 h-7 rounded-xl bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[11px] shrink-0 mb-1">
+                <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-[11px] shrink-0 mb-0.5 shadow-xs border border-emerald-200/60">
                   {msg.sender?.name?.charAt(0) || 'P'}
                 </div>
               )}
 
               <div
-                className={`max-w-[78%] sm:max-w-md rounded-2xl p-3 text-xs leading-relaxed shadow-soft-xs ${
+                className={`max-w-[82%] sm:max-w-md p-2.5 sm:px-3 sm:py-2 text-xs sm:text-[13px] leading-relaxed shadow-xs ${
                   isMe
-                    ? 'bg-emerald-700 text-white rounded-br-xs'
-                    : 'bg-white text-slate-900 border border-slate-200/80 rounded-bl-xs'
+                    ? 'bg-[#d9fdd3] text-[#111b21] rounded-2xl rounded-tr-none border border-[#bbf7d0]/60'
+                    : 'bg-white text-[#111b21] rounded-2xl rounded-tl-none border border-slate-200/60'
                 }`}
               >
                 {!isMe && (
-                  <p className="text-[10px] font-bold text-emerald-800 mb-0.5">
+                  <p className="text-[11px] font-bold text-[#008069] mb-0.5 tracking-tight">
                     {msg.sender?.name}
                   </p>
                 )}
-                <p className="whitespace-pre-wrap">{msg.message}</p>
+                <p className="whitespace-pre-wrap leading-relaxed text-[#111b21]">{msg.message}</p>
                 <div
-                  className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
-                    isMe ? 'text-emerald-200' : 'text-slate-400'
-                  }`}
+                  className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#667781] select-none"
                 >
                   <span>{msgTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                   {isMe && (
                     <span>
                       {msg.is_read ? (
-                        <CheckCheck className="w-3 h-3 text-emerald-200" />
+                        <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
                       ) : (
-                        <Check className="w-3 h-3 text-emerald-300" />
+                        <Check className="w-3.5 h-3.5 text-[#8696a0]" />
                       )}
                     </span>
                   )}
@@ -302,28 +317,28 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
-      <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-slate-100 bg-white">
-        <div className="flex items-center gap-2">
+      {/* WhatsApp Styled Input Form */}
+      <form onSubmit={handleSendMessage} className="p-2.5 sm:p-3 bg-[#f0f2f5] border-t border-slate-200/90 flex items-center gap-2 shrink-0">
+        <div className="flex-1 relative flex items-center">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onFocus={() => setTimeout(scrollToBottom, 250)}
             autoComplete="off"
-            placeholder="Tulis pesan konseling Anda di sini..."
-            className="flex-1 h-11 px-4 text-xs sm:text-sm bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-slate-800"
+            placeholder="Ketik pesan..."
+            className="w-full h-11 px-4 text-xs sm:text-sm bg-white rounded-2xl border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#00a884]/30 focus:border-[#00a884] transition-all text-[#111b21] placeholder:text-slate-400 shadow-xs"
           />
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            type="submit"
-            disabled={!inputText.trim() || isSending}
-            className="h-11 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-soft-sm transition-colors shrink-0"
-          >
-            <span>Kirim</span>
-            <Send className="w-3.5 h-3.5" />
-          </motion.button>
         </div>
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          type="submit"
+          disabled={!inputText.trim() || isSending}
+          className="h-11 w-11 rounded-full bg-[#00a884] hover:bg-[#008f6f] disabled:opacity-40 text-white font-bold flex items-center justify-center shadow-soft-sm transition-all shrink-0 cursor-pointer"
+          title="Kirim Pesan"
+        >
+          <Send className="w-4 h-4 ml-0.5" />
+        </motion.button>
       </form>
 
       {/* Counselee Diagnostic Modal */}

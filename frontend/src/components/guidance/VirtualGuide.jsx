@@ -66,7 +66,7 @@ export const loadActiveRecordings = async () => {
   if (isFetchingRecordings) return activeRecordingsMap;
   isFetchingRecordings = true;
   try {
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
     const res = await fetch(`${apiBase}/voice-recordings/active`);
     if (res.ok) {
       const data = await res.json();
@@ -257,7 +257,7 @@ const speakWithBrowserVoice = (text, { onStart, onEnd, onError } = {}) => {
  */
 const speakWithNeuralTts = (cleanText, voice, rate, { onStart, onEnd, onError } = {}) => {
   try {
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
     const streamUrl = `${apiBase}/tts?text=${encodeURIComponent(cleanText)}&voice=${encodeURIComponent(voice)}&rate=${encodeURIComponent(rate)}`;
 
     const audio = new Audio(streamUrl);

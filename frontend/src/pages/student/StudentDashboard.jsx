@@ -17,7 +17,10 @@ import {
   AlertCircle,
   BookOpen,
   HeartHandshake,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare,
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
@@ -47,6 +50,24 @@ export const StudentDashboard = () => {
   const [latestScreening, setLatestScreening] = useState(null);
   const [todayMood, setTodayMood] = useState(null);
   const [actionPlans, setActionPlans] = useState([]);
+  const [isStartingInstant, setIsStartingInstant] = useState(false);
+  const [instantMethodType, setInstantMethodType] = useState(null);
+
+  const handleStartInstantSession = async (method) => {
+    setIsStartingInstant(true);
+    setInstantMethodType(method);
+    try {
+      const res = await api.post('/sessions/instant', { method });
+      const sessionData = res.data?.data || res.data;
+      showSuccess(`Sesi ${method === 'ZOOM' ? 'Zoom' : 'Chat'} instan berhasil disiapkan! Mengalihkan ke ruang konseling...`);
+      navigate(`/counseling/session/${sessionData.id}`);
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Gagal memulai sesi instan.');
+    } finally {
+      setIsStartingInstant(false);
+      setInstantMethodType(null);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -151,6 +172,76 @@ export const StudentDashboard = () => {
       {/* 1. Daily Mood Check-in */}
       <section>
         <MoodPicker initialMood={todayMood} onSaved={(m) => setTodayMood(m)} />
+      </section>
+
+      {/* 1.5 Quick Instant Testing Bar: Uji Chat & Zoom Sekarang */}
+      <section className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 text-white shadow-soft-md border border-emerald-500/30 relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 w-52 h-52 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-10 -bottom-10 w-52 h-52 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/40 backdrop-blur-sm">
+                <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+                <span>Mode Pengujian Cepat (Testing Langsung)</span>
+              </span>
+              <span className="text-[11px] text-emerald-200/70 font-mono">
+                Jam Sekarang: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+              Ingin Menguji Fitur Chat atau Video Zoom di Jam Saat Ini?
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Mulai sesi simulasi langsung tanpa perlu memilih slot waktu atau menunggu jadwal hari lain. Ruang chat dan video meeting langsung aktif seketika.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+            {/* Tombol Chat Sekarang */}
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              disabled={isStartingInstant}
+              onClick={() => handleStartInstantSession('CHAT')}
+              className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
+            >
+              {isStartingInstant && instantMethodType === 'CHAT' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Menyiapkan Chat...</span>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="w-4 h-4 text-emerald-100" />
+                  <span>💬 Uji Chat Sekarang</span>
+                </>
+              )}
+            </motion.button>
+
+            {/* Tombol Zoom Sekarang */}
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              disabled={isStartingInstant}
+              onClick={() => handleStartInstantSession('ZOOM')}
+              className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
+            >
+              {isStartingInstant && instantMethodType === 'ZOOM' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Menyiapkan Zoom...</span>
+                </>
+              ) : (
+                <>
+                  <Video className="w-4 h-4 text-teal-100" />
+                  <span>📹 Uji Zoom Sekarang</span>
+                </>
+              )}
+            </motion.button>
+          </div>
+        </div>
       </section>
 
       {/* 2. Primary Action Hero Banner */}

@@ -17,6 +17,7 @@ class ZoomController extends Controller
     {
         $request->validate([
             'session_id' => 'required|exists:counseling_sessions,id',
+            'force_test' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -24,7 +25,8 @@ class ZoomController extends Controller
             ->findOrFail($request->input('session_id'));
 
         try {
-            $data = ZoomService::generateSignature($user, $session);
+            $forceTest = $request->boolean('force_test');
+            $data = ZoomService::generateSignature($user, $session, $forceTest);
 
             // Audit log join attempt
             AuditLogService::log('join_session', 'CounselingSession', (string)$session->id, [
