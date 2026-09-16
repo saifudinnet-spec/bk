@@ -135,9 +135,10 @@ export const AppRoutes = () => {
           }
         >
           <Route path="dashboard" element={<TutorDashboard />} />
-          <Route path="students" element={<TutorStudents />} />
           <Route path="schedule" element={<TutorSchedule />} />
           <Route path="cases" element={<TutorStudents />} />
+          <Route path="cases/:id" element={<CaseDetail />} />
+          <Route path="students" element={<Navigate to="/tutor/cases" replace />} />
           <Route path="profile" element={<TutorProfile />} />
         </Route>
 

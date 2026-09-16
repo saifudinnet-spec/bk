@@ -133,7 +133,7 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
           {caseId && (
             <button
               type="button"
-              onClick={() => navigate(`/app/cases/${caseId}`)}
+              onClick={() => navigate(isTutor ? `/tutor/cases/${caseId}` : `/app/cases/${caseId}`)}
               className="py-2.5 px-3 rounded-xl border border-slate-200 border-b-[3px] border-b-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-h-[42px] active:translate-y-0.5 shadow-2xs"
             >
               <FileText className="w-3.5 h-3.5 text-slate-500" />

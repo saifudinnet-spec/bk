@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\QuestionnaireController;
 use App\Http\Controllers\Api\SessionFeedbackController;
 use App\Http\Controllers\Api\StudentDashboardController;
 use App\Http\Controllers\Api\TtsController;
+use App\Http\Controllers\Api\TutorDashboardController;
 use App\Http\Controllers\Api\TutorProfileController;
 use App\Http\Controllers\Api\TutorScheduleController;
 use App\Http\Controllers\Api\ZoomController;
@@ -64,8 +65,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    // Fast Aggregated Student Dashboard
+    // Fast Aggregated Student & Tutor Dashboards
     Route::get('/student/dashboard', [StudentDashboardController::class, 'getDashboardSummary']);
+    Route::get('/tutor/dashboard', [TutorDashboardController::class, 'getDashboardSummary']);
 
     // Mood Tracking
     Route::post('/mood/checkin', [MoodCheckinController::class, 'store']);
@@ -86,7 +88,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cases/{id}/suggest-method', [CounselingCaseController::class, 'suggestMethod']);
     Route::post('/cases/{id}/respond-method-suggestion', [CounselingCaseController::class, 'respondMethodSuggestion']);
 
-    // Tutor Schedules & Sessions
+    // Tutor Schedules, Students & Sessions
+    Route::get('/tutor/students', [TutorDashboardController::class, 'getStudents']);
     Route::get('/tutor/students/{id}/diagnostics', [CounselingCaseController::class, 'studentDiagnostics']);
     Route::get('/tutor/my-profile', [TutorProfileController::class, 'getProfile']);
     Route::post('/tutor/my-profile', [TutorProfileController::class, 'updateProfile']);

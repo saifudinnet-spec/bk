@@ -34,7 +34,6 @@ export const BottomNav = () => {
   // Tutor Nav Items
   const tutorNavItems = [
     { label: 'Home', path: '/tutor/dashboard', icon: LayoutDashboard },
-    { label: 'Mahasiswa', path: '/tutor/students', icon: Users },
     { label: 'Jadwal', path: '/tutor/schedule', icon: Calendar },
     { label: 'Kasus', path: '/tutor/cases', icon: FolderHeart },
     { label: 'Profil', path: '/tutor/profile', icon: User },

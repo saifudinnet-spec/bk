@@ -7,53 +7,43 @@ import PageTransition from '../../components/common/PageTransition';
 import CounseleeDiagnosticModal from '../../components/counseling/CounseleeDiagnosticModal';
 
 export const TutorStudents = () => {
-  const [cases, setCases] = useState([]);
+  const [studentList, setStudentList] = useState([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStudentForDiagnostics, setSelectedStudentForDiagnostics] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCases = async () => {
+    const fetchStudents = async () => {
       try {
-        const res = await api.get('/cases');
-        setCases(res.data || []);
+        const res = await api.get('/tutor/students');
+        const data = res.data?.data || res.data || [];
+        setStudentList(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to load students:', err);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchCases();
+    fetchStudents();
   }, []);
 
-  // Group unique students from cases
-  const studentsMap = new Map();
-  cases.forEach((c) => {
-    if (c.user && !studentsMap.has(c.user.id)) {
-      studentsMap.set(c.user.id, {
-        user: c.user,
-        latestCase: c,
-        totalCases: cases.filter((item) => item.user_id === c.user.id).length,
-      });
-    }
-  });
-
-  const students = Array.from(studentsMap.values()).filter((item) => {
+  const students = studentList.filter((item) => {
     const query = search.toLowerCase();
     const nameMatch = item.user?.name?.toLowerCase().includes(query);
     const nimMatch = (item.user?.studentProfile?.nim || item.user?.student_profile?.nim || '').toLowerCase().includes(query);
     const prodiMatch = (item.user?.studentProfile?.program_study || item.user?.student_profile?.program_study || '').toLowerCase().includes(query);
-    return nameMatch || nimMatch || prodiMatch;
+    const caseMatch = (item.latestCase?.category || '').toLowerCase().includes(query) || (item.latestCase?.case_number || '').toLowerCase().includes(query);
+    return nameMatch || nimMatch || prodiMatch || caseMatch;
   });
 
   return (
     <PageTransition className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold text-darktext">Daftar Mahasiswa & Klien Konseli</h2>
+          <h2 className="text-xl font-bold text-darktext">Daftar Kasus & Klien Konseli</h2>
           <p className="text-xs text-mutedtext">
-            Klien yang terdaftar dalam bimbingan konseling, rekam asesmen, dan diagnosa berkala
+            Riwayat kasus bimbingan konseling, rekam asesmen, dan pendampingan konseli aktif
           </p>
         </div>
       </div>
@@ -64,7 +54,7 @@ export const TutorStudents = () => {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari berdasarkan nama mahasiswa, NIM, atau program studi..."
+          placeholder="Cari berdasarkan nama mahasiswa, NIM, program studi, atau kategori kasus..."
           className="w-full h-12 px-4 pl-10 rounded-2xl border border-softborder bg-white text-xs sm:text-sm text-darktext focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-soft-sm"
         />
         <Search className="w-4 h-4 text-mutedtext absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -123,7 +113,7 @@ export const TutorStudents = () => {
                       )}
                     </div>
 
-                    {latestCase.category && (
+                    {latestCase?.category && (
                       <p className="text-[11px] text-slate-600 mt-1">
                         Kasus Terakhir: <strong className="text-slate-800">{latestCase.category}</strong>{' '}
                         <span className="text-slate-400 font-mono">({latestCase.case_number})</span>
@@ -143,14 +133,16 @@ export const TutorStudents = () => {
                     <span>Rekam Diagnosa & Asesmen</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/app/cases/${latestCase.id}`)}
-                    className="flex-1 md:flex-none px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-soft-xs transition-colors flex items-center justify-center gap-1"
-                  >
-                    <span>Detail Kasus</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  {latestCase?.id && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/tutor/cases/${latestCase.id}`)}
+                      className="flex-1 md:flex-none px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-soft-xs transition-colors flex items-center justify-center gap-1"
+                    >
+                      <span>Detail Kasus</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

@@ -32,7 +32,14 @@ export const TutorDashboard = () => {
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
-  const [cases, setCases] = useState([]);
+  const [metrics, setMetrics] = useState({
+    waiting_review: 0,
+    today_sessions: 0,
+    active_cases: 0,
+    follow_up: 0,
+  });
+  const [counselorInfo, setCounselorInfo] = useState(null);
+  const [waitingCases, setWaitingCases] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCaseForReview, setSelectedCaseForReview] = useState(null);
@@ -57,14 +64,15 @@ export const TutorDashboard = () => {
 
   const fetchTutorData = async () => {
     try {
-      const [casesRes, sessRes] = await Promise.all([
-        api.get('/cases'),
-        api.get('/sessions?scope=upcoming'),
-      ]);
-      const rawCases = casesRes.data?.data || casesRes.data || [];
-      const rawSessions = sessRes.data?.data || sessRes.data || [];
-      setCases(Array.isArray(rawCases) ? rawCases : []);
-      setSessions(Array.isArray(rawSessions) ? rawSessions : []);
+      const res = await api.get('/tutor/dashboard');
+      if (res && res.metrics) {
+        setMetrics(res.metrics);
+        setWaitingCases(res.waiting_cases || []);
+        setSessions(res.upcoming_sessions || []);
+        if (res.counselor) {
+          setCounselorInfo(res.counselor);
+        }
+      }
     } catch (err) {
       console.error('Failed to load tutor data:', err);
     } finally {
@@ -80,10 +88,16 @@ export const TutorDashboard = () => {
     return <DashboardSkeleton />;
   }
 
-  // Filter metrics
-  const waitingReview = cases.filter((c) => c.status === 'NEW' || c.status === 'WAITING_REVIEW');
-  const activeCases = cases.filter((c) => c.status !== 'CLOSED');
-  const followUpCases = cases.filter((c) => c.status === 'FOLLOW_UP');
+  // Resolve counselor photo
+  const counselorPhoto =
+    counselorInfo?.avatar ||
+    user?.avatar ||
+    user?.profile?.photo ||
+    (user?.name?.toLowerCase().includes('nurlina') || user?.name?.toLowerCase().includes('dian')
+      ? '/images/counselor_dian.jpg'
+      : user?.name?.toLowerCase().includes('bambang')
+        ? '/images/counselor_bambang.jpg'
+        : '/images/counselor_ahmad.jpg');
 
   return (
     <PageTransition className="space-y-6">
@@ -91,14 +105,27 @@ export const TutorDashboard = () => {
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-900 via-emerald-800 to-slate-950 text-white p-6 sm:p-7 shadow-soft-md border border-emerald-800/40">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-400 to-teal-200 text-emerald-950 font-black text-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20 border-2 border-white/20">
-              {user?.name?.charAt(0) || 'K'}
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden ring-2 ring-emerald-400/50 border-2 border-white/30 shadow-lg shadow-emerald-950/40 shrink-0 bg-slate-900 relative">
+              <img
+                src={counselorPhoto}
+                alt={user?.name || 'Konselor'}
+                className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-300"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/images/counselor_ahmad.jpg';
+                }}
+              />
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30 backdrop-blur-md">
                   🧑‍🏫 Konselor
                 </span>
+                {counselorInfo?.specialization && (
+                  <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-white/10 text-emerald-200 text-[11px] font-medium border border-white/15 backdrop-blur-md truncate max-w-xs">
+                    {counselorInfo.specialization}
+                  </span>
+                )}
               </div>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                 {user?.name || 'Konselor'}
@@ -108,7 +135,7 @@ export const TutorDashboard = () => {
 
           <div className="flex flex-wrap md:flex-col items-stretch gap-2 shrink-0">
             <div className="flex items-center gap-2">
-              <NotificationBell variant="dark" />
+              <NotificationBell variant="dark" className="md:hidden" />
               <Link
                 to="/tutor/schedule"
                 className="flex-1 px-4 py-2.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 text-xs font-bold shadow-md shadow-black/10 transition-all flex items-center justify-center gap-2 min-h-[42px]"
@@ -196,15 +223,15 @@ export const TutorDashboard = () => {
         <StatCard
           icon={AlertCircle}
           label="Perlu Review"
-          value={waitingReview.length}
+          value={metrics.waiting_review}
           subtext="Permohonan baru masuk"
           color="amber"
-          badge={waitingReview.length > 0 ? 'Prioritas' : 'Nihil'}
+          badge={metrics.waiting_review > 0 ? 'Prioritas' : 'Nihil'}
         />
         <StatCard
           icon={Calendar}
           label="Konseling Hari Ini"
-          value={sessions.length}
+          value={metrics.today_sessions}
           subtext="Jadwal aktif terdaftar"
           color="emerald"
           badge="Jadwal"
@@ -212,7 +239,7 @@ export const TutorDashboard = () => {
         <StatCard
           icon={FolderHeart}
           label="Kasus Aktif"
-          value={activeCases.length}
+          value={metrics.active_cases}
           subtext="Dalam pendampingan"
           color="indigo"
           badge="Berjalan"
@@ -220,7 +247,7 @@ export const TutorDashboard = () => {
         <StatCard
           icon={Clock}
           label="Follow Up"
-          value={followUpCases.length}
+          value={metrics.follow_up}
           subtext="Perlu evaluasi lanjutan"
           color="purple"
           badge="Evaluasi"
@@ -228,12 +255,12 @@ export const TutorDashboard = () => {
       </div>
 
       {/* 3. Priority Review Queue */}
-      {waitingReview.length > 0 && (
+      {waitingCases.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-darktext flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-amber-950">Permohonan Konseling Menunggu Review ({waitingReview.length})</span>
+              <span className="text-amber-950">Permohonan Konseling Menunggu Review ({metrics.waiting_review})</span>
             </h3>
             <span className="text-xs text-amber-800 font-semibold bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
               Konfirmasi metode & jadwal
@@ -241,7 +268,7 @@ export const TutorDashboard = () => {
           </div>
 
           <div className="space-y-3">
-            {waitingReview.map((c) => (
+            {waitingCases.map((c) => (
               <div
                 key={c.id}
                 className="p-4 sm:p-5 rounded-3xl bg-white border-l-4 border-l-amber-500 border border-amber-200/80 shadow-soft-sm hover:shadow-soft-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"

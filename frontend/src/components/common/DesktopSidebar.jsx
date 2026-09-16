@@ -32,7 +32,6 @@ export const DesktopSidebar = () => {
 
   const tutorLinks = [
     { label: 'Dashboard Tutor', path: '/tutor/dashboard', icon: LayoutDashboard },
-    { label: 'Daftar Mahasiswa', path: '/tutor/students', icon: Users },
     { label: 'Jadwal Konseling', path: '/tutor/schedule', icon: Calendar },
     { label: 'Daftar Kasus', path: '/tutor/cases', icon: FolderHeart },
     { label: 'Profil Tutor', path: '/tutor/profile', icon: User },
@@ -88,8 +87,28 @@ export const DesktopSidebar = () => {
       {/* User Info & Logout */}
       <div className="pt-4 border-t border-softborder mt-auto">
         <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs shrink-0">
-            {user?.name?.charAt(0) || 'U'}
+          <div className="w-9 h-9 rounded-xl overflow-hidden bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs shrink-0 border border-emerald-200/80">
+            {isTutor ? (
+              <img
+                src={
+                  user?.avatar ||
+                  user?.profile?.photo ||
+                  (user?.name?.toLowerCase().includes('nurlina') || user?.name?.toLowerCase().includes('dian')
+                    ? '/images/counselor_dian.jpg'
+                    : user?.name?.toLowerCase().includes('bambang')
+                      ? '/images/counselor_bambang.jpg'
+                      : '/images/counselor_ahmad.jpg')
+                }
+                alt={user?.name || 'Konselor'}
+                className="w-full h-full object-cover object-top"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/images/counselor_ahmad.jpg';
+                }}
+              />
+            ) : (
+              user?.name?.charAt(0) || 'U'
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-darktext truncate">{user?.name}</p>
