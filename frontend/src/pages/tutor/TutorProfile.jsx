@@ -255,14 +255,15 @@ export const TutorProfile = () => {
   return (
     <PageTransition className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* 1. Header Hero Card with Photo, Stats & Availability */}
-      <div className="relative rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 shadow-soft-sm overflow-hidden">
-        {/* Subtle decorative background gradient accent */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-emerald-100/40 via-teal-50/30 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
+      <div className="relative rounded-3xl bg-gradient-to-br from-teal-900 via-emerald-800 to-slate-950 text-white border border-emerald-700/50 p-6 sm:p-8 shadow-soft-md overflow-hidden">
+        {/* Decorative background glow orbs */}
+        <div className="absolute -right-12 -top-12 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-12 -bottom-12 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
           {/* Avatar with Camera Overlay */}
           <div className="relative group shrink-0">
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden ring-4 ring-emerald-500/20 shadow-soft-md bg-slate-100 relative">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden ring-4 ring-white/20 shadow-lg border-2 border-white/20 bg-slate-900 relative">
               <img
                 src={photoPreview || avatar || '/images/counselor_dian.jpg'}
                 alt={name}
@@ -277,7 +278,7 @@ export const TutorProfile = () => {
             <button
               type="button"
               onClick={() => setShowPhotoModal(true)}
-              className="absolute -bottom-2 -right-2 p-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft-md transition-transform hover:scale-110 flex items-center justify-center"
+              className="absolute -bottom-2 -right-2 p-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white shadow-soft-md transition-transform hover:scale-110 flex items-center justify-center border border-white/30"
               title="Ganti Foto Profil"
             >
               <Camera className="w-4 h-4" />
@@ -287,13 +288,13 @@ export const TutorProfile = () => {
           {/* Counselor Info & Badge Details */}
           <div className="flex-1 text-center md:text-left space-y-2.5 min-w-0">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
                 <span>Konselor Resmi UINSSC</span>
               </span>
 
               {nip && (
-                <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-full bg-white/10 text-slate-200 border border-white/15 backdrop-blur-md">
                   NIP: {nip}
                 </span>
               )}
@@ -302,42 +303,42 @@ export const TutorProfile = () => {
               <button
                 type="button"
                 onClick={() => setIsAvailable(!isAvailable)}
-                className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full transition-all cursor-pointer border ${
+                className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full transition-all cursor-pointer border backdrop-blur-md ${
                   isAvailable
-                    ? 'bg-emerald-100/80 text-emerald-950 border-emerald-300 hover:bg-emerald-200/80'
-                    : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                    ? 'bg-emerald-400/20 text-emerald-200 border-emerald-400/40 hover:bg-emerald-400/30'
+                    : 'bg-rose-500/20 text-rose-200 border-rose-500/40 hover:bg-rose-500/30'
                 }`}
                 title="Klik untuk mengubah status ketersediaan"
               >
-                <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-emerald-600 animate-pulse' : 'bg-rose-500'}`} />
+                <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
                 <span>{isAvailable ? 'Tersedia Menerima Sesi' : 'Sedang Libur'}</span>
               </button>
             </div>
 
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight">
               {name || 'Nama Konselor'}
             </h1>
 
-            <p className="text-xs sm:text-sm font-semibold text-emerald-800 line-clamp-1">
+            <p className="text-xs sm:text-sm font-bold text-emerald-300 line-clamp-1">
               {specialization || 'Spesialisasi Konseling & Kesehatan Mental'}
             </p>
 
-            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed max-w-2xl">
+            <p className="text-xs text-emerald-100/80 line-clamp-2 leading-relaxed max-w-2xl">
               {bio || 'Belum ada ringkasan bio profesional. Tuliskan deskripsi Anda di formulir di bawah ini.'}
             </p>
 
             {/* Stats Pills Bar */}
-            <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-slate-600">
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+            <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium">
+              <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 text-white backdrop-blur-md">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                 <span><strong>{stats.average_rating}</strong> ({stats.total_reviews} ulasan)</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 text-white backdrop-blur-md">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
                 <span><strong>{stats.completed_sessions}</strong> Sesi Selesai</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-                <HeartHandshake className="w-3.5 h-3.5 text-teal-600" />
+              <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 text-white backdrop-blur-md">
+                <HeartHandshake className="w-3.5 h-3.5 text-teal-300" />
                 <span><strong>{stats.active_cases}</strong> Kasus Berjalan</span>
               </div>
             </div>
