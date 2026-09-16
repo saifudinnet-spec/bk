@@ -25,6 +25,7 @@ import AppointmentCard from '../../components/cards/AppointmentCard';
 import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
 import CaseReviewModal from '../../components/counseling/CaseReviewModal';
+import NotificationBell from '../../components/common/NotificationBell';
 
 export const TutorDashboard = () => {
   const { user } = useAuth();
@@ -112,14 +113,17 @@ export const TutorDashboard = () => {
           </div>
 
           <div className="flex flex-wrap md:flex-col items-stretch gap-2 shrink-0">
-            <Link
-              to="/tutor/schedule"
-              className="px-4 py-2.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 text-xs font-bold shadow-md shadow-black/10 transition-all flex items-center justify-center gap-2 min-h-[42px]"
-            >
-              <Calendar className="w-4 h-4 text-emerald-700" />
-              <span>Atur Jadwal Konseling</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <NotificationBell variant="dark" />
+              <Link
+                to="/tutor/schedule"
+                className="flex-1 px-4 py-2.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 text-xs font-bold shadow-md shadow-black/10 transition-all flex items-center justify-center gap-2 min-h-[42px]"
+              >
+                <Calendar className="w-4 h-4 text-emerald-700" />
+                <span>Atur Jadwal Konseling</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
             <div className="px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-[11px] text-emerald-200 flex items-center justify-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               <span className="font-semibold">Siap Melayani Konseling</span>

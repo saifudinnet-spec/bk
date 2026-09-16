@@ -35,6 +35,7 @@ import EmptyState from '../../components/common/EmptyState';
 import PageTransition from '../../components/common/PageTransition';
 import ActionPlanSection from '../../components/counseling/ActionPlanSection';
 import SessionFeedbackModal from '../../components/counseling/SessionFeedbackModal';
+import NotificationBell from '../../components/common/NotificationBell';
 
 export const StudentDashboard = () => {
   const { user } = useAuth();
@@ -158,14 +159,8 @@ export const StudentDashboard = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <Link
-            to="/app/counseling/wizard"
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 min-h-[42px]"
-          >
-            <MessageSquareHeart className="w-4 h-4" />
-            <span>Ajukan Konseling Baru</span>
-          </Link>
+        <div className="flex items-center self-start md:self-auto shrink-0">
+          <NotificationBell />
         </div>
       </section>
 

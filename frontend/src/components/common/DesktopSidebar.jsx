@@ -16,6 +16,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
+import NotificationBell from './NotificationBell';
 
 export const DesktopSidebar = () => {
   const { user, isStudent, isGeneral, isTutor, isAdmin, logout } = useAuth();
@@ -86,14 +87,15 @@ export const DesktopSidebar = () => {
 
       {/* User Info & Logout */}
       <div className="pt-4 border-t border-softborder mt-auto">
-        <div className="flex items-center gap-3 px-2 py-2 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs">
+        <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs shrink-0">
             {user?.name?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-darktext truncate">{user?.name}</p>
             <p className="text-[10px] text-mutedtext truncate">{user?.email}</p>
           </div>
+          <NotificationBell className="!w-8 !h-8 !rounded-xl shrink-0" />
         </div>
 
         <button
