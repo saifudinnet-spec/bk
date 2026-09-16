@@ -103,9 +103,6 @@ export const TutorDashboard = () => {
               <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                 {user?.name || 'Konselor'}
               </h2>
-              <p className="text-xs text-emerald-100/80 max-w-xl leading-relaxed">
-                Ruang pendampingan siap memfasilitasi sesi bimbingan tatap muka maupun online (Zoom) untuk membantu perkembangan akademik dan mental konseli.
-              </p>
             </div>
           </div>
 
