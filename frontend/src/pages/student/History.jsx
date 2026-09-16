@@ -44,13 +44,13 @@ export const History = () => {
       </div>
 
       {/* Segmented Tab Control */}
-      <div className="flex p-1 bg-gray-100 rounded-2xl">
+      <div className="flex p-1.5 bg-slate-200/70 rounded-2xl border border-slate-200 shadow-2xs">
         <button
           onClick={() => setActiveTab('sessions')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
             activeTab === 'sessions'
-              ? 'bg-white text-emerald-800 shadow-sm'
-              : 'text-mutedtext hover:text-darktext'
+              ? 'bg-white text-emerald-900 shadow-sm border border-slate-200/80 font-extrabold'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           Sesi Konseling ({sessions.length})
@@ -58,10 +58,10 @@ export const History = () => {
 
         <button
           onClick={() => setActiveTab('screenings')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
             activeTab === 'screenings'
-              ? 'bg-white text-emerald-800 shadow-sm'
-              : 'text-mutedtext hover:text-darktext'
+              ? 'bg-white text-emerald-900 shadow-sm border border-slate-200/80 font-extrabold'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           Screening ({screenings.length})
@@ -69,10 +69,10 @@ export const History = () => {
 
         <button
           onClick={() => setActiveTab('cases')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
             activeTab === 'cases'
-              ? 'bg-white text-emerald-800 shadow-sm'
-              : 'text-mutedtext hover:text-darktext'
+              ? 'bg-white text-emerald-900 shadow-sm border border-slate-200/80 font-extrabold'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           Kasus BK ({cases.length})
@@ -83,7 +83,7 @@ export const History = () => {
       {isLoading ? (
         <ListSkeleton count={4} />
       ) : activeTab === 'sessions' ? (
-        <div className="space-y-3">
+        <div className="space-y-4 sm:space-y-5">
           {sessions.length === 0 ? (
             <EmptyState
               title="Belum Ada Sesi Konseling"
@@ -98,7 +98,7 @@ export const History = () => {
           )}
         </div>
       ) : activeTab === 'screenings' ? (
-        <div className="space-y-3">
+        <div className="space-y-4 sm:space-y-5">
           {screenings.length === 0 ? (
             <EmptyState
               title="Belum Ada Hasil Screening"
@@ -111,7 +111,7 @@ export const History = () => {
               <div
                 key={sc.id}
                 onClick={() => navigate(`/app/screening/result/${sc.id}`)}
-                className="p-5 rounded-3xl bg-white border border-softborder shadow-soft-sm hover:border-emerald-200 transition-all cursor-pointer flex items-center justify-between"
+                className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 border-b-[4px] border-b-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(20,184,166,0.14)] hover:border-teal-300 hover:border-b-teal-500 transition-all cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
@@ -143,7 +143,7 @@ export const History = () => {
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4 sm:space-y-5">
           {cases.length === 0 ? (
             <EmptyState
               title="Belum Ada Kasus Konseling"

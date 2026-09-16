@@ -61,13 +61,13 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
   return (
     <motion.div
       whileTap={{ scale: 0.99 }}
-      className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-soft-sm hover:border-emerald-300 transition-all flex flex-col justify-between"
+      className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 border-b-[4px] border-b-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.14),0_2px_6px_rgba(0,0,0,0.06)] hover:border-emerald-300 hover:border-b-emerald-500 transition-all flex flex-col justify-between group"
     >
       <div>
         {/* Method Header & Status */}
         <div className="flex items-start justify-between gap-2 mb-3.5">
           <div className="flex items-center gap-2.5">
-            <span className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${currentMethodConfig.color}`}>
+            <span className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 border border-slate-200/60 shadow-xs ${currentMethodConfig.color}`}>
               <MethodIcon className="w-4 h-4" />
             </span>
             <div>
@@ -85,8 +85,8 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
         </div>
 
         {/* Partner Info */}
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 mb-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
+        <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 mb-3.5 shadow-2xs">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm border border-white">
             {partnerName?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 min-w-0">
@@ -94,7 +94,7 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
             <p className="text-[10px] text-slate-500 font-medium">{partnerRole}</p>
           </div>
           {currentFeedback && (
-            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl text-amber-900 font-bold text-[11px]">
+            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl text-amber-900 font-bold text-[11px] shadow-2xs">
               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
               <span>{currentFeedback.rating}.0</span>
             </div>
@@ -129,12 +129,12 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
 
       {/* Action Buttons */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           {caseId && (
             <button
               type="button"
               onClick={() => navigate(`/app/cases/${caseId}`)}
-              className="py-2.5 px-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors flex items-center justify-center gap-1 min-h-[42px]"
+              className="py-2.5 px-3 rounded-xl border border-slate-200 border-b-[3px] border-b-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-h-[42px] active:translate-y-0.5 shadow-2xs"
             >
               <FileText className="w-3.5 h-3.5 text-slate-500" />
               <span>Lihat Detail</span>
@@ -144,12 +144,12 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(`/counseling/session/${session.id}`)}
-            className={`py-2.5 px-3 rounded-xl text-white text-xs font-bold shadow-soft-xs flex items-center justify-center gap-1.5 transition-all min-h-[42px] ${
+            className={`py-2.5 px-3 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all min-h-[42px] border-b-[3px] active:translate-y-0.5 ${
               caseId ? '' : 'col-span-2'
             } ${
               canJoin
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 animate-pulse'
-                : 'bg-emerald-700 hover:bg-emerald-800'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 border-b-emerald-800 shadow-md shadow-emerald-600/25 animate-pulse'
+                : 'bg-emerald-700 hover:bg-emerald-800 border-b-emerald-950 shadow-md shadow-emerald-800/20'
             }`}
           >
             <MethodIcon className="w-3.5 h-3.5" />

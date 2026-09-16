@@ -11,7 +11,7 @@ export const CaseCard = ({ caseItem, basePath = '/app/cases' }) => {
     <motion.div
       whileTap={{ scale: 0.98 }}
       onClick={() => navigate(`${basePath}/${caseItem.id}`)}
-      className="p-5 rounded-3xl bg-white border border-softborder shadow-soft-sm hover:border-emerald-200 transition-all cursor-pointer flex flex-col justify-between"
+      className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 border-b-[4px] border-b-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(147,51,234,0.14)] hover:border-purple-300 hover:border-b-purple-500 transition-all cursor-pointer flex flex-col justify-between group"
     >
       <div>
         <div className="flex items-start justify-between gap-2 mb-3">
