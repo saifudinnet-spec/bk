@@ -97,14 +97,11 @@ export const TutorDashboard = () => {
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30 backdrop-blur-md">
-                  🧑‍🏫 Konselor / Tutor BK
-                </span>
-                <span className="text-[11px] text-slate-300 font-mono">
-                  {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  🧑‍🏫 Konselor
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                Selamat Bertugas, {user?.name || 'Konselor'}!
+                {user?.name || 'Konselor'}
               </h2>
               <p className="text-xs text-emerald-100/80 max-w-xl leading-relaxed">
                 Ruang pendampingan siap memfasilitasi sesi bimbingan tatap muka maupun online (Zoom) untuk membantu perkembangan akademik dan mental konseli.
