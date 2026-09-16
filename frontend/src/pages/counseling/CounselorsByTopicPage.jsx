@@ -104,56 +104,13 @@ export const CounselorsByTopicPage = () => {
   const activeTopic = topicInfo || topics.find((t) => t.id === selectedTopicId);
 
   return (
-    <PageTransition className="min-h-screen bg-[#F8FAFC] pb-16">
-      {/* Top Navbar Minimal */}
-      <header className="bg-white border-b border-emerald-100/80 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1.5 text-xs font-bold"
-            >
-              <ArrowLeft className="w-4 h-4 text-emerald-700" />
-              <span className="hidden sm:inline">Kembali ke Beranda</span>
-            </button>
-            <div className="h-4 w-[1px] bg-slate-200" />
-            <span className="text-xs sm:text-sm font-black text-slate-800 tracking-tight">
-              Pilihan Konselor
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!isAuthenticated && (
-              <Link
-                to="/login"
-                className="px-3.5 py-1.5 rounded-xl border border-emerald-200 text-emerald-800 text-xs font-bold hover:bg-emerald-50 transition-colors"
-              >
-                Masuk
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6 sm:space-y-8">
-        {/* Banner Topic Selected */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-[#024a35] via-[#047857] to-teal-700 text-white p-6 sm:p-8 shadow-soft-md">
-          <div className="relative z-10 max-w-2xl space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-[11px] font-bold backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Jalur Bimbingan Tematik</span>
-              {activeTopic?.tag && (
-                <>
-                  <span className="opacity-40">•</span>
-                  <span className="text-amber-300">{activeTopic.tag}</span>
-                </>
-              )}
-            </div>
-
-            <h1 className="text-xl sm:text-3xl font-black tracking-tight leading-snug">
-              Konselor untuk {activeTopic?.title || 'Topik Pilihan'}
-            </h1>
+    <PageTransition className="space-y-6 sm:space-y-8 pb-12">
+      {/* Banner Topic Selected */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-[#024a35] via-[#047857] to-teal-700 text-white p-6 sm:p-8 shadow-soft-md">
+        <div className="relative z-10 max-w-2xl space-y-2">
+          <h1 className="text-xl sm:text-3xl font-black tracking-tight leading-snug">
+            Konselor untuk {activeTopic?.title || 'Topik Pilihan'}
+          </h1>
 
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-medium">
               Pilih konselor yang sesuai untuk mendampingi Anda. Konselor di bawah ini memiliki kompetensi dan fokus pendampingan teruji pada topik ini.
@@ -339,7 +296,6 @@ export const CounselorsByTopicPage = () => {
             </div>
           )}
         </div>
-      </main>
     </PageTransition>
   );
 };
