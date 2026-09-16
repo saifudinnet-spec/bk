@@ -176,15 +176,6 @@ export const StudentDashboard = () => {
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-1.5 max-w-xl">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/40 backdrop-blur-sm">
-                <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
-                <span>Mode Pengujian Cepat (Testing Langsung)</span>
-              </span>
-              <span className="text-[11px] text-emerald-200/70 font-mono">
-                Jam Sekarang: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
-              </span>
-            </div>
             <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
               Ingin Menguji Fitur Chat atau Video Zoom di Jam Saat Ini?
             </h3>
@@ -240,31 +231,27 @@ export const StudentDashboard = () => {
       </section>
 
       {/* 2. Primary Action Hero Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-emerald-700 via-teal-700 to-indigo-900 text-white p-6 sm:p-7 shadow-soft-md border border-emerald-700/40">
-        <div className="relative z-10 max-w-lg">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-emerald-100 text-xs font-semibold backdrop-blur-md mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-            <span>Pendampingan Terstruktur & Terpercaya</span>
-          </span>
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-emerald-700 via-teal-700 to-indigo-900 text-white p-5 sm:p-6 shadow-soft-md border border-emerald-700/40">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-1 max-w-2xl">
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              {hasScreening
+                ? 'Siap Melanjutkan Sesi Bimbingan Konseling?'
+                : 'Mulai dengan Screening Kebutuhan Mandiri'}
+            </h2>
+            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+              {hasScreening
+                ? 'Ajukan sesi konseling tatap muka atau video call Zoom dengan konselor terpercaya dan jadwalkan pertemuan Anda.'
+                : 'Kuesioner asesmen mandiri membantu memetakan kebutuhan emosi, akademik, dan karir Anda secara aman & rahasia.'}
+            </p>
+          </div>
 
-          <h2 className="text-xl sm:text-2xl font-black leading-snug">
-            {hasScreening
-              ? 'Siap Melanjutkan Sesi Bimbingan Konseling?'
-              : 'Mulai dengan Screening Kebutuhan Mandiri'}
-          </h2>
-
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-2 leading-relaxed">
-            {hasScreening
-              ? 'Ajukan sesi konseling tatap muka atau video call Zoom dengan konselor terpercaya dan jadwalkan pertemuan Anda.'
-              : 'Kuesioner asesmen mandiri membantu memetakan kebutuhan emosi, akademik, dan karir Anda secara aman & rahasia.'}
-          </p>
-
-          <div className="mt-5 flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0">
             {hasScreening ? (
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => navigate('/app/counseling/wizard')}
-                className="px-6 py-3 bg-white text-emerald-800 hover:bg-emerald-50 rounded-2xl text-xs sm:text-sm font-bold shadow-soft-sm flex items-center gap-2 transition-all min-h-[44px]"
+                className="px-5 py-3 bg-white text-emerald-800 hover:bg-emerald-50 rounded-2xl text-xs sm:text-sm font-bold shadow-soft-sm flex items-center justify-center gap-2 transition-all min-h-[44px]"
               >
                 <MessageSquareHeart className="w-4 h-4 text-emerald-700" />
                 <span>Ajukan Konseling Baru</span>
@@ -274,7 +261,7 @@ export const StudentDashboard = () => {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => navigate('/app/screening')}
-                className="px-6 py-3 bg-white text-emerald-800 hover:bg-emerald-50 rounded-2xl text-xs sm:text-sm font-bold shadow-soft-sm flex items-center gap-2 transition-all min-h-[44px]"
+                className="px-5 py-3 bg-white text-emerald-800 hover:bg-emerald-50 rounded-2xl text-xs sm:text-sm font-bold shadow-soft-sm flex items-center justify-center gap-2 transition-all min-h-[44px]"
               >
                 <ClipboardList className="w-4 h-4 text-emerald-700" />
                 <span>Mulai Screening (Kuesioner)</span>

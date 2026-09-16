@@ -143,15 +143,6 @@ export const TutorDashboard = () => {
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-1.5 max-w-xl">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/40 backdrop-blur-sm">
-                <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
-                <span>Uji Coba Konselor (Testing Sesi Instan)</span>
-              </span>
-              <span className="text-[11px] text-emerald-200/70 font-mono">
-                Jam Sekarang: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
-              </span>
-            </div>
             <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
               Uji Coba Ruang Chat atau Video Zoom sebagai Konselor
             </h3>
