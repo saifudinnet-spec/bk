@@ -55,7 +55,7 @@ export const BottomNav = () => {
             <NavLink
               key={item.path}
               to={item.path}
-              className={`relative flex flex-col items-center justify-center min-w-[56px] min-h-[48px] py-1 px-2 rounded-2xl transition-all ${
+              className={`relative flex flex-col items-center justify-center min-w-[56px] min-h-[48px] py-1 px-2 rounded-2xl transition-all active:scale-95 ${
                 isActive
                   ? 'text-emerald-700 font-bold'
                   : 'text-mutedtext hover:text-darktext font-medium'

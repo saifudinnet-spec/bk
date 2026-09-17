@@ -18,6 +18,7 @@ export const QuestionnaireRunner = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showSuccess, showError, showInfo } = useToast();
   const navigate = useNavigate();
+  const hasRestoredDraftRef = React.useRef(false);
 
   // Load questionnaire & restore draft
   useEffect(() => {
@@ -29,7 +30,8 @@ export const QuestionnaireRunner = () => {
 
           // Restore draft if present
           const draftStr = localStorage.getItem(`${DRAFT_KEY_PREFIX}${response.data.id}`);
-          if (draftStr) {
+          if (draftStr && !hasRestoredDraftRef.current) {
+            hasRestoredDraftRef.current = true;
             try {
               const parsed = JSON.parse(draftStr);
               setAnswers(parsed.answers || {});
@@ -281,40 +283,48 @@ export const QuestionnaireRunner = () => {
                   </p>
                 </div>
               ) : isLikertGroup(currentQuestion.options) ? (
-                /* 5-Column Generous Rating Tiles */
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-3.5">
+                /* Responsive Rating Tiles: Vertical stack on mobile, 5 columns on desktop */
+                <div className="flex flex-col sm:grid sm:grid-cols-5 gap-2 sm:gap-3.5">
                   {currentQuestion.options?.map((opt, idx) => {
                     const isSelected = currentAnswer?.option_id === opt.id;
-                    const isLastOfFive = idx === 4;
                     return (
                       <motion.button
                         key={opt.id}
                         type="button"
-                        whileHover={{ y: -3, scale: 1.015 }}
+                        whileHover={{ y: -2, scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleSelectOption(currentQuestion.id, opt.id, opt.score)}
-                        className={`group relative p-4 sm:p-5 rounded-3xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer select-none min-h-[95px] sm:min-h-[125px] ${
-                          isLastOfFive ? 'col-span-2 sm:col-span-1' : ''
-                        } ${
+                        className={`group relative p-3 sm:p-5 rounded-2xl sm:rounded-3xl border flex flex-row sm:flex-col items-center sm:justify-center justify-between text-left sm:text-center transition-all cursor-pointer select-none min-h-[52px] sm:min-h-[125px] ${
                           isSelected
-                            ? 'border-emerald-500 bg-gradient-to-b from-emerald-50/90 via-teal-50/60 to-emerald-50/30 text-emerald-950 font-bold shadow-soft-md ring-2 ring-emerald-500/30'
+                            ? 'border-emerald-500 bg-emerald-50/90 sm:bg-gradient-to-b sm:from-emerald-50/90 sm:via-teal-50/60 sm:to-emerald-50/30 text-emerald-950 font-bold shadow-soft-xs sm:shadow-soft-md ring-2 ring-emerald-500/30'
                             : 'border-slate-200/90 bg-white hover:bg-slate-50/90 text-slate-700 hover:border-slate-300 shadow-2xs'
                         }`}
                       >
-                        {/* Number & Check Badge */}
-                        <div
-                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center transition-colors mb-2.5 shadow-2xs ${
-                            isSelected
-                              ? 'bg-emerald-600 text-white shadow-soft-sm'
-                              : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-800'
-                          }`}
-                        >
-                          {isSelected ? <Check className="w-4 h-4 stroke-[3]" /> : idx + 1}
+                        <div className="flex items-center gap-3 sm:block">
+                          {/* Number & Check Badge */}
+                          <div
+                            className={`w-7 h-7 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center transition-colors sm:mb-2.5 shadow-2xs shrink-0 ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white shadow-soft-sm'
+                                : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-800'
+                            }`}
+                          >
+                            {isSelected ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" /> : idx + 1}
+                          </div>
+
+                          <span className="text-xs sm:text-sm font-bold leading-tight tracking-tight">
+                            {opt.label}
+                          </span>
                         </div>
 
-                        <span className="text-xs sm:text-sm font-bold leading-tight tracking-tight">
-                          {opt.label}
-                        </span>
+                        {/* Mobile Radio/Check Pill */}
+                        <div className="sm:hidden flex items-center">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-slate-50'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </div>
+                        </div>
                       </motion.button>
                     );
                   })}
@@ -356,20 +366,23 @@ export const QuestionnaireRunner = () => {
           </AnimatePresence>
         </div>
 
-        {/* 3. Bottom Navigation Footer (No Dots - Clean Proportional Bar) */}
-        <div className="px-5 sm:px-8 py-4 sm:py-5 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-4">
+        {/* 3. Bottom Navigation Footer */}
+        <div className="px-4 sm:px-8 py-3.5 sm:py-5 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2 sm:gap-4">
           <button
             onClick={handlePrev}
             disabled={currentIndex === 0}
-            className="px-5 sm:px-6 h-11 sm:h-12 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-2 transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-2xs"
+            className="px-3.5 sm:px-6 h-10 sm:h-12 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-40 disabled:pointer-events-none shadow-2xs shrink-0 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Sebelumnya</span>
+            <span className="hidden sm:inline">Sebelumnya</span>
           </button>
 
-          {/* Clean Numerical Context (Replacing Green Dots) */}
-          <div className="text-xs sm:text-sm font-semibold text-slate-500">
-            Pertanyaan <span className="font-extrabold text-slate-900">{currentIndex + 1}</span> dari <span className="font-extrabold text-slate-900">{questions.length}</span>
+          {/* Clean Numerical Context */}
+          <div className="text-xs sm:text-sm font-semibold text-slate-500 text-center">
+            <span className="hidden sm:inline">Pertanyaan </span>
+            <span className="font-extrabold text-slate-900">{currentIndex + 1}</span>
+            <span className="text-slate-400 mx-1">/</span>
+            <span className="font-extrabold text-slate-900">{questions.length}</span>
           </div>
 
           {isLastQuestion ? (
@@ -377,9 +390,10 @@ export const QuestionnaireRunner = () => {
               whileTap={{ scale: 0.97 }}
               disabled={isSubmitting || !isCurrentAnswered}
               onClick={handleSubmit}
-              className="px-6 sm:px-8 h-11 sm:h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-soft-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="px-4 sm:px-8 h-10 sm:h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-soft-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all disabled:opacity-50 shrink-0 cursor-pointer"
             >
-              <span>{isSubmitting ? 'Mengirim...' : 'Kirimkan Screening'}</span>
+              <span>{isSubmitting ? 'Mengirim...' : 'Kirimkan'}</span>
+              <span className="hidden sm:inline"> Screening</span>
               <Check className="w-4 h-4 stroke-[3]" />
             </motion.button>
           ) : (
@@ -387,7 +401,7 @@ export const QuestionnaireRunner = () => {
               whileTap={{ scale: 0.97 }}
               disabled={!isCurrentAnswered}
               onClick={handleNext}
-              className="px-6 sm:px-8 h-11 sm:h-12 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-soft-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-40"
+              className="px-4 sm:px-8 h-10 sm:h-12 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-soft-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all disabled:opacity-40 shrink-0 cursor-pointer"
             >
               <span>Berikutnya</span>
               <ArrowRight className="w-4 h-4" />
