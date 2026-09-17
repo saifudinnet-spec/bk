@@ -7,6 +7,7 @@ use App\Models\CounselingSession;
 use App\Services\AuditLogService;
 use App\Services\ZoomService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ZoomController extends Controller
 {
@@ -45,5 +46,62 @@ class ZoomController extends Controller
                 'message' => $e->getMessage(),
             ], $statusCode);
         }
+    }
+
+    /**
+     * Post a WebRTC signaling message (relay between laptops on same network/WiFi)
+     */
+    public function postSignal(Request $request)
+    {
+        $request->validate([
+            'session_id' => 'required',
+            'type' => 'required|string',
+            'sender' => 'required|string',
+        ]);
+
+        $sessionId = (string)$request->input('session_id');
+        $cacheKey = "zoom_signals_{$sessionId}";
+
+        $signals = Cache::get($cacheKey, []);
+        $now = microtime(true);
+        // Keep only recent signals within 3 minutes
+        $signals = array_filter($signals, fn($s) => ($now - ($s['time'] ?? 0)) < 180);
+
+        $newSignal = [
+            'id' => uniqid('sig_'),
+            'type' => $request->input('type'),
+            'sender' => $request->input('sender'),
+            'payload' => $request->input('payload'),
+            'sdp' => $request->input('sdp'),
+            'candidate' => $request->input('candidate'),
+            'time' => $now,
+        ];
+
+        $signals[] = $newSignal;
+        Cache::put($cacheKey, array_values($signals), 300);
+
+        return response()->json(['status' => 'ok', 'signal_id' => $newSignal['id']]);
+    }
+
+    /**
+     * Retrieve WebRTC signaling messages from counterpart peer
+     */
+    public function getSignals(Request $request)
+    {
+        $sessionId = (string)$request->input('session_id');
+        $afterTime = (float)$request->input('after', 0);
+        $myPeerId = (string)$request->input('sender', '');
+
+        $cacheKey = "zoom_signals_{$sessionId}";
+        $signals = Cache::get($cacheKey, []);
+
+        $newSignals = array_filter($signals, function ($s) use ($afterTime, $myPeerId) {
+            return ($s['time'] ?? 0) > $afterTime && ($myPeerId === '' || ($s['sender'] ?? '') !== $myPeerId);
+        });
+
+        return response()->json([
+            'signals' => array_values($newSignals),
+            'server_time' => microtime(true),
+        ])->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 }

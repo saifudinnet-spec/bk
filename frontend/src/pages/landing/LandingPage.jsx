@@ -25,6 +25,7 @@ import {
   BookOpen,
   Clock,
   Calendar,
+  ChevronLeft,
   ChevronRight,
   X
 } from 'lucide-react';
@@ -168,6 +169,8 @@ export const LandingPage = () => {
   const [activeArticleModal, setActiveArticleModal] = useState(null);
   const [content, setContent] = useState(null);
   const [tutors, setTutors] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSliderHovered, setIsSliderHovered] = useState(false);
   const navigate = useNavigate();
   const { startWithTopic, startWithCounselor } = useCounselingFlow();
 
@@ -212,12 +215,67 @@ export const LandingPage = () => {
   const hero = content?.hero || {
     tagline: '',
     title: "Ada Hal yang Sedang Membebani Pikiranmu?",
-    subtitle: 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya bagi seluruh mahasiswa & sivitas akademika UINSSC. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
+    subtitle: 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
     image_url: '/images/banner1.jpg',
+    banner_images: [
+      '/images/banner1.jpg',
+      '/images/banner3.jpg',
+      '/images/hero_counseling.jpg',
+    ],
     online_card_title: 'Konseling Online via Zoom & Chat',
     online_card_desc: 'Sesi privat fleksibel dari mana saja, aman dan nyaman.',
     offline_card_title: 'Konseling Tatap Muka di Kampus',
     offline_card_desc: 'Pertemuan langsung di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2.',
+  };
+
+  // Dynamic Hero Banner Slider (supports 2 - 3 photos with fallback)
+  const defaultBannerImages = [
+    {
+      url: '/images/banner1.jpg',
+      alt: 'Layanan Bimbingan Konseling UINSSC',
+      title: 'Ruang Nyaman untuk Bercerita & Bertumbuh',
+    },
+    {
+      url: '/images/banner3.jpg',
+      alt: 'Lounge Konseling & Diskusi Mahasiswa',
+      title: 'Pendampingan Psikologis Profesional & Ramah',
+    },
+    {
+      url: '/images/hero_counseling.jpg',
+      alt: 'Konseling Privat Tatap Muka & Online',
+      title: 'Sesi Privat Terpercaya Tanpa Biaya',
+    },
+  ];
+
+  const heroBanners = (() => {
+    if (hero?.banner_images && Array.isArray(hero.banner_images) && hero.banner_images.length > 0) {
+      return hero.banner_images.map((img, i) => {
+        if (typeof img === 'string') {
+          return { url: img, alt: `Banner Foto ${i + 1}` };
+        }
+        return img;
+      });
+    }
+    return defaultBannerImages;
+  })();
+
+  // Auto-play timer for hero banner slider (changes every 4.5 seconds, pauses on hover)
+  useEffect(() => {
+    if (isSliderHovered || heroBanners.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [isSliderHovered, heroBanners.length]);
+
+  const handlePrevSlide = (e) => {
+    e?.stopPropagation();
+    setCurrentSlide((prev) => (prev === 0 ? heroBanners.length - 1 : prev - 1));
+  };
+
+  const handleNextSlide = (e) => {
+    e?.stopPropagation();
+    setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
   };
 
   const trustBadges = content?.trust_badges || [
@@ -542,17 +600,54 @@ export const LandingPage = () => {
       {/* 3. Hero Section - Banner Foto Memanjang Bersih di Atas & Teks/Pilihan Layanan di Bawahnya */}
       <section className="relative overflow-hidden bg-white border-b border-emerald-100">
 
-        {/* Foto Banner Manusia Penuh & Bersih di Atas - Melebar ke Samping */}
+        {/* Foto Banner Utama - Slider 2-3 Foto Melebar ke Samping */}
         <ScrollReveal direction="none" delay={0.05} duration={0.8}>
-          <div className="relative w-full h-[240px] sm:h-[320px] lg:h-[390px] overflow-hidden bg-slate-100 border-b border-emerald-100/60">
-            <img
-              src={(!hero.image_url || hero.image_url.includes('hero_counseling')) ? '/images/banner1.jpg' : hero.image_url}
-              alt="Konseling Kampus Ruang BK"
-              className="w-full h-full object-cover object-center"
-              loading="eager"
-            />
+          <div
+            className="relative w-full h-[250px] sm:h-[340px] lg:h-[410px] overflow-hidden bg-slate-900 border-b border-emerald-100/60 group select-none"
+            onMouseEnter={() => setIsSliderHovered(true)}
+            onMouseLeave={() => setIsSliderHovered(false)}
+          >
+            {/* Foto Slides dengan Transisi Halus (Cross-fade) */}
+            {heroBanners.map((banner, index) => (
+              <div
+                key={index}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                  index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+                }`}
+              >
+                <img
+                  src={banner.url}
+                  alt={banner.alt || `Banner Foto ${index + 1}`}
+                  className="w-full h-full object-cover object-center transform scale-100"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                />
+                {/* Gradien halus untuk kontras dan estetika premium */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+              </div>
+            ))}
+
+            {/* Indikator Titik Paginasi di Bawah Tengah */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20 bg-black/35 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-md">
+              {heroBanners.map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentSlide(dotIdx);
+                  }}
+                  className={`transition-all duration-300 rounded-full cursor-pointer ${
+                    dotIdx === currentSlide
+                      ? 'w-7 h-2 bg-emerald-400 shadow-sm'
+                      : 'w-2 h-2 bg-white/60 hover:bg-white'
+                  }`}
+                  aria-label={`Pindah ke foto ${dotIdx + 1}`}
+                />
+              ))}
+            </div>
+
             {/* Badge resmi mengambang di pojok kanan bawah foto */}
-            <div className="absolute bottom-3 right-4 sm:right-8 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-emerald-200/90 shadow-soft-sm">
+            <div className="absolute bottom-3 right-4 sm:right-8 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-emerald-200/90 shadow-soft-sm z-20">
               <ShieldCheck className="w-4 h-4 text-emerald-700" />
               <span className="text-[11px] font-bold text-darktext">Fasilitas Resmi UINSSC • 100% Bebas Biaya</span>
             </div>

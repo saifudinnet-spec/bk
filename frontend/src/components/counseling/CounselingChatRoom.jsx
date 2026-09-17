@@ -12,7 +12,9 @@ import {
   FileText,
   AlertCircle,
   Sparkles,
-  Stethoscope
+  Stethoscope,
+  Copy,
+  Share2
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
@@ -25,8 +27,20 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
   const [isSending, setIsSending] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const messagesEndRef = useRef(null);
   const prevMessagesLengthRef = useRef(0);
+
+  const handleCopyLink = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      showSuccess('Link ruang chat berhasil disalin! Buka link ini di laptop lain untuk terhubung ke sesi yang sama.');
+      setTimeout(() => setCopiedLink(false), 3000);
+    } catch {
+      showError('Gagal menyalin link secara otomatis.');
+    }
+  };
 
   const partner = isTutor ? session.user : session.tutor;
   const partnerRole = isTutor ? 'Mahasiswa / Klien' : 'Konselor BK';
@@ -85,7 +99,7 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
     }
   };
 
-  // Adaptive visibility-aware polling: saves battery & bandwidth on background tabs
+  // Adaptive visibility-aware polling: 1.8s for snappy real-time communication across devices
   useEffect(() => {
     fetchMessages();
 
@@ -95,17 +109,17 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
       intervalId = setInterval(fetchMessages, ms);
     };
 
-    // Active polling every 3.5s
-    startPolling(3500);
+    // Active polling every 1.8s for fast instant delivery
+    startPolling(1800);
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Battery saver: slow down to 20s when user switches tab or locks screen
-        startPolling(20000);
+        // Battery saver: slow down to 10s when user switches tab or locks screen
+        startPolling(10000);
       } else {
-        // Immediately fetch and resume 3.5s polling upon returning
+        // Immediately fetch and resume 1.8s polling upon returning
         fetchMessages();
-        startPolling(3500);
+        startPolling(1800);
       }
     };
 
@@ -178,6 +192,9 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                 {partnerRole}
               </span>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700" title="Nomor ID Ruang Sesi">
+                #{session.id}
+              </span>
             </div>
             <p className="text-[11px] text-slate-500 truncate">
               Topik: <strong className="text-slate-700">{topicName}</strong>
@@ -186,6 +203,26 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Tombol Salin Link Sesi untuk Pengujian Lintas-Laptop */}
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Salin tautan ruang chat untuk dibuka langsung di laptop / perangkat lain"
+          >
+            {copiedLink ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-emerald-700 font-bold">Link Tersalin!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden md:inline">Salin Link Sesi #{session.id}</span>
+                <span className="md:hidden">Salin Link</span>
+              </>
+            )}
+          </button>
           {/* Status Badge */}
           {isInProgress && (
             <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">

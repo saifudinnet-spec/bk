@@ -123,8 +123,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/action-plans/{id}', [ActionPlanController::class, 'update']);
     Route::delete('/action-plans/{id}', [ActionPlanController::class, 'destroy']);
 
-    // Zoom Meeting SDK Signature
+    // Zoom Meeting SDK Signature & WebRTC Local-Network Relay Signaling
     Route::post('/zoom/signature', [ZoomController::class, 'getSignature']);
+    Route::post('/zoom/signaling', [ZoomController::class, 'postSignal']);
+    Route::get('/zoom/signaling', [ZoomController::class, 'getSignals']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
@@ -142,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/zoom/test-connection', [AdminController::class, 'testZoomConnection']);
         Route::put('/landing-content', [LandingContentController::class, 'update']);
         Route::post('/landing-content/reset', [LandingContentController::class, 'resetDefault']);
+        Route::post('/landing-content/upload-image', [LandingContentController::class, 'uploadImage']);
 
         // Nara Voice Recording Management
         Route::get('/voice-recordings', [NaraVoiceController::class, 'index']);

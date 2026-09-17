@@ -113,6 +113,7 @@ export const AdminDashboard = () => {
   // CMS Landing Content State
   const [landingContent, setLandingContent] = useState(null);
   const [isSavingCms, setIsSavingCms] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   // Article Manager State (WordPress Sederhana)
   const [editingArticle, setEditingArticle] = useState(null);
@@ -312,20 +313,46 @@ export const AdminDashboard = () => {
     }));
   };
 
-  const handleBannerFileUpload = (e) => {
+  const handleBannerFileUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showError('Ukuran gambar maksimal 5MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        handleHeroChange('image_url', uploadEvent.target?.result);
-        showSuccess('Gambar banner berhasil dimuat!');
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      showError('Ukuran gambar maksimal 10MB.');
+      return;
     }
+
+    setIsUploadingBanner(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      showSuccess('Mengunggah gambar ke server...');
+      const res = await api.post('/admin/landing-content/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (res?.url) {
+        handleHeroChange('image_url', res.url);
+        showSuccess('Foto banner berhasil diunggah & disimpan!');
+      } else {
+        showError('Gagal mendapatkan URL foto dari server.');
+      }
+    } catch (err) {
+      console.error('Upload banner error:', err);
+      const msg = err?.response?.data?.message || err?.message || 'Gagal mengunggah foto ke server.';
+      showError(msg);
+    } finally {
+      setIsUploadingBanner(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleClearBannerImage = () => {
+    handleHeroChange('image_url', '');
+    showSuccess('Foto banner telah dihapus. Silakan upload foto lain atau pilih preset.');
   };
 
   // Services handlers
@@ -2266,24 +2293,58 @@ export const AdminDashboard = () => {
               </label>
 
               <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  placeholder="URL Gambar (misal: /images/banner1.jpg atau https://...)"
-                  value={landingContent?.hero?.image_url || ''}
-                  onChange={(e) => handleHeroChange('image_url', e.target.value)}
-                  className="flex-1 h-11 px-3.5 rounded-xl border border-softborder bg-white text-xs font-medium text-darktext focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="URL Gambar (misal: /images/banner1.jpg atau https://...)"
+                    value={landingContent?.hero?.image_url || ''}
+                    onChange={(e) => handleHeroChange('image_url', e.target.value)}
+                    className="w-full h-11 pl-3.5 pr-10 rounded-xl border border-softborder bg-white text-xs font-medium text-darktext focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                  {landingContent?.hero?.image_url && (
+                    <button
+                      type="button"
+                      onClick={handleClearBannerImage}
+                      title="Hapus / Kosongkan foto"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
 
-                <label className="px-4 py-2.5 bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Upload Foto</span>
+                <label className={`px-4 py-2.5 bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs shrink-0 ${isUploadingBanner ? 'opacity-60 pointer-events-none' : ''}`}>
+                  {isUploadingBanner ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-700" />
+                      <span>Mengunggah...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Foto</span>
+                    </>
+                  )}
                   <input
                     type="file"
                     accept="image/*"
+                    disabled={isUploadingBanner}
                     onChange={handleBannerFileUpload}
                     className="hidden"
                   />
                 </label>
+
+                {landingContent?.hero?.image_url && (
+                  <button
+                    type="button"
+                    onClick={handleClearBannerImage}
+                    className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs shrink-0"
+                    title="Hapus foto banner saat ini"
+                  >
+                    <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+                    <span>Hapus</span>
+                  </button>
+                )}
               </div>
 
               {/* Preset Pilihan Cepat */}
@@ -2302,6 +2363,17 @@ export const AdminDashboard = () => {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleHeroChange('image_url', '/images/banner3.jpg')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                    landingContent?.hero?.image_url === '/images/banner3.jpg'
+                      ? 'bg-emerald-700 text-white border-emerald-700'
+                      : 'bg-white text-darktext border-softborder hover:border-emerald-400'
+                  }`}
+                >
+                  Banner 2 (Lounge Diskusi Mahasiswa)
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleHeroChange('image_url', '/images/hero_counseling.jpg')}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
                     landingContent?.hero?.image_url === '/images/hero_counseling.jpg'
@@ -2309,23 +2381,76 @@ export const AdminDashboard = () => {
                       : 'bg-white text-darktext border-softborder hover:border-emerald-400'
                   }`}
                 >
-                  Banner 2 (Sesi Konseling Privat)
+                  Banner 3 (Sesi Konseling Privat)
                 </button>
               </div>
+              <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                <span>💡</span>
+                <span>Banner utama di halaman depan berputar otomatis (slider 3 foto) dilengkapi navigasi panah & indikator slide.</span>
+              </p>
 
-              {/* Preview Gambar Banner */}
-              {landingContent?.hero?.image_url && (
+              {/* Preview Gambar Banner dengan Tombol X */}
+              {landingContent?.hero?.image_url ? (
                 <div className="pt-2">
-                  <div className="w-full h-36 rounded-2xl overflow-hidden border border-softborder bg-gray-100 relative group">
+                  <div className="w-full h-44 rounded-2xl overflow-hidden border-2 border-emerald-500/30 bg-gray-100 relative group shadow-sm">
                     <img
                       src={landingContent.hero.image_url}
                       alt="Preview Banner"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold">
-                      Preview Banner Aktif
+
+                    {/* Lencana Banner Aktif */}
+                    <div className="absolute top-3 left-3 z-10 px-3 py-1 rounded-xl bg-emerald-900/80 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-md border border-white/10">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span>Banner Aktif</span>
+                    </div>
+
+                    {/* Tombol X Hapus Foto */}
+                    <button
+                      type="button"
+                      onClick={handleClearBannerImage}
+                      className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs shadow-lg backdrop-blur-md transition-all border border-white/20 cursor-pointer"
+                      title="Hapus foto ini untuk upload foto lain"
+                    >
+                      <X className="w-4 h-4 stroke-[2.5]" />
+                      <span>Hapus Foto</span>
+                    </button>
+
+                    {/* Overlay info */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
+                      <p className="text-white text-xs font-medium">
+                        Klik tombol <strong>"Hapus Foto" (X)</strong> di pojok kanan atas untuk menghapus foto ini dan mengunggah foto baru.
+                      </p>
                     </div>
                   </div>
+                </div>
+              ) : (
+                /* Empty state saat foto dihapus */
+                <div className="pt-2">
+                  <label className={`w-full h-36 rounded-2xl border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white hover:bg-emerald-50/40 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer group text-center p-4 ${isUploadingBanner ? 'opacity-60 pointer-events-none' : ''}`}>
+                    <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-emerald-100 text-gray-400 group-hover:text-emerald-700 flex items-center justify-center transition-colors">
+                      {isUploadingBanner ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-emerald-700" />
+                      ) : (
+                        <Upload className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-darktext group-hover:text-emerald-900">
+                        {isUploadingBanner ? 'Sedang Mengunggah Foto...' : 'Foto Banner Kosong / Telah Dihapus'}
+                      </p>
+                      <p className="text-[11px] text-mutedtext mt-0.5">
+                        {isUploadingBanner ? 'Mohon tunggu beberapa detik...' : 'Klik di sini untuk Upload Foto Baru atau pilih salah satu Preset di atas.'}
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploadingBanner}
+                      onChange={handleBannerFileUpload}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
               )}
             </div>

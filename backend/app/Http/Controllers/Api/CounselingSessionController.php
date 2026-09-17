@@ -184,6 +184,53 @@ class CounselingSessionController extends Controller
 
         $user = $request->user();
         $method = strtoupper($request->input('method', 'CHAT'));
+        $forceNew = $request->boolean('force_new');
+
+        // 1. If force_new, complete any previous active instant test sessions
+        if ($forceNew) {
+            CounselingSession::where('method', $method)
+                ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+                ->whereHas('counselingCase', function ($q) {
+                    $q->where('case_number', 'LIKE', 'TEST-%');
+                })
+                ->update(['status' => 'COMPLETED']);
+        } else {
+            // 2. Check if an active instant test session already exists (within the last 2 hours)
+            // This ensures Laptop 1 and Laptop 2 automatically enter the EXACT SAME chat room!
+            $activeTestSession = CounselingSession::with(['counselingCase', 'tutor', 'user'])
+                ->where('method', $method)
+                ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+                ->where('end_at', '>=', Carbon::now())
+                ->whereHas('counselingCase', function ($q) {
+                    $q->where('case_number', 'LIKE', 'TEST-%');
+                })
+                ->latest('id')
+                ->first();
+
+            if ($activeTestSession) {
+                // If caller is tutor, bind as the tutor of this active test session
+                if ($user->isTutor() && $activeTestSession->tutor_id !== $user->id) {
+                    $activeTestSession->tutor_id = $user->id;
+                    $activeTestSession->save();
+                    $activeTestSession->counselingCase?->update(['tutor_id' => $user->id]);
+                } elseif (($user->isStudent() || $user->isGeneral()) && $activeTestSession->user_id !== $user->id) {
+                    // If caller is student/general, bind as student of this active test session
+                    $activeTestSession->user_id = $user->id;
+                    $activeTestSession->save();
+                    $activeTestSession->counselingCase?->update(['user_id' => $user->id]);
+                }
+
+                AuditLogService::log('join_instant_test_session', 'CounselingSession', (string)$activeTestSession->id, [
+                    'method' => $method,
+                    'case_number' => $activeTestSession->counselingCase?->case_number,
+                ], $user->id);
+
+                return response()->json([
+                    'message' => 'Terhubung ke sesi uji instan yang sedang aktif.',
+                    'data' => $activeTestSession->fresh(['counselingCase', 'tutor:id,name,email,avatar,role', 'user:id,name,email,avatar,role']),
+                ], 200);
+            }
+        }
 
         // Determine student and tutor
         if ($user->isTutor()) {
@@ -319,7 +366,24 @@ class CounselingSessionController extends Controller
 
         // Security check
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Akses ditolak.'], 403);
+            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-')) {
+                // Auto-pair counterpart for instant test sessions across laptops
+                if ($user->isTutor()) {
+                    $session->tutor_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['tutor_id' => $user->id]);
+                    $session->load('tutor.tutorProfile');
+                } elseif ($user->isStudent() || $user->isGeneral()) {
+                    $session->user_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['user_id' => $user->id]);
+                    $session->load(['user.studentProfile', 'user.generalProfile']);
+                } else {
+                    return response()->json(['message' => 'Akses ditolak.'], 403);
+                }
+            } else {
+                return response()->json(['message' => 'Akses ditolak.'], 403);
+            }
         }
 
         // Only assigned tutor can load student's psychological screening questionnaire responses (Admin excluded)

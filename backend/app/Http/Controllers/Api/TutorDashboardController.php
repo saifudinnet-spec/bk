@@ -100,6 +100,15 @@ class TutorDashboardController extends Controller
             }
         }
 
+        $activeTestSession = CounselingSession::with(['counselingCase', 'user:id,name,avatar'])
+            ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+            ->where('end_at', '>=', $now)
+            ->whereHas('counselingCase', function ($q) {
+                $q->where('case_number', 'LIKE', 'TEST-%');
+            })
+            ->latest('id')
+            ->first();
+
         return response()->json([
             'counselor' => [
                 'id' => $user->id,
@@ -115,6 +124,7 @@ class TutorDashboardController extends Controller
             ],
             'waiting_cases' => $waitingCases,
             'upcoming_sessions' => $upcomingSessions,
+            'active_test_session' => $activeTestSession,
         ]);
     }
 

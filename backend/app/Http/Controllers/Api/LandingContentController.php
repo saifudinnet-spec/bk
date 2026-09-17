@@ -8,6 +8,7 @@ use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 
 class LandingContentController extends Controller
 {
@@ -20,8 +21,13 @@ class LandingContentController extends Controller
             'hero' => [
                 'tagline' => '',
                 'title' => "Ada Hal yang Sedang Membebani Pikiranmu?",
-                'subtitle' => 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya bagi seluruh mahasiswa & sivitas akademika UINSSC. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
+                'subtitle' => 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
                 'image_url' => '/images/banner1.jpg',
+                'banner_images' => [
+                    '/images/banner1.jpg',
+                    '/images/banner3.jpg',
+                    '/images/hero_counseling.jpg',
+                ],
                 'layout_style' => 'banner_wide',
                 'online_card_title' => 'Konseling Online via Zoom & Chat',
                 'online_card_desc' => 'Sesi privat fleksibel dari mana saja, aman dan nyaman.',
@@ -315,6 +321,9 @@ class LandingContentController extends Controller
 
         $content = $request->all();
 
+        // Safety: If any image is sent as a large base64 string, write it to file storage to prevent MySQL max_allowed_packet error
+        $this->processBase64Images($content);
+
         SystemSetting::updateOrCreate(
             ['key' => 'landing_content'],
             ['value' => json_encode($content)]
@@ -331,6 +340,86 @@ class LandingContentController extends Controller
             'message' => 'Konten landing page berhasil diperbarui!',
             'data' => $content,
         ]);
+    }
+
+    /**
+     * Upload banner or promotional image (Admin only).
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp,svg,gif|max:10240', // Max 10MB
+        ]);
+
+        $file = $request->file('image');
+        $dir = storage_path('app/public/banners');
+        if (!File::exists($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        $filename = 'banner_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+        $file->move($dir, $filename);
+
+        $url = '/storage/banners/' . $filename;
+
+        AuditLogService::log(
+            Auth::id(),
+            'upload_banner_image',
+            'Admin mengunggah gambar banner baru: ' . $filename
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Gambar banner berhasil diunggah!',
+            'url' => $url,
+        ]);
+    }
+
+    /**
+     * Convert any Base64 image data URLs in content into storage files.
+     */
+    private function processBase64Images(array &$content): void
+    {
+        if (isset($content['hero']['image_url']) && is_string($content['hero']['image_url']) && str_starts_with($content['hero']['image_url'], 'data:image')) {
+            $content['hero']['image_url'] = $this->saveBase64Image($content['hero']['image_url'], 'hero_banner');
+        }
+
+        if (isset($content['hero']['banner_images']) && is_array($content['hero']['banner_images'])) {
+            foreach ($content['hero']['banner_images'] as $i => $img) {
+                if (is_string($img) && str_starts_with($img, 'data:image')) {
+                    $content['hero']['banner_images'][$i] = $this->saveBase64Image($img, 'banner_' . ($i + 1));
+                } elseif (is_array($img) && isset($img['url']) && is_string($img['url']) && str_starts_with($img['url'], 'data:image')) {
+                    $content['hero']['banner_images'][$i]['url'] = $this->saveBase64Image($img['url'], 'banner_' . ($i + 1));
+                }
+            }
+        }
+    }
+
+    /**
+     * Save a base64 encoded image string into storage/app/public/banners and return relative URL.
+     */
+    private function saveBase64Image(string $base64Data, string $prefix = 'img'): string
+    {
+        $dir = storage_path('app/public/banners');
+        if (!File::exists($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
+            $data = substr($base64Data, strpos($base64Data, ',') + 1);
+            $ext = strtolower($type[1]);
+            if (!in_array($ext, ['jpg', 'jpeg', 'gif', 'png', 'webp', 'svg'])) {
+                $ext = 'jpg';
+            }
+            $decoded = base64_decode($data);
+            if ($decoded !== false) {
+                $filename = $prefix . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                file_put_contents($dir . DIRECTORY_SEPARATOR . $filename, $decoded);
+                return '/storage/banners/' . $filename;
+            }
+        }
+
+        return $base64Data;
     }
 
     /**

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Heart, CheckCircle2, ShieldCheck, Send, Sparkles, MessageSquare } from 'lucide-react';
+import { Star, Heart, CheckCircle2, ShieldCheck, Send, Sparkles, MessageSquare, X } from 'lucide-react';
 import Modal from '../common/Modal';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
@@ -58,14 +58,24 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
   const starLabels = ['', 'Sangat Kurang', 'Kurang Membantu', 'Cukup', 'Bagus & Bermanfaat', 'Luar Biasa / Sangat Terbantu'];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Evaluasi & Ulasan Pasca-Konseling" maxWidth="max-w-lg">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 1. Main Star Rating */}
-        <div className="text-center space-y-1.5 p-3.5 rounded-2xl bg-gray-50/80 border border-gray-100">
-          <label className="block text-xs font-bold text-darktext">
+    <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 w-8 h-8 flex items-center justify-center rounded-full text-mutedtext hover:text-darktext hover:bg-gray-100 transition-colors cursor-pointer z-20"
+          aria-label="Tutup"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 1. Main Star Rating */}
+        <div className="text-center space-y-1 py-2 px-3 rounded-2xl bg-gray-50/80 border border-gray-100">
+          <label className="block text-[11.5px] font-bold text-darktext">
             Bagaimana penilaian Anda terhadap keseluruhan sesi ini?
           </label>
-          <div className="flex items-center justify-center gap-2 py-1">
+          <div className="flex items-center justify-center gap-1.5">
             {[1, 2, 3, 4, 5].map((star) => {
               const active = (hoverRating || rating) >= star;
               return (
@@ -75,10 +85,10 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
                   onMouseEnter={() => setHoverRating(star)}
                   onMouseLeave={() => setHoverRating(0)}
                   onClick={() => setRating(star)}
-                  className="p-1 transition-transform hover:scale-125 focus:outline-none cursor-pointer"
+                  className="p-0.5 transition-transform hover:scale-115 focus:outline-none cursor-pointer"
                 >
                   <Star
-                    className={`w-7 h-7 sm:w-8 sm:h-8 transition-colors ${
+                    className={`w-5.5 h-5.5 sm:w-6 sm:h-6 transition-colors ${
                       active ? 'text-amber-400 fill-amber-400' : 'text-gray-300'
                     }`}
                   />
@@ -86,7 +96,7 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
               );
             })}
           </div>
-          <p className="text-xs font-bold text-emerald-800 min-h-[1.1rem]">
+          <p className="text-[11px] font-bold text-emerald-800 min-h-[0.95rem] leading-tight">
             {starLabels[hoverRating || rating]}
           </p>
         </div>
@@ -227,6 +237,7 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
           </motion.button>
         </div>
       </form>
+      </div>
     </Modal>
   );
 };

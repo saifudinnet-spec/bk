@@ -19,7 +19,22 @@ class CounselingChatController extends Controller
 
         // Security check: Only participant student and assigned tutor can view chat (or admin)
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Akses ditolak: Percakapan konseling bersifat rahasia dan hanya dapat diakses oleh konseli dan konselor terkait.'], 403);
+            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-')) {
+                // Auto-pair participant for instant test sessions across laptops
+                if ($user->isTutor()) {
+                    $session->tutor_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['tutor_id' => $user->id]);
+                } elseif ($user->isStudent() || $user->isGeneral()) {
+                    $session->user_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['user_id' => $user->id]);
+                } else {
+                    return response()->json(['message' => 'Akses ditolak: Percakapan konseling bersifat rahasia.'], 403);
+                }
+            } else {
+                return response()->json(['message' => 'Akses ditolak: Percakapan konseling bersifat rahasia dan hanya dapat diakses oleh konseli dan konselor terkait.'], 403);
+            }
         }
 
         // Mark unread messages sent by the other party as read
@@ -36,7 +51,7 @@ class CounselingChatController extends Controller
         return response()->json([
             'session_id' => (int)$sessionId,
             'data' => $messages,
-        ]);
+        ])->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     /**
@@ -53,7 +68,22 @@ class CounselingChatController extends Controller
 
         // Security check: Only participant student and assigned tutor can send message (or admin)
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.'], 403);
+            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-')) {
+                // Auto-pair participant for instant test sessions across laptops
+                if ($user->isTutor()) {
+                    $session->tutor_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['tutor_id' => $user->id]);
+                } elseif ($user->isStudent() || $user->isGeneral()) {
+                    $session->user_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['user_id' => $user->id]);
+                } else {
+                    return response()->json(['message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.'], 403);
+                }
+            } else {
+                return response()->json(['message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.'], 403);
+            }
         }
 
         $message = CounselingMessage::create([
@@ -67,6 +97,6 @@ class CounselingChatController extends Controller
         return response()->json([
             'message' => 'Pesan berhasil dikirim.',
             'data' => $message->load('sender:id,name,avatar,role'),
-        ], 201);
+        ], 201)->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 }

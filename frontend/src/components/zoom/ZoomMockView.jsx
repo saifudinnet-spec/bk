@@ -14,8 +14,12 @@ import {
   X,
   Sparkles,
   Stethoscope,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Check,
+  ExternalLink
 } from 'lucide-react';
+import api from '../../services/api';
 import Modal from '../common/Modal';
 import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
 
@@ -28,6 +32,8 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [hasWebcam, setHasWebcam] = useState(false);
+  const [isVirtualCamera, setIsVirtualCamera] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
   const [seconds, setSeconds] = useState(0);
   const [chatMessages, setChatMessages] = useState([
@@ -56,6 +62,161 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
     }
   }, [remoteStream]);
 
+  const animFrameIdRef = useRef(null);
+  const processedSignalIdsRef = useRef(new Set());
+  const signalingPollingRef = useRef(null);
+
+  const handleCopyLink = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Broadcast WebRTC signaling both locally (inter-tab) and over local network (Laravel API relay)
+  const broadcastSignal = async (signalData) => {
+    // 1. Same-device inter-tab BroadcastChannel
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage(signalData);
+      } catch (e) {}
+    }
+    // 2. Cross-laptop network signaling relay
+    try {
+      await api.post('/zoom/signaling', {
+        session_id: session?.id || sessionData?.meeting_number,
+        type: signalData.type,
+        sender: myPeerId.current,
+        payload: signalData.payload || null,
+        sdp: signalData.sdp || null,
+        candidate: signalData.candidate || null,
+      });
+    } catch (e) {
+      // Network signaling failed or offline
+    }
+  };
+
+  // Virtual Camera: generates an animated canvas stream for devices where physical webcam is blocked by HTTP
+  const startVirtualCamera = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      let frame = 0;
+      const render = () => {
+        frame++;
+        // Gradient background
+        const grad = ctx.createLinearGradient(0, 0, 640, 480);
+        grad.addColorStop(0, '#022c22');
+        grad.addColorStop(0.5, '#064e3b');
+        grad.addColorStop(1, '#0f172a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 640, 480);
+
+        // Animated soft waves
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.arc(320, 240, 140 + i * 35 + Math.sin((frame + i * 20) * 0.05) * 15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Center Avatar Circle
+        const bounce = Math.sin(frame * 0.06) * 4;
+        ctx.save();
+        ctx.translate(320, 200 + bounce);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 65, 0, Math.PI * 2);
+        ctx.fillStyle = '#059669';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#34d399';
+        ctx.stroke();
+
+        // Initial letter
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 50px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sessionData?.user_name?.charAt(0) || 'P', 0, 0);
+        ctx.restore();
+
+        // User name
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(sessionData?.user_name || 'Peserta', 320, 310);
+
+        // Subtitle
+        ctx.fillStyle = '#a7f3d0';
+        ctx.font = '13px sans-serif';
+        ctx.fillText(isTutor ? 'Konselor Bimbingan Konseling' : 'Mahasiswa / Klien', 320, 335);
+
+        // Virtual Camera Badge
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText('● LIVE STREAM (KAMERA VIRTUAL)', 320, 380);
+
+        animFrameIdRef.current = requestAnimationFrame(render);
+      };
+      render();
+
+      const vStream = canvas.captureStream(30);
+
+      // Create dummy silent audio track so WebRTC has both video & audio
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const audioCtx = new AudioCtx();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0.0001;
+          osc.connect(gain);
+          const dest = audioCtx.createMediaStreamDestination();
+          gain.connect(dest);
+          osc.start();
+          dest.stream.getAudioTracks().forEach((track) => vStream.addTrack(track));
+        }
+      } catch (e) {}
+
+      streamRef.current = vStream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = vStream;
+        localVideoRef.current.play().catch(() => {});
+      }
+
+      setHasWebcam(true);
+      setIsVideoOff(false);
+      setIsVirtualCamera(true);
+      setCameraError(null);
+
+      // Attach tracks to WebRTC peer connection
+      if (peerConnectionRef.current) {
+        const pc = peerConnectionRef.current;
+        vStream.getTracks().forEach((track) => {
+          const senders = pc.getSenders();
+          const existingSender = senders.find((s) => s.track && s.track.kind === track.kind);
+          if (!existingSender) {
+            pc.addTrack(track, vStream);
+          } else if (existingSender.replaceTrack) {
+            existingSender.replaceTrack(track);
+          }
+        });
+        broadcastSignal({ type: 'PEER_HELLO', sender: myPeerId.current });
+      }
+    } catch (err) {
+      console.error('Failed to start virtual camera:', err);
+    }
+  };
+
+  // Initialize and request user webcam/mic
   // Initialize and request user webcam/mic
   const startCamera = async () => {
     try {
@@ -66,13 +227,12 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
 
       if (!navigator?.mediaDevices?.getUserMedia) {
         if (isHttpNonLocal) {
-          setCameraError('Browser HP memblokir kamera di jaringan HTTP. Diperlukan HTTPS atau izin Chrome Flags.');
+          setCameraError('Browser memblokir kamera di jaringan HTTP (10.78.3.2). Kamera Virtual Simulasi diaktifkan.');
         } else {
-          setCameraError('Peramban tidak mendukung akses kamera/mikrofon.');
+          setCameraError('Peramban tidak mendukung akses kamera/mikrofon. Kamera Virtual Simulasi diaktifkan.');
         }
-        setIsVideoOff(true);
-        setHasWebcam(false);
-        return;
+        startVirtualCamera();
+        return false;
       }
 
       let stream;
@@ -82,8 +242,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
           audio: true,
         });
       } catch (firstErr) {
-        console.warn('Initial media request failed, attempting mobile video fallback:', firstErr);
-        // Fallback for mobile devices if high resolution or audio combined constraint fails
+        console.warn('Initial media request failed, attempting mobile/simple fallback:', firstErr);
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'user' },
           audio: false,
@@ -96,20 +255,27 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       }
       setHasWebcam(true);
       setIsVideoOff(false);
+      setIsVirtualCamera(false);
+      setCameraError(null);
 
       // Add tracks to active WebRTC connection if ready
       if (peerConnectionRef.current) {
+        const pc = peerConnectionRef.current;
         stream.getTracks().forEach((track) => {
-          const senders = peerConnectionRef.current.getSenders();
+          const senders = pc.getSenders();
           const alreadyAdded = senders.some((s) => s.track && s.track.kind === track.kind);
           if (!alreadyAdded) {
-            peerConnectionRef.current.addTrack(track, stream);
+            pc.addTrack(track, stream);
+          } else {
+            const sender = senders.find((s) => s.track && s.track.kind === track.kind);
+            if (sender && sender.replaceTrack) {
+              sender.replaceTrack(track);
+            }
           }
         });
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.postMessage({ type: 'PEER_HELLO', sender: myPeerId.current });
-        }
+        broadcastSignal({ type: 'PEER_HELLO', sender: myPeerId.current });
       }
+      return true;
     } catch (err) {
       console.warn('Webcam stream unavailable or permission denied:', err);
       const isHttpNonLocal = typeof window !== 'undefined' && 
@@ -117,127 +283,177 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
         !['localhost', '127.0.0.1'].includes(window.location.hostname);
 
       if (isHttpNonLocal && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
-        setCameraError('Browser HP memblokir izin kamera via HTTP (bukan HTTPS).');
+        setCameraError('Browser memblokir izin kamera via HTTP (10.78.3.2). Kamera Virtual Simulasi diaktifkan.');
       } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setCameraError('Izin akses kamera ditolak di browser HP Anda.');
+        setCameraError('Izin akses kamera ditolak di browser. Kamera Virtual Simulasi diaktifkan.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setCameraError('Perangkat kamera/webcam tidak ditemukan.');
+        setCameraError('Perangkat kamera/webcam tidak ditemukan. Kamera Virtual Simulasi diaktifkan.');
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        setCameraError('Kamera fisik sedang digunakan oleh tab atau aplikasi lain.');
+        setCameraError('Kamera fisik sedang digunakan oleh aplikasi/tab lain. Kamera Virtual Simulasi diaktifkan.');
       } else {
-        setCameraError('Kamera tidak dapat diakses (' + (err.message || err.name) + ')');
+        setCameraError('Kamera tidak dapat diakses (' + (err.message || err.name) + '). Kamera Virtual diaktifkan.');
       }
-      setIsVideoOff(true);
-      setHasWebcam(false);
+      startVirtualCamera();
+      return false;
     }
   };
 
   useEffect(() => {
-    startCamera();
+    // 1. Setup WebRTC PeerConnection FIRST so tracks can be attached immediately
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
+      ],
+    });
+    peerConnectionRef.current = pc;
 
-    // Setup WebRTC Inter-Tab Video Bridge (same device / multi-tab / local network)
-    if (typeof BroadcastChannel !== 'undefined') {
-      const channel = new BroadcastChannel(channelName);
-      broadcastChannelRef.current = channel;
-
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' },
-        ],
-      });
-      peerConnectionRef.current = pc;
-
-      if (streamRef.current) {
+    // Helper to ensure current local stream tracks are attached to pc
+    const attachLocalTracks = () => {
+      if (streamRef.current && pc.signalingState !== 'closed') {
         streamRef.current.getTracks().forEach((track) => {
-          pc.addTrack(track, streamRef.current);
+          const senders = pc.getSenders();
+          if (!senders.some((s) => s.track && s.track.kind === track.kind)) {
+            pc.addTrack(track, streamRef.current);
+          }
         });
       }
+    };
 
-      pc.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          const s = event.streams[0];
-          setRemoteStream(s);
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = s;
-            remoteVideoRef.current.play().catch(() => {});
-          }
+    // 2. Start Camera (real or virtual fallback)
+    startCamera();
+
+    pc.ontrack = (event) => {
+      if (event.streams && event.streams[0]) {
+        const s = event.streams[0];
+        setRemoteStream(s);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = s;
+          remoteVideoRef.current.play().catch(() => {});
         }
-      };
+      }
+    };
 
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          channel.postMessage({
-            type: 'ICE_CANDIDATE',
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        broadcastSignal({
+          type: 'ICE_CANDIDATE',
+          sender: myPeerId.current,
+          candidate: event.candidate,
+        });
+      }
+    };
+
+    const sendOffer = async () => {
+      try {
+        if (pc.signalingState !== 'closed') {
+          attachLocalTracks();
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          broadcastSignal({
+            type: 'OFFER',
             sender: myPeerId.current,
-            candidate: event.candidate,
+            sdp: pc.localDescription,
           });
         }
-      };
+      } catch (e) {
+        console.warn('WebRTC offer creation error:', e);
+      }
+    };
 
-      const sendOffer = async () => {
+    // Central incoming signal dispatcher (handles messages from either BroadcastChannel or Network Relay)
+    const handleIncomingSignal = async (data) => {
+      if (!data || data.sender === myPeerId.current) return;
+
+      if (data.type === 'PEER_HELLO') {
+        attachLocalTracks();
+        // When counterpart arrives, primary offerer creates offer
+        if (isTutor || pc.signalingState === 'stable') {
+          await sendOffer();
+        }
+      } else if (data.type === 'OFFER') {
         try {
           if (pc.signalingState !== 'closed') {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            channel.postMessage({
-              type: 'OFFER',
+            attachLocalTracks();
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            broadcastSignal({
+              type: 'ANSWER',
               sender: myPeerId.current,
               sdp: pc.localDescription,
             });
           }
         } catch (e) {
-          console.warn('WebRTC offer creation error:', e);
+          console.warn('WebRTC offer handling error:', e);
         }
-      };
-
-      channel.onmessage = async (event) => {
-        const data = event.data;
-        if (!data || data.sender === myPeerId.current) return;
-
-        if (data.type === 'PEER_HELLO') {
-          await sendOffer();
-        } else if (data.type === 'OFFER') {
-          try {
-            if (pc.signalingState !== 'closed') {
-              await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
-              channel.postMessage({
-                type: 'ANSWER',
-                sender: myPeerId.current,
-                sdp: pc.localDescription,
-              });
-            }
-          } catch (e) {
-            console.warn('WebRTC offer handling error:', e);
+      } else if (data.type === 'ANSWER') {
+        try {
+          if (pc.signalingState === 'have-local-offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
           }
-        } else if (data.type === 'ANSWER') {
-          try {
-            if (pc.signalingState === 'have-local-offer') {
-              await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            }
-          } catch (e) {
-            console.warn('WebRTC answer handling error:', e);
-          }
-        } else if (data.type === 'ICE_CANDIDATE') {
-          try {
-            if (data.candidate && pc.remoteDescription) {
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }
-          } catch (e) {
-            console.warn('WebRTC ICE candidate error:', e);
-          }
-        } else if (data.type === 'CHAT_MSG') {
-          setChatMessages((prev) => [...prev, data.payload]);
+        } catch (e) {
+          console.warn('WebRTC answer handling error:', e);
         }
-      };
+      } else if (data.type === 'ICE_CANDIDATE') {
+        try {
+          if (data.candidate && pc.remoteDescription) {
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+          }
+        } catch (e) {
+          console.warn('WebRTC ICE candidate error:', e);
+        }
+      } else if (data.type === 'CHAT_MSG') {
+        setChatMessages((prev) => {
+          if (prev.some((m) => m.time === data.payload?.time && m.text === data.payload?.text && m.sender === data.payload?.sender)) {
+            return prev;
+          }
+          return [...prev, data.payload];
+        });
+      }
+    };
 
-      // Announce arrival to existing peers in room
-      channel.postMessage({ type: 'PEER_HELLO', sender: myPeerId.current });
+    // 2. Inter-tab BroadcastChannel
+    if (typeof BroadcastChannel !== 'undefined') {
+      const channel = new BroadcastChannel(channelName);
+      broadcastChannelRef.current = channel;
+      channel.onmessage = (event) => {
+        handleIncomingSignal(event.data);
+      };
     }
 
+    // 3. Network Signaling Relay Poller (Connects Laptop 1 & Laptop 2 over WiFi / LAN)
+    let lastSignalTime = 0;
+    const pollNetworkSignals = async () => {
+      try {
+        const res = await api.get(`/zoom/signaling?session_id=${session?.id || sessionData?.meeting_number}&sender=${myPeerId.current}&after=${lastSignalTime}`);
+        if (res && Array.isArray(res.signals)) {
+          for (const sig of res.signals) {
+            if (sig.sender !== myPeerId.current && !processedSignalIdsRef.current.has(sig.id)) {
+              processedSignalIdsRef.current.add(sig.id);
+              await handleIncomingSignal(sig);
+            }
+          }
+          if (res.server_time) {
+            lastSignalTime = res.server_time;
+          }
+        }
+      } catch (e) {
+        // Silent error
+      }
+    };
+
+    // Active polling every 800ms for fast P2P WebRTC handshake across laptops
+    signalingPollingRef.current = setInterval(pollNetworkSignals, 800);
+    pollNetworkSignals();
+
+    // Announce arrival to room
+    broadcastSignal({ type: 'PEER_HELLO', sender: myPeerId.current });
+
     return () => {
+      if (signalingPollingRef.current) {
+        clearInterval(signalingPollingRef.current);
+      }
       if (broadcastChannelRef.current) {
         broadcastChannelRef.current.close();
       }
@@ -247,8 +463,11 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+      }
     };
-  }, [channelName]);
+  }, [channelName, isTutor]);
 
   const handleToggleVideo = async () => {
     if (isVideoOff) {
@@ -306,31 +525,53 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       time: timeStr,
     };
     setChatMessages((prev) => [...prev, newMsg]);
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.postMessage({
-        type: 'CHAT_MSG',
-        sender: myPeerId.current,
-        payload: newMsg,
-      });
-    }
+    broadcastSignal({
+      type: 'CHAT_MSG',
+      sender: myPeerId.current,
+      payload: newMsg,
+    });
     setInputMsg('');
   };
 
   return (
     <div className="relative w-full h-[calc(100vh-65px)] max-h-[850px] bg-slate-950 rounded-3xl overflow-hidden flex flex-col text-white shadow-2xl border border-slate-800 select-none">
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-5 py-3.5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 z-10">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-semibold border border-emerald-500/30">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-3 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 z-10 gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-semibold border border-emerald-500/30 shrink-0">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Terhubung • {formatTime(seconds)}</span>
           </div>
-          <span className="hidden sm:inline-block text-xs text-slate-400 font-medium">
+          <span className="text-xs text-slate-300 font-bold truncate">
             {sessionData.session_title}
+          </span>
+          <span className="hidden sm:inline-block font-mono text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded-full border border-slate-700 shrink-0">
+            #{session?.id || sessionData?.meeting_number}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs shrink-0">
+          {/* Tombol Salin Link Sesi Video Konseling */}
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Salin tautan ruang video untuk dibuka langsung di laptop lain"
+          >
+            {copiedLink ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400 font-bold">Link Tersalin!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden md:inline">Salin Link Video Sesi #{session?.id || sessionData?.meeting_number}</span>
+                <span className="md:hidden">Salin Link</span>
+              </>
+            )}
+          </button>
+
           {isTutor && session?.user && (
             <button
               type="button"
@@ -339,11 +580,11 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
               title="Lihat Data Konseli & Asesmen Lengkap"
             >
               <Stethoscope className="w-3.5 h-3.5 text-teal-200" />
-              <span>Data Konseli</span>
+              <span className="hidden sm:inline">Data Konseli</span>
             </button>
           )}
-          <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-xl text-[11px] font-mono border border-slate-700">
-            Mode SDK: Development (Simulator WebRTC)
+          <span className="hidden lg:inline-block bg-slate-800 text-slate-300 px-3 py-1 rounded-xl text-[11px] font-mono border border-slate-700">
+            WebRTC Relay
           </span>
         </div>
       </div>
@@ -434,7 +675,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
 
         {/* Local Self Video (Real Webcam Support) */}
         <div className="relative flex items-center justify-center bg-slate-950 rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-inner w-full h-full min-h-[300px]">
-          {/* Real Device Webcam Video Feed */}
+          {/* Real Device Webcam or Virtual Video Feed */}
           <video
             ref={localVideoRef}
             autoPlay
@@ -444,6 +685,24 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
               !isVideoOff && hasWebcam ? 'block' : 'hidden'
             }`}
           />
+
+          {/* Badge when Virtual Camera is Active */}
+          {!isVideoOff && hasWebcam && isVirtualCamera && (
+            <div className="absolute top-3 right-3 px-3 py-1 rounded-xl bg-amber-500/20 backdrop-blur-md text-[11px] font-semibold text-amber-300 border border-amber-500/30 flex items-center gap-1.5 z-10">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span>Kamera Virtual (HTTP)</span>
+            </div>
+          )}
+
+          {/* Notification banner if on HTTP when Virtual Camera is active */}
+          {!isVideoOff && hasWebcam && isVirtualCamera && typeof window !== 'undefined' && window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname) && (
+            <div className="absolute top-3 left-3 right-3 max-w-sm mx-auto p-2 rounded-xl bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 text-slate-200 z-10 text-[11px] shadow-lg flex items-center justify-center gap-2">
+              <span className="text-emerald-300 flex items-center gap-1.5 text-[10.5px]">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Kamera Virtual Simulasi Aktif & Terhubung ke Lawan Bicara</span>
+              </span>
+            </div>
+          )}
 
           {/* Fallback avatar when camera is off or not accessible */}
           {(isVideoOff || !hasWebcam) && (
@@ -455,16 +714,34 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
                 {cameraError || (isVideoOff ? 'Kamera Dinonaktifkan' : 'Kamera Tidak Terdeteksi')}
               </p>
 
-              {/* Guide for Mobile / HTTP security */}
-              {cameraError && typeof window !== 'undefined' && window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname) && (
-                <div className="mt-3 text-[11px] text-amber-300 bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20 text-left space-y-1 max-w-xs">
+              {/* Guide for HTTP / Chrome Security Policy */}
+              {typeof window !== 'undefined' && window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname) && (
+                <div className="mt-3 text-[11px] text-amber-300 bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20 text-left space-y-2 max-w-xs">
                   <p className="font-semibold flex items-center gap-1 text-amber-400">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    Kebijakan Browser HP (HTTP):
+                    Kebijakan Browser Chrome (Akses HTTP):
                   </p>
                   <p className="text-amber-200/90 leading-relaxed text-[10px]">
-                    Chrome/Safari HP memblokir kamera di jaringan WiFi via HTTP. Buka <code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">chrome://flags</code> di HP dan aktifkan <em>"Insecure origins treated as secure"</em> untuk IP ini.
+                    Chrome otomatis mengunci setting kamera pada IP lokal HTTP (<code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">10.78.3.2</code>).
                   </p>
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={startVirtualCamera}
+                      className="w-full text-[11px] font-bold text-emerald-300 bg-emerald-600/30 hover:bg-emerald-600/50 p-2 rounded-xl border border-emerald-500/30 transition-colors flex items-center justify-center gap-1.5 shadow-soft-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Aktifkan Kamera Virtual Simulasi</span>
+                    </button>
+                  </div>
+                  <details className="text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-xl border border-slate-700/50 cursor-pointer">
+                    <summary className="font-semibold text-amber-300">Cara Buka Izin Kamera Fisik di Chrome</summary>
+                    <ol className="list-decimal pl-4 mt-1 space-y-1 text-slate-300 text-[10px]">
+                      <li>Buka tab baru: <code className="bg-black/50 px-1 py-0.5 rounded text-amber-200 font-mono">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
+                      <li>Masukkan: <code className="bg-black/50 px-1 py-0.5 rounded text-amber-200 font-mono">http://10.78.3.2:5173</code></li>
+                      <li>Ubah ke <b>Enabled</b> lalu klik <b>Relaunch</b>.</li>
+                    </ol>
+                  </details>
                 </div>
               )}
 
@@ -483,16 +760,14 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
                 </div>
               )}
 
-              {cameraError && (
-                <button
-                  type="button"
-                  onClick={startCamera}
-                  className="mt-3 text-[11px] font-bold text-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/30 px-3.5 py-1.5 rounded-xl border border-emerald-500/30 transition-colors inline-flex items-center gap-1.5 shadow-soft-xs"
-                >
-                  <Video className="w-3.5 h-3.5" />
-                  <span>Coba Nyalakan Kamera</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={startCamera}
+                className="mt-3 text-[11px] font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3.5 py-1.5 rounded-xl border border-slate-700 transition-colors inline-flex items-center gap-1.5 shadow-soft-xs"
+              >
+                <Video className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Coba Nyalakan Kamera Fisik</span>
+              </button>
             </div>
           )}
 

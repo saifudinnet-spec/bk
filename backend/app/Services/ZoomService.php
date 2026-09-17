@@ -22,9 +22,23 @@ class ZoomService
      */
     public static function generateSignature(User $user, CounselingSession $session, bool $forceTest = false): array
     {
-        // 1. Authorization: Only the assigned student or tutor may join
+        // 1. Authorization: Only the assigned student or tutor may join (auto-pair for test sessions)
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            throw new \Exception('Akses ditolak: Anda tidak terdaftar dalam sesi konseling ini.', 403);
+            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST')) {
+                if ($user->isTutor()) {
+                    $session->tutor_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['tutor_id' => $user->id]);
+                } elseif ($user->isStudent() || $user->isGeneral()) {
+                    $session->user_id = $user->id;
+                    $session->save();
+                    $session->counselingCase?->update(['user_id' => $user->id]);
+                } else {
+                    throw new \Exception('Akses ditolak: Anda tidak terdaftar dalam sesi konseling ini.', 403);
+                }
+            } else {
+                throw new \Exception('Akses ditolak: Anda tidak terdaftar dalam sesi konseling ini.', 403);
+            }
         }
 
         // 2. Validate Session Status

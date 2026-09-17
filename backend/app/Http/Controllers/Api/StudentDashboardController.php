@@ -96,6 +96,16 @@ class StudentDashboardController extends Controller
         ->take(10)
         ->get();
 
+        // 7. Active instant test session (if any testing session running in last 2 hours)
+        $activeTestSession = CounselingSession::with(['counselingCase', 'tutor:id,name,avatar'])
+            ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+            ->where('end_at', '>=', $now)
+            ->whereHas('counselingCase', function ($q) {
+                $q->where('case_number', 'LIKE', 'TEST-%');
+            })
+            ->latest('id')
+            ->first();
+
         return response()->json([
             'upcoming_session' => $upcomingSession,
             'unreviewed_session' => $unreviewedSession,
@@ -105,6 +115,7 @@ class StudentDashboardController extends Controller
             'latest_mood' => $latestMood,
             'has_checked_in_today' => $hasCheckedInToday,
             'action_plans' => $actionPlans,
+            'active_test_session' => $activeTestSession,
         ]);
     }
 }
