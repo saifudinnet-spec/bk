@@ -60,14 +60,6 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Evaluasi & Ulasan Pasca-Konseling" maxWidth="max-w-lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Intro */}
-        <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-100 text-xs text-emerald-950 flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-          <p className="leading-relaxed text-[11px] sm:text-xs">
-            Suara Anda sangat berharga untuk memastikan konselor kami memberikan pendampingan yang aman, empatik, dan berkualitas tinggi.
-          </p>
-        </div>
-
         {/* 1. Main Star Rating */}
         <div className="text-center space-y-1.5 p-3.5 rounded-2xl bg-gray-50/80 border border-gray-100">
           <label className="block text-xs font-bold text-darktext">
