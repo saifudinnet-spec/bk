@@ -259,12 +259,12 @@ export const LandingPage = () => {
     return defaultBannerImages;
   })();
 
-  // Auto-play timer for hero banner slider (changes every 4.5 seconds, pauses on hover)
+  // Auto-play timer for hero banner slider (changes every 5 seconds, pauses on hover)
   useEffect(() => {
     if (isSliderHovered || heroBanners.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
-    }, 4500);
+    }, 5000);
     return () => clearInterval(timer);
   }, [isSliderHovered, heroBanners.length]);
 
