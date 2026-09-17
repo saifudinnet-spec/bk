@@ -6,10 +6,10 @@ import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
 
 const MOOD_OPTIONS = [
-  { value: 'MUCH_BETTER', label: 'Jauh Lebih Tenang & Lega', emoji: '🌟', desc: 'Beban emosi berkurang banyak' },
-  { value: 'BETTER', label: 'Cukup Terbantu & Lebih Jelas', emoji: '😊', desc: 'Mendapat sudut pandang baru' },
-  { value: 'NEUTRAL', label: 'Biasa Saja / Masih Meresapi', emoji: '😐', desc: 'Perlu waktu mencerna hasil sesi' },
-  { value: 'NEED_FOLLOWUP', label: 'Masih Cemas & Butuh Sesi Lagi', emoji: '🤝', desc: 'Perlu penanganan lanjutan' },
+  { value: 'MUCH_BETTER', label: 'Jauh Lebih Tenang', emoji: '🌟' },
+  { value: 'BETTER', label: 'Cukup Terbantu', emoji: '😊' },
+  { value: 'NEUTRAL', label: 'Biasa Saja', emoji: '😐' },
+  { value: 'NEED_FOLLOWUP', label: 'Butuh Sesi Lagi', emoji: '🤝' },
 ];
 
 export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) => {
@@ -102,17 +102,14 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
                 key={m.value}
                 type="button"
                 onClick={() => setMoodAfter(m.value)}
-                className={`p-2.5 sm:p-3 rounded-2xl border text-left transition-all flex items-center gap-2.5 cursor-pointer ${
+                className={`px-3.5 py-2.5 rounded-2xl border text-left transition-all flex items-center gap-2.5 cursor-pointer ${
                   moodAfter === m.value
-                    ? 'border-emerald-600 bg-emerald-50/90 text-emerald-950 shadow-soft-xs ring-1 ring-emerald-500'
-                    : 'border-gray-200 bg-white hover:border-gray-300 text-slate-700'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-soft-xs ring-1 ring-emerald-500'
+                    : 'border-gray-200 bg-white hover:border-gray-300 text-slate-700 font-medium'
                 }`}
               >
                 <span className="text-xl shrink-0">{m.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold truncate">{m.label}</p>
-                  <p className="text-[10px] text-mutedtext line-clamp-1">{m.desc}</p>
-                </div>
+                <span className="text-xs">{m.label}</span>
               </button>
             ))}
           </div>

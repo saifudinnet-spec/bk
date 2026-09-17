@@ -11,6 +11,13 @@ import ActionPlanSection from '../../components/counseling/ActionPlanSection';
 import SessionFeedbackModal from '../../components/counseling/SessionFeedbackModal';
 import CounseleeDiagnosticCard from '../../components/counseling/CounseleeDiagnosticCard';
 
+const MOOD_LABELS = {
+  MUCH_BETTER: 'Jauh Lebih Tenang',
+  BETTER: 'Cukup Terbantu',
+  NEUTRAL: 'Biasa Saja',
+  NEED_FOLLOWUP: 'Butuh Sesi Lagi',
+};
+
 export const CaseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -301,7 +308,7 @@ export const CaseDetail = () => {
                         </div>
                         {s.feedback.mood_after && (
                           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white text-slate-700 border border-amber-200">
-                            {moodLabels[s.feedback.mood_after] || s.feedback.mood_after}
+                            {MOOD_LABELS[s.feedback.mood_after] || s.feedback.mood_after}
                           </span>
                         )}
                       </div>
