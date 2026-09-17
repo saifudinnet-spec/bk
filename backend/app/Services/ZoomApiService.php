@@ -119,6 +119,17 @@ class ZoomApiService
                 default => 'Akun Terverifikasi'
             };
 
+            $pmi = $userData['pmi'] ?? null;
+            $personalUrl = $userData['personal_meeting_url'] ?? null;
+
+            // Automatically sync permanent meeting URL and ID from user's verified Zoom account
+            if (!empty($personalUrl)) {
+                SystemSetting::set('zoom_permanent_meeting_url', $personalUrl);
+                if (!empty($pmi)) {
+                    SystemSetting::set('zoom_permanent_meeting_id', (string)$pmi);
+                }
+            }
+
             return [
                 'success' => true,
                 'message' => 'Koneksi ke Zoom Server-to-Server OAuth berhasil!',
@@ -129,6 +140,8 @@ class ZoomApiService
                     'account_type' => $accountType,
                     'timezone' => $userData['timezone'] ?? 'Asia/Jakarta',
                     'status' => $userData['status'] ?? 'active',
+                    'pmi' => (string)($userData['pmi'] ?? ''),
+                    'personal_meeting_url' => $userData['personal_meeting_url'] ?? '',
                 ],
             ];
         } catch (\Exception $e) {
@@ -148,16 +161,20 @@ class ZoomApiService
         int $durationMinutes = 60,
         ?string $hostEmail = null
     ): array {
-        // Fallback to Mock if in mock mode or not configured
+        $permanentUrl = SystemSetting::get('zoom_permanent_meeting_url');
+        $permanentId = SystemSetting::get('zoom_permanent_meeting_id');
+        $permanentPassword = SystemSetting::get('zoom_permanent_meeting_password');
+
+        // Fallback to Mock or Permanent Meeting if in mock mode or not configured
         if (!self::isLiveMode()) {
-            $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
-            $meetingPassword = 'bk' . rand(1000, 9999);
+            $meetingNumber = !empty($permanentId) ? $permanentId : ('BK' . rand(100, 999) . rand(1000, 9999));
+            $meetingPassword = !empty($permanentPassword) ? $permanentPassword : ('bk' . rand(1000, 9999));
             return [
-                'is_live' => false,
+                'is_live' => !empty($permanentUrl),
                 'id' => $meetingNumber,
                 'password' => $meetingPassword,
-                'join_url' => null, // will use in-app room
-                'start_url' => null,
+                'join_url' => !empty($permanentUrl) ? $permanentUrl : null,
+                'start_url' => !empty($permanentUrl) ? $permanentUrl : null,
             ];
         }
 
@@ -195,17 +212,17 @@ class ZoomApiService
 
             if ($response->failed()) {
                 $err = $response->json() ?? [];
-                Log::warning('Zoom createMeeting API failed, falling back to mock room:', $err);
+                Log::warning('Zoom createMeeting API failed, falling back to mock or permanent room:', $err);
                 
-                // Graceful fallback to mock so flow is not blocked
-                $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
-                $meetingPassword = 'bk' . rand(1000, 9999);
+                // Graceful fallback to permanent meeting or mock
+                $meetingNumber = !empty($permanentId) ? $permanentId : ('BK' . rand(100, 999) . rand(1000, 9999));
+                $meetingPassword = !empty($permanentPassword) ? $permanentPassword : ('bk' . rand(1000, 9999));
                 return [
-                    'is_live' => false,
+                    'is_live' => !empty($permanentUrl),
                     'id' => $meetingNumber,
                     'password' => $meetingPassword,
-                    'join_url' => null,
-                    'start_url' => null,
+                    'join_url' => !empty($permanentUrl) ? $permanentUrl : null,
+                    'start_url' => !empty($permanentUrl) ? $permanentUrl : null,
                     'api_error' => $err['message'] ?? 'Gagal menghubungi API Zoom.',
                 ];
             }
@@ -216,21 +233,21 @@ class ZoomApiService
                 'is_live' => true,
                 'id' => (string)$data['id'],
                 'password' => $data['password'] ?? '',
-                'join_url' => $data['join_url'] ?? null,
-                'start_url' => $data['start_url'] ?? null,
+                'join_url' => $data['join_url'] ?? $permanentUrl,
+                'start_url' => $data['start_url'] ?? $permanentUrl,
             ];
         } catch (\Exception $e) {
             Log::error('Exception in ZoomApiService::createMeeting: ' . $e->getMessage());
 
             // Graceful fallback
-            $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
-            $meetingPassword = 'bk' . rand(1000, 9999);
+            $meetingNumber = !empty($permanentId) ? $permanentId : ('BK' . rand(100, 999) . rand(1000, 9999));
+            $meetingPassword = !empty($permanentPassword) ? $permanentPassword : ('bk' . rand(1000, 9999));
             return [
-                'is_live' => false,
+                'is_live' => !empty($permanentUrl),
                 'id' => $meetingNumber,
                 'password' => $meetingPassword,
-                'join_url' => null,
-                'start_url' => null,
+                'join_url' => !empty($permanentUrl) ? $permanentUrl : null,
+                'start_url' => !empty($permanentUrl) ? $permanentUrl : null,
                 'api_error' => $e->getMessage(),
             ];
         }

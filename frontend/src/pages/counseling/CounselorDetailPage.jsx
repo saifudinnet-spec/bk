@@ -193,7 +193,7 @@ export const CounselorDetailPage = () => {
 
             <div className="bg-white/15 backdrop-blur-md px-3.5 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1.5 border border-white/20 shadow-xs">
               <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-              <span>Psikolog / Konselor Resmi UINSSC</span>
+              <span>Konselor</span>
             </div>
           </div>
 

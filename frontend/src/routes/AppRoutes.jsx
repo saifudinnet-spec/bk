@@ -73,12 +73,12 @@ export const AppRoutes = () => {
           <Route path="/register/general" element={<RegisterGeneral />} />
         </Route>
 
-        {/* Student & General User Routes */}
+        {/* Student & General User Routes (Also accessible by Admin and Tutor for preview/testing) */}
         <Route
           path="/app"
           element={
             <ProtectedRoute>
-              <RoleRoute allowedRoles={['STUDENT', 'GENERAL']}>
+              <RoleRoute allowedRoles={['STUDENT', 'GENERAL', 'ADMIN', 'TUTOR']}>
                 <AppLayout />
               </RoleRoute>
             </ProtectedRoute>

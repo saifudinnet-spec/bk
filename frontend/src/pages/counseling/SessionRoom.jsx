@@ -88,15 +88,17 @@ export const SessionRoom = () => {
   const method = (session.method || session.counseling_case?.method || 'ZOOM').toUpperCase();
 
   return (
-    <PageTransition className="w-full h-full flex-1 flex flex-col overflow-hidden">
+    <PageTransition className="w-full flex-1 flex flex-col">
       {/* 1. CHAT METHOD */}
       {method === 'CHAT' && (
-        <CounselingChatRoom
-          session={session}
-          user={user}
-          isTutor={isTutor}
-          onLeaveSession={handleLeaveSession}
-        />
+        <div className="w-full h-[calc(100vh-3rem)] min-h-[550px] flex flex-col">
+          <CounselingChatRoom
+            session={session}
+            user={user}
+            isTutor={isTutor}
+            onLeaveSession={handleLeaveSession}
+          />
+        </div>
       )}
 
       {/* 2. OFFLINE / TATAP MUKA METHOD */}

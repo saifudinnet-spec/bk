@@ -82,7 +82,7 @@ class TutorScheduleController extends Controller
                 'photo' => $photo,
                 'nip' => $tProfile ? $tProfile->nip : null,
                 'specialization' => $tProfile ? $tProfile->specialization : 'Konselor Umum',
-                'bio' => $tProfile ? $tProfile->bio : 'Siap mendengarkan dan mendampingi proses konseling Anda.',
+                'bio' => $tProfile?->bio ?? '',
                 'is_available' => $tProfile ? $tProfile->is_available : true,
                 'topics' => $topicsList,
                 'matching_expertise' => $matchingExpertise,
@@ -163,7 +163,7 @@ class TutorScheduleController extends Controller
             'photo' => $photo,
             'nip' => $tProfile ? $tProfile->nip : null,
             'specialization' => $tProfile ? $tProfile->specialization : 'Konselor Kampus',
-            'bio' => $tProfile ? $tProfile->bio : 'Konselor profesional siap mendengarkan cerita dan mendampingi pemulihan Anda.',
+            'bio' => $tProfile?->bio ?? '',
             'is_available' => $tProfile ? $tProfile->is_available : true,
             'topics' => $topicsList,
             'supported_methods' => [

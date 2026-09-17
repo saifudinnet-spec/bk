@@ -177,6 +177,9 @@ class AdminController extends Controller
             'zoom_has_client_secret' => !empty($clientSecret),
             'zoom_host_email' => SystemSetting::get('zoom_host_email', env('ZOOM_HOST_EMAIL', '')),
             'zoom_is_configured' => \App\Services\ZoomApiService::isConfigured(),
+            'zoom_permanent_meeting_url' => SystemSetting::get('zoom_permanent_meeting_url', ''),
+            'zoom_permanent_meeting_id' => SystemSetting::get('zoom_permanent_meeting_id', ''),
+            'zoom_permanent_meeting_password' => SystemSetting::get('zoom_permanent_meeting_password', ''),
         ]);
     }
 
@@ -216,6 +219,9 @@ class AdminController extends Controller
             'zoom_client_id' => 'nullable|string|max:255',
             'zoom_client_secret' => 'nullable|string|max:255',
             'zoom_host_email' => 'nullable|string|email|max:255',
+            'zoom_permanent_meeting_url' => 'nullable|string|max:500',
+            'zoom_permanent_meeting_id' => 'nullable|string|max:100',
+            'zoom_permanent_meeting_password' => 'nullable|string|max:100',
         ]);
 
         // Web CMS
@@ -246,6 +252,9 @@ class AdminController extends Controller
         if ($request->has('zoom_client_id')) SystemSetting::set('zoom_client_id', trim($request->input('zoom_client_id') ?? ''));
         if ($request->filled('zoom_client_secret')) SystemSetting::set('zoom_client_secret', trim($request->input('zoom_client_secret')));
         if ($request->has('zoom_host_email')) SystemSetting::set('zoom_host_email', trim($request->input('zoom_host_email') ?? ''));
+        if ($request->has('zoom_permanent_meeting_url')) SystemSetting::set('zoom_permanent_meeting_url', trim($request->input('zoom_permanent_meeting_url') ?? ''));
+        if ($request->has('zoom_permanent_meeting_id')) SystemSetting::set('zoom_permanent_meeting_id', trim($request->input('zoom_permanent_meeting_id') ?? ''));
+        if ($request->has('zoom_permanent_meeting_password')) SystemSetting::set('zoom_permanent_meeting_password', trim($request->input('zoom_permanent_meeting_password') ?? ''));
 
         AuditLogService::log('update_settings', 'SystemSetting', null, $request->except(['zoom_client_secret']), $request->user()->id);
 

@@ -75,11 +75,14 @@ class StudentDashboardController extends Controller
             ->latest('submitted_at')
             ->first();
 
-        // 5. Today's mood check-in
+        // 5. Today's mood check-in & latest check-in
         $todayMood = MoodCheckin::where('user_id', $user->id)
             ->whereDate('created_at', $today)
             ->latest()
             ->first();
+
+        $hasCheckedInToday = !is_null($todayMood);
+        $latestMood = $todayMood ?: MoodCheckin::where('user_id', $user->id)->latest()->first();
 
         // 6. Action plans / lembar tindak lanjut
         $actionPlans = CounselingActionPlan::with([
@@ -99,6 +102,8 @@ class StudentDashboardController extends Controller
             'active_case' => $activeCase,
             'latest_screening' => $latestScreening,
             'today_mood' => $todayMood,
+            'latest_mood' => $latestMood,
+            'has_checked_in_today' => $hasCheckedInToday,
             'action_plans' => $actionPlans,
         ]);
     }

@@ -25,7 +25,6 @@ import AppointmentCard from '../../components/cards/AppointmentCard';
 import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
 import CaseReviewModal from '../../components/counseling/CaseReviewModal';
-import NotificationBell from '../../components/common/NotificationBell';
 
 export const TutorDashboard = () => {
   const { user } = useAuth();
@@ -104,8 +103,8 @@ export const TutorDashboard = () => {
       {/* 1. Tutor Hero Welcome Banner */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-900 via-emerald-800 to-slate-950 text-white p-6 sm:p-7 shadow-soft-md border border-emerald-800/40">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden ring-2 ring-emerald-400/50 border-2 border-white/30 shadow-lg shadow-emerald-950/40 shrink-0 bg-slate-900 relative">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl sm:rounded-3xl overflow-hidden ring-4 ring-emerald-400/30 border-2 border-white/30 shadow-xl shadow-emerald-950/50 shrink-0 bg-slate-900 relative">
               <img
                 src={counselorPhoto}
                 alt={user?.name || 'Konselor'}
@@ -116,35 +115,32 @@ export const TutorDashboard = () => {
                 }}
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30 backdrop-blur-md">
+                <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 backdrop-blur-md">
                   🧑‍🏫 Konselor
                 </span>
                 {counselorInfo?.specialization && (
-                  <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-white/10 text-emerald-200 text-[11px] font-medium border border-white/15 backdrop-blur-md truncate max-w-xs">
+                  <span className="hidden sm:inline-block px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-medium border border-white/15 backdrop-blur-md truncate max-w-sm">
                     {counselorInfo.specialization}
                   </span>
                 )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-white">
                 {user?.name || 'Konselor'}
               </h2>
             </div>
           </div>
 
           <div className="flex flex-wrap md:flex-col items-stretch gap-2 shrink-0">
-            <div className="flex items-center gap-2">
-              <NotificationBell variant="dark" className="md:hidden" />
-              <Link
-                to="/tutor/schedule"
-                className="flex-1 px-4 py-2.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 text-xs font-bold shadow-md shadow-black/10 transition-all flex items-center justify-center gap-2 min-h-[42px]"
-              >
-                <Calendar className="w-4 h-4 text-emerald-700" />
-                <span>Atur Jadwal Konseling</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+            <Link
+              to="/tutor/schedule"
+              className="px-4 py-2.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 text-xs font-bold shadow-md shadow-black/10 transition-all flex items-center justify-center gap-2 min-h-[42px]"
+            >
+              <Calendar className="w-4 h-4 text-emerald-700" />
+              <span>Atur Jadwal Konseling</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
             <div className="px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-[11px] text-emerald-200 flex items-center justify-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               <span className="font-semibold">Siap Melayani Konseling</span>

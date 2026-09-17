@@ -233,22 +233,27 @@ export const TutorSchedule = () => {
   });
 
   return (
-    <PageTransition className="max-w-4xl mx-auto space-y-6">
-      {/* Top Header Banner */}
-      <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-emerald-800 via-teal-800 to-emerald-950 text-white shadow-soft-xl border border-emerald-700/50 space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-bold">
-          <Calendar className="w-3.5 h-3.5 text-emerald-300" />
-          <span>Manajemen Sesi Konseling</span>
+    <PageTransition className="space-y-6 pb-12">
+      {/* Flat Header (matches /tutor/cases) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-darktext">Kelola Ketersediaan Jadwal Konseling</h2>
+          <p className="text-xs text-mutedtext">
+            Atur ketersediaan waktu dan format sesi konseling Anda
+          </p>
         </div>
-        <h1 className="text-xl sm:text-2xl font-black tracking-tight">
-          Kelola Ketersediaan Jadwal Konseling
-        </h1>
-        <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed max-w-2xl">
-          Atur hari, jam, dan format pertemuan konseling yang Anda layani. Anda dapat membuka jadwal untuk{' '}
-          <span className="font-extrabold text-white">Online (Chat & Video Zoom)</span>,{' '}
-          <span className="font-extrabold text-white">Offline (Tatap Muka di Kampus)</span>, maupun{' '}
-          <span className="font-extrabold text-emerald-300">Semua Format Fleksibel</span>.
-        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={fetchMySlots}
+            disabled={isLoadingSlots}
+            className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors shadow-soft-xs text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+            title="Muat Ulang Jadwal"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSlots ? 'animate-spin' : ''}`} />
+            <span>Segarkan</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Grid: Add Form (Left) & Upcoming Slots (Right) */}

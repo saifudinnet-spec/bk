@@ -60,15 +60,36 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
   const startCamera = async () => {
     try {
       setCameraError(null);
+      const isHttpNonLocal = typeof window !== 'undefined' && 
+        window.location.protocol === 'http:' && 
+        !['localhost', '127.0.0.1'].includes(window.location.hostname);
+
       if (!navigator?.mediaDevices?.getUserMedia) {
-        setCameraError('Peramban tidak mendukung akses kamera.');
+        if (isHttpNonLocal) {
+          setCameraError('Browser HP memblokir kamera di jaringan HTTP. Diperlukan HTTPS atau izin Chrome Flags.');
+        } else {
+          setCameraError('Peramban tidak mendukung akses kamera/mikrofon.');
+        }
         setIsVideoOff(true);
+        setHasWebcam(false);
         return;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: true,
-      });
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true,
+        });
+      } catch (firstErr) {
+        console.warn('Initial media request failed, attempting mobile video fallback:', firstErr);
+        // Fallback for mobile devices if high resolution or audio combined constraint fails
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+          audio: false,
+        });
+      }
+
       streamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
@@ -91,10 +112,16 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       }
     } catch (err) {
       console.warn('Webcam stream unavailable or permission denied:', err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setCameraError('Izin akses kamera belum diizinkan di browser.');
+      const isHttpNonLocal = typeof window !== 'undefined' && 
+        window.location.protocol === 'http:' && 
+        !['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+      if (isHttpNonLocal && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+        setCameraError('Browser HP memblokir izin kamera via HTTP (bukan HTTPS).');
+      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Izin akses kamera ditolak di browser HP Anda.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setCameraError('Perangkat webcam/kamera tidak ditemukan.');
+        setCameraError('Perangkat kamera/webcam tidak ditemukan.');
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
         setCameraError('Kamera fisik sedang digunakan oleh tab atau aplikasi lain.');
       } else {
@@ -425,8 +452,21 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
                 {sessionData.user_name?.charAt(0) || 'Y'}
               </div>
               <p className="text-xs font-bold text-slate-300">
-                {isVideoOff ? 'Kamera Dinonaktifkan' : (cameraError || 'Kamera Tidak Terdeteksi')}
+                {cameraError || (isVideoOff ? 'Kamera Dinonaktifkan' : 'Kamera Tidak Terdeteksi')}
               </p>
+
+              {/* Guide for Mobile / HTTP security */}
+              {cameraError && typeof window !== 'undefined' && window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname) && (
+                <div className="mt-3 text-[11px] text-amber-300 bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20 text-left space-y-1 max-w-xs">
+                  <p className="font-semibold flex items-center gap-1 text-amber-400">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    Kebijakan Browser HP (HTTP):
+                  </p>
+                  <p className="text-amber-200/90 leading-relaxed text-[10px]">
+                    Chrome/Safari HP memblokir kamera di jaringan WiFi via HTTP. Buka <code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">chrome://flags</code> di HP dan aktifkan <em>"Insecure origins treated as secure"</em> untuk IP ini.
+                  </p>
+                </div>
+              )}
 
               {cameraError && cameraError.includes('tab atau aplikasi lain') && (
                 <div className="mt-3 text-[11px] text-amber-300 bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20 text-left space-y-1">

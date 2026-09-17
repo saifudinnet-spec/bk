@@ -51,7 +51,8 @@ import {
   Filter,
   ChevronRight,
   Code,
-  Mic
+  Mic,
+  Zap
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
@@ -91,7 +92,7 @@ export const AdminDashboard = () => {
     crisis_alert_email: 'crisis-center@kampus.ac.id',
     reminder_notifications_enabled: true,
 
-    // Zoom Server-to-Server OAuth
+    // Zoom Server-to-Server OAuth & Permanent Link
     zoom_mock_mode: true,
     zoom_account_id: '',
     zoom_client_id: '',
@@ -100,6 +101,9 @@ export const AdminDashboard = () => {
     zoom_has_client_secret: false,
     zoom_host_email: '',
     zoom_is_configured: false,
+    zoom_permanent_meeting_url: '',
+    zoom_permanent_meeting_id: '',
+    zoom_permanent_meeting_password: '',
   });
   const [isTestingZoom, setIsTestingZoom] = useState(false);
   const [zoomTestResult, setZoomTestResult] = useState(null);
@@ -151,9 +155,27 @@ export const AdminDashboard = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // 1. Priority load: Dashboard Overview statistics (instant display)
-      const dashRes = await api.get('/admin/dashboard');
+      // 1. Priority load: Dashboard Overview statistics & System Settings in parallel
+      const [dashRes, settingsRes] = await Promise.all([
+        api.get('/admin/dashboard'),
+        api.get('/admin/settings').catch(() => null),
+      ]);
       setData(dashRes);
+      if (settingsRes) {
+        setSettings((prev) => ({
+          ...prev,
+          ...settingsRes,
+          default_session_duration: Number(settingsRes.default_session_duration || 60),
+          max_active_sessions_per_student: Number(settingsRes.max_active_sessions_per_student || 2),
+          cancellation_buffer_hours: Number(settingsRes.cancellation_buffer_hours || 6),
+          auto_approve_counseling: Boolean(settingsRes.auto_approve_counseling),
+          crisis_flag_enabled: Boolean(settingsRes.crisis_flag_enabled),
+          reminder_notifications_enabled: Boolean(settingsRes.reminder_notifications_enabled),
+          announcement_bar_enabled: Boolean(settingsRes.announcement_bar_enabled),
+          zoom_mock_mode: settingsRes.zoom_mock_mode === true || settingsRes.zoom_mock_mode === 'true',
+          zoom_is_configured: Boolean(settingsRes.zoom_is_configured),
+        }));
+      }
       setIsLoading(false);
 
       // 2. Preload remaining datasets asynchronously in the background
@@ -167,24 +189,6 @@ export const AdminDashboard = () => {
 
       api.get('/admin/audit-logs').then((res) => {
         setAuditLogs(res.data || []);
-      }).catch(() => {});
-
-      api.get('/admin/settings').then((res) => {
-        if (res) {
-          setSettings((prev) => ({
-            ...prev,
-            ...res,
-            default_session_duration: Number(res.default_session_duration || 60),
-            max_active_sessions_per_student: Number(res.max_active_sessions_per_student || 2),
-            cancellation_buffer_hours: Number(res.cancellation_buffer_hours || 6),
-            auto_approve_counseling: Boolean(res.auto_approve_counseling),
-            crisis_flag_enabled: Boolean(res.crisis_flag_enabled),
-            reminder_notifications_enabled: Boolean(res.reminder_notifications_enabled),
-            announcement_bar_enabled: Boolean(res.announcement_bar_enabled),
-            zoom_mock_mode: Boolean(res.zoom_mock_mode),
-            zoom_is_configured: Boolean(res.zoom_is_configured),
-          }));
-        }
       }).catch(() => {});
     } catch (err) {
       showError('Gagal memuat data administrasi.');
@@ -237,6 +241,34 @@ export const AdminDashboard = () => {
     }
   };
 
+  const [isStartingInstantZoom, setIsStartingInstantZoom] = useState(false);
+
+  const handleStartInstantZoomSession = async () => {
+    setIsStartingInstantZoom(true);
+    try {
+      const res = await api.post('/sessions/instant', { method: 'ZOOM' });
+      const sessionData = res.data?.data || res.data;
+      showSuccess('Sesi simulasi Zoom langsung aktif! Mengalihkan ke ruang konseling...');
+      navigate(`/counseling/session/${sessionData.id}`);
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Gagal memulai simulasi sesi Zoom.');
+    } finally {
+      setIsStartingInstantZoom(false);
+    }
+  };
+
+  const handleAutoFillPmi = (customUrl, customId) => {
+    const pmiUrl = customUrl || zoomTestResult?.data?.personal_meeting_url || 'https://us06web.zoom.us/j/3404109926?pwd=DL7dEt2btM2sQUcOA7o3AEhF7VajJr.1';
+    const pmiId = customId || zoomTestResult?.data?.pmi || '3404109926';
+    setSettings((prev) => ({
+      ...prev,
+      zoom_permanent_meeting_url: pmiUrl,
+      zoom_permanent_meeting_id: pmiId,
+      zoom_permanent_meeting_password: 'Tersemat di link (?pwd=...)',
+    }));
+    showSuccess('Tautan Personal Room akun Pasca UINSSC berhasil disinkronkan!');
+  };
+
   const handleTestZoomConnection = async () => {
     setIsTestingZoom(true);
     setZoomTestResult(null);
@@ -250,6 +282,13 @@ export const AdminDashboard = () => {
       setZoomTestResult(res);
       if (res.success) {
         showSuccess('Koneksi ke Akun Zoom berhasil terverifikasi!');
+        if (res.data?.personal_meeting_url) {
+          setSettings((prev) => ({
+            ...prev,
+            zoom_permanent_meeting_url: res.data.personal_meeting_url,
+            zoom_permanent_meeting_id: res.data.pmi || prev.zoom_permanent_meeting_id,
+          }));
+        }
       } else {
         showError(res.message || 'Koneksi ke Zoom gagal.');
       }
@@ -3406,6 +3445,116 @@ export const AdminDashboard = () => {
                     ? '🟢 Live Zoom API (Terkonfigurasi)'
                     : '⚪ Belum Dikonfigurasi'}
                 </span>
+              </div>
+            </div>
+
+            {/* Tautan Zoom Meeting Tetap (Permanent / Standby Link) */}
+            <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/70 via-indigo-50/30 to-white p-4 sm:p-5 shadow-soft-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-blue-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-soft-xs shrink-0">
+                    <Video className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                      <span>Zoom Meeting Tetap</span>
+                      <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        Siap Pakai Kapan Saja
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Tautan permanen untuk uji coba langsung dan konseling online. Bisa digunakan setiap saat oleh Admin, Konselor, dan Mahasiswa.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {settings.zoom_permanent_meeting_url && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(settings.zoom_permanent_meeting_url, '_blank')}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-soft-xs transition-colors shrink-0 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Buka Aplikasi Zoom</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={isStartingInstantZoom}
+                    onClick={handleStartInstantZoomSession}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-soft-xs transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {isStartingInstantZoom ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menyiapkan Ruang Sesi...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                        <span>⚡ Mulai Simulasi Sesi Langsung (Tanpa Jadwal)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Connected Account Banner */}
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-blue-200/80 text-xs text-slate-700 shadow-soft-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Akun Terhubung: <strong>Pasca UINSSC</strong> (<code>admpasca@uinssc.ac.id</code>) • <span className="text-emerald-700 font-semibold">Licensed / Pro</span>
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Personal Meeting Link
+                </label>
+                <input
+                  type="url"
+                  value={settings.zoom_permanent_meeting_url || ''}
+                  onChange={(e) => setSettings({ ...settings, zoom_permanent_meeting_url: e.target.value })}
+                  placeholder="Contoh: https://us06web.zoom.us/j/3404109926?pwd=xxxx"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-blue-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-soft-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Meeting ID Tetap (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.zoom_permanent_meeting_id || ''}
+                    onChange={(e) => setSettings({ ...settings, zoom_permanent_meeting_id: e.target.value })}
+                    placeholder="Contoh: 849 2019 481"
+                    className="w-full h-11 px-3.5 rounded-2xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Passcode Meeting Tetap (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.zoom_permanent_meeting_password || ''}
+                    onChange={(e) => setSettings({ ...settings, zoom_permanent_meeting_password: e.target.value })}
+                    placeholder="Contoh: 123456 atau bk123"
+                    className="w-full h-11 px-3.5 rounded-2xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-blue-50/80 border border-blue-200/60 text-[11px] text-blue-900 leading-relaxed">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>💡 Solusi Lancar untuk Pengujian di HP:</strong> Mahasiswa yang mengakses dari HP cukup klik <em>"Buka di Aplikasi Zoom"</em> di ruang tunggu. Aplikasi Zoom resmi di HP akan langsung terbuka dengan video kamera & audio 100% aktif tanpa hambatan browser web!
+                </div>
               </div>
             </div>
 

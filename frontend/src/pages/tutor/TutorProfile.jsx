@@ -290,7 +290,7 @@ export const TutorProfile = () => {
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-                <span>Konselor Resmi UINSSC</span>
+                <span>Konselor</span>
               </span>
 
               {nip && (

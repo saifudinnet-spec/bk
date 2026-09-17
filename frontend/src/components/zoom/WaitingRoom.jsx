@@ -98,7 +98,7 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
   const partnerRole = isTutor ? 'Klien / Mahasiswa' : 'Konselor Bimbingan Konseling';
 
   return (
-    <div className="max-w-xl mx-auto w-full px-4 py-6">
+    <div className="max-w-xl mx-auto w-full px-4 py-6 pb-24">
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-soft-lg text-center">
         {/* Animated Icon */}
         <div className="w-16 h-16 rounded-3xl bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center mx-auto mb-4 shadow-soft-sm">
@@ -240,20 +240,27 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           )}
         </div>
 
-        {/* Action Button */}
+        {/* Action Button: In-App Video Call */}
         <motion.button
           whileTap={{ scale: 0.98 }}
           disabled={!canJoin}
           onClick={() => onJoin(false)}
-          className={`w-full py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-soft-md transition-all min-h-[48px] ${
+          className={`w-full py-3.5 px-6 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 shadow-soft-md transition-all min-h-[52px] ${
             canJoin
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 animate-pulse'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/25'
               : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
           }`}
         >
-          <Video className="w-5 h-5" />
-          <span>{canJoin ? 'Masuk Sesi Konseling Sekarang' : 'Menunggu Jadwal Sesi'}</span>
-          {canJoin && <ArrowRight className="w-4 h-4" />}
+          <div className="flex items-center gap-2">
+            <Video className="w-5 h-5" />
+            <span>{canJoin ? 'Masuk Video Konseling (Di Dalam Aplikasi Ruang BK)' : 'Menunggu Jadwal Sesi'}</span>
+            {canJoin && <ArrowRight className="w-4 h-4" />}
+          </div>
+          {canJoin && (
+            <span className="text-[11px] font-normal text-emerald-100">
+              ✨ Video call langsung di layar ini tanpa perlu keluar aplikasi
+            </span>
+          )}
         </motion.button>
 
         {/* Testing Bypass Button (Active if session is outside scheduled time window) */}
@@ -265,27 +272,37 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
             className="mt-3 w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors shadow-soft-xs"
           >
             <Zap className="w-3.5 h-3.5 text-teal-600 fill-teal-600" />
-            <span>⚡ Masuk Sekarang (Bypass Jadwal untuk Testing)</span>
+            <span>⚡ Masuk di Dalam Ruang BK Sekarang (Bypass Jadwal)</span>
           </motion.button>
         )}
 
-        {/* Official Zoom Meeting URL Link (if generated) */}
+        {/* Official Zoom Meeting URL Link (Alternative / Backup) */}
         {session.meeting_url && (
-          <div className="mt-4 pt-3.5 border-t border-slate-100 text-center space-y-1.5">
-            <span className="text-[11px] text-slate-500 font-medium block">
-              Tersedia juga tautan resmi Zoom Meeting:
-            </span>
+          <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-slate-50 via-blue-50/40 to-slate-50 border border-blue-200/80 text-center space-y-2.5 shadow-soft-xs">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700">
+              <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+              <span>Opsi Cadangan: Buka di Aplikasi Zoom Resmi</span>
+            </div>
+            
             <a
               href={session.meeting_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-xl border border-blue-200 transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 active:scale-[0.98] transition-all shadow-soft-xs cursor-pointer"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Buka di Aplikasi Zoom Eksternal</span>
+              <Video className="w-4 h-4 text-blue-600" />
+              <span>Buka di Aplikasi Zoom HP / Laptop</span>
             </a>
-            <p className="text-[10px] text-slate-400 font-mono">
-              Meeting ID: {session.meeting_number || session.zoom_meeting_id} {session.meeting_password ? `| Passcode: ${session.meeting_password}` : ''}
+
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-slate-500 font-mono">
+              <span>Meeting ID: <strong className="text-slate-800 font-bold">{session.meeting_number || session.zoom_meeting_id || '-'}</strong></span>
+              {session.meeting_password && (
+                <span>Passcode: <strong className="text-slate-800 font-bold">{session.meeting_password}</strong></span>
+              )}
+            </div>
+
+            <p className="text-[10px] text-slate-400 leading-tight">
+              Gunakan opsi ini jika browser HP Anda membatasi akses kamera, atau jika Anda ingin menggunakan fitur aplikasi Zoom bawaan.
             </p>
           </div>
         )}

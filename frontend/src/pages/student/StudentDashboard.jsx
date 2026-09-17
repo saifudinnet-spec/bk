@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardList,
   MessageSquareHeart,
@@ -35,7 +35,14 @@ import EmptyState from '../../components/common/EmptyState';
 import PageTransition from '../../components/common/PageTransition';
 import ActionPlanSection from '../../components/counseling/ActionPlanSection';
 import SessionFeedbackModal from '../../components/counseling/SessionFeedbackModal';
-import NotificationBell from '../../components/common/NotificationBell';
+
+const MOOD_MAP = {
+  VERY_GOOD: { emoji: '😄', label: 'Sangat Baik' },
+  GOOD: { emoji: '🙂', label: 'Baik' },
+  NEUTRAL: { emoji: '😐', label: 'Biasa Saja' },
+  NOT_GOOD: { emoji: '😟', label: 'Kurang Baik' },
+  BAD: { emoji: '😔', label: 'Sedih / Lelah' },
+};
 
 export const StudentDashboard = () => {
   const { user } = useAuth();
@@ -50,6 +57,7 @@ export const StudentDashboard = () => {
   const [activeCase, setActiveCase] = useState(null);
   const [latestScreening, setLatestScreening] = useState(null);
   const [todayMood, setTodayMood] = useState(null);
+  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [actionPlans, setActionPlans] = useState([]);
   const [isStartingInstant, setIsStartingInstant] = useState(false);
   const [instantMethodType, setInstantMethodType] = useState(null);
@@ -77,9 +85,12 @@ export const StudentDashboard = () => {
       setCompletedUnreviewedSession(res.unreviewed_session || null);
       setActiveCase(res.active_case || null);
       setLatestScreening(res.latest_screening || null);
-      if (res.today_mood) {
-        setTodayMood(res.today_mood);
+      if (res.has_checked_in_today !== undefined) {
+        setHasCheckedInToday(Boolean(res.has_checked_in_today));
+      } else {
+        setHasCheckedInToday(Boolean(res.today_mood));
       }
+      setTodayMood(res.today_mood || res.latest_mood || null);
       setActionPlans(res.action_plans || []);
     } catch (e) {
       console.error('Failed to load dashboard:', e);
@@ -107,6 +118,8 @@ export const StudentDashboard = () => {
     activeCase?.sessions?.some((s) => s.note?.follow_up_required)
   );
 
+  const hasScreening = Boolean(latestScreening);
+
   const handleQuickBookFollowUp = () => {
     if (activeCase?.tutor) {
       startWithCounselor(activeCase.tutor);
@@ -131,43 +144,88 @@ export const StudentDashboard = () => {
     return <DashboardSkeleton />;
   }
 
-  const hasScreening = Boolean(latestScreening);
+  const currentMoodKey = typeof todayMood === 'string' ? todayMood : todayMood?.mood;
+  const currentMoodInfo = currentMoodKey ? MOOD_MAP[currentMoodKey] : null;
 
   return (
     <PageTransition className="space-y-6">
       {/* 0. Student Dynamic Personalized Welcome Header */}
-      <section className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-emerald-50/80 via-teal-50/60 to-indigo-50/70 border border-emerald-100 shadow-soft-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white font-black text-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20 border-2 border-white">
-            {user?.name?.charAt(0) || 'M'}
+      <section className="py-3 px-5 sm:py-3.5 sm:px-6 rounded-3xl bg-gradient-to-r from-emerald-50/80 via-teal-50/60 to-indigo-50/70 border border-emerald-100 shadow-soft-sm flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white font-black text-lg sm:text-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20 border-2 border-white">
+            {user?.name?.charAt(0) || 'K'}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                {getGreeting()}
-              </span>
-              <span className="text-[11px] font-semibold text-slate-500">
-                {user?.role === 'STUDENT' ? '🎓 Konseli Mahasiswa' : '🌐 Klien Umum'}
+              <span className="text-[10px] sm:text-[11px] font-bold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200">
+                Konseli
               </span>
             </div>
-            <h2 className="text-xl md:text-2xl font-black text-darktext tracking-tight">
-              Hai, {user?.name || 'Mahasiswa'}!
+            <h2 className="text-lg sm:text-xl font-black text-darktext tracking-tight leading-tight truncate">
+              Hai, {user?.name || 'Konseli'}!
             </h2>
-            <p className="text-xs text-mutedtext">
+            <p className="text-[11px] sm:text-xs text-mutedtext line-clamp-1 sm:line-clamp-none">
               "Setiap langkah kecil yang kamu ambil hari ini adalah kemajuan berharga untuk kesehatan mentalmu."
             </p>
           </div>
         </div>
 
-        <div className="flex items-center self-start md:self-auto shrink-0">
-          <NotificationBell />
-        </div>
+        {/* Emoticon di Kolom Nama Pojok Kanan */}
+        {currentMoodInfo ? (
+          <motion.div
+            key={currentMoodKey}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className="flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-white/95 backdrop-blur-sm border border-emerald-200/90 shadow-soft-xs shrink-0"
+          >
+            <span className="text-2xl sm:text-3xl drop-shadow-xs select-none">
+              {currentMoodInfo.emoji}
+            </span>
+            <div className="text-left hidden sm:block">
+              <div className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider leading-none">
+                Kabar Hari Ini
+              </div>
+              <div className="text-xs font-black text-emerald-950 leading-tight">
+                {currentMoodInfo.label}
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-white/80 backdrop-blur-xs border border-dashed border-emerald-300/80 shadow-soft-xs shrink-0 text-emerald-700">
+            <span className="text-2xl select-none animate-pulse">😊</span>
+            <div className="text-left hidden sm:block">
+              <div className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider leading-none">
+                Kabar Hari Ini
+              </div>
+              <div className="text-xs font-bold text-emerald-700 leading-tight">
+                Pilih Kabarmu
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
-      {/* 1. Daily Mood Check-in */}
-      <section>
-        <MoodPicker initialMood={todayMood} onSaved={(m) => setTodayMood(m)} />
-      </section>
+      {/* 1. Daily Mood Check-in (Otomatis hilang jika sudah check-in hari ini) */}
+      <AnimatePresence>
+        {!hasCheckedInToday && (
+          <motion.section
+            key="daily-mood-picker"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
+          >
+            <MoodPicker
+              initialMood={todayMood}
+              onSaved={(m) => {
+                setTodayMood(m);
+                setHasCheckedInToday(true);
+              }}
+            />
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       {/* 1.5 Quick Instant Testing Bar: Uji Chat & Zoom Sekarang */}
       <section className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 text-white shadow-soft-md border border-emerald-500/30 relative overflow-hidden">

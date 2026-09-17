@@ -347,9 +347,15 @@ class CounselingSessionController extends Controller
         }
         $minutesUntilStart = $now->lt($startTime) ? $now->diffInMinutes($startTime) : 0;
 
-        // Mask private_note for student, general user, and admin
-        if ($session->note && ($user->isStudent() || $user->isGeneral() || $user->isAdmin())) {
-            $session->note->makeHidden('private_note');
+        // If session has no meeting_url and a permanent Zoom URL is configured, attach it
+        if (empty($session->meeting_url) && strtoupper($session->method ?? 'ZOOM') === 'ZOOM') {
+            $permanentUrl = \App\Models\SystemSetting::get('zoom_permanent_meeting_url');
+            if (!empty($permanentUrl)) {
+                $session->meeting_url = $permanentUrl;
+                $session->zoom_meeting_id = $session->zoom_meeting_id ?: \App\Models\SystemSetting::get('zoom_permanent_meeting_id');
+                $session->meeting_number = $session->meeting_number ?: \App\Models\SystemSetting::get('zoom_permanent_meeting_id');
+                $session->meeting_password = $session->meeting_password ?: \App\Models\SystemSetting::get('zoom_permanent_meeting_password');
+            }
         }
 
         return response()->json([
