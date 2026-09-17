@@ -304,13 +304,27 @@ export const AdminDashboard = () => {
 
   // CMS Handlers
   const handleHeroChange = (field, value) => {
-    setLandingContent((prev) => ({
-      ...prev,
-      hero: {
+    setLandingContent((prev) => {
+      const updatedHero = {
         ...prev?.hero,
         [field]: value,
-      },
-    }));
+      };
+
+      if (field === 'image_url') {
+        const others = (prev?.hero?.banner_images || ['/images/banner3.jpg', '/images/hero_counseling.jpg'])
+          .filter((img) => img !== value && img !== '/images/banner1.jpg');
+        updatedHero.banner_images = [
+          value,
+          others[0] || '/images/banner3.jpg',
+          others[1] || '/images/hero_counseling.jpg',
+        ].filter(Boolean);
+      }
+
+      return {
+        ...prev,
+        hero: updatedHero,
+      };
+    });
   };
 
   const handleBannerFileUpload = async (e) => {
@@ -325,6 +339,9 @@ export const AdminDashboard = () => {
     setIsUploadingBanner(true);
     const formData = new FormData();
     formData.append('image', file);
+    if (landingContent?.hero?.image_url) {
+      formData.append('previous_image_url', landingContent.hero.image_url);
+    }
 
     try {
       showSuccess('Mengunggah gambar ke server...');
@@ -335,8 +352,12 @@ export const AdminDashboard = () => {
       });
 
       if (res?.url) {
-        handleHeroChange('image_url', res.url);
-        showSuccess('Foto banner berhasil diunggah & disimpan!');
+        if (res?.data) {
+          setLandingContent(res.data);
+        } else {
+          handleHeroChange('image_url', res.url);
+        }
+        showSuccess('Foto banner baru berhasil diunggah & disimpan otomatis!');
       } else {
         showError('Gagal mendapatkan URL foto dari server.');
       }
@@ -350,9 +371,34 @@ export const AdminDashboard = () => {
     }
   };
 
-  const handleClearBannerImage = () => {
-    handleHeroChange('image_url', '');
-    showSuccess('Foto banner telah dihapus. Silakan upload foto lain atau pilih preset.');
+  const handleClearBannerImage = async () => {
+    const currentImg = landingContent?.hero?.image_url;
+    if (!currentImg) {
+      handleHeroChange('image_url', '');
+      return;
+    }
+
+    if (!window.confirm('Hapus foto banner ini secara permanen dari server?')) return;
+
+    try {
+      showSuccess('Menghapus foto dari server & database...');
+      const res = await api.post('/admin/landing-content/delete-image', {
+        image_url: currentImg,
+        clean_all_custom_banners: true,
+      });
+
+      if (res?.data) {
+        setLandingContent(res.data);
+      } else {
+        handleHeroChange('image_url', '');
+      }
+
+      showSuccess('Foto banner telah berhasil dihapus permanen dari server & database!');
+    } catch (err) {
+      console.error('Delete banner error:', err);
+      handleHeroChange('image_url', '');
+      showError(err?.response?.data?.message || 'Gagal menghapus file dari server.');
+    }
   };
 
   // Services handlers
@@ -2386,7 +2432,7 @@ export const AdminDashboard = () => {
               </div>
               <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
                 <span>💡</span>
-                <span>Banner utama di halaman depan berputar otomatis (slider 3 foto) dilengkapi navigasi panah & indikator slide.</span>
+                <span>Banner utama di halaman depan berputar otomatis tiap 3 detik dengan jeda saat kursor diarahkan & indikator titik slide.</span>
               </p>
 
               {/* Preview Gambar Banner dengan Tombol X */}

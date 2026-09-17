@@ -145,6 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/landing-content', [LandingContentController::class, 'update']);
         Route::post('/landing-content/reset', [LandingContentController::class, 'resetDefault']);
         Route::post('/landing-content/upload-image', [LandingContentController::class, 'uploadImage']);
+        Route::post('/landing-content/delete-image', [LandingContentController::class, 'deleteImage']);
 
         // Nara Voice Recording Management
         Route::get('/voice-recordings', [NaraVoiceController::class, 'index']);

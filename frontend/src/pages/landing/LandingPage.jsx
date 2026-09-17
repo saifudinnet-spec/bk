@@ -229,34 +229,28 @@ export const LandingPage = () => {
   };
 
   // Dynamic Hero Banner Slider (supports 2 - 3 photos with fallback)
-  const defaultBannerImages = [
-    {
-      url: '/images/banner1.jpg',
-      alt: 'Layanan Bimbingan Konseling UINSSC',
-      title: 'Ruang Nyaman untuk Bercerita & Bertumbuh',
-    },
-    {
-      url: '/images/banner3.jpg',
-      alt: 'Lounge Konseling & Diskusi Mahasiswa',
-      title: 'Pendampingan Psikologis Profesional & Ramah',
-    },
-    {
-      url: '/images/hero_counseling.jpg',
-      alt: 'Konseling Privat Tatap Muka & Online',
-      title: 'Sesi Privat Terpercaya Tanpa Biaya',
-    },
-  ];
-
   const heroBanners = (() => {
+    const primaryUrl = hero?.image_url || '/images/banner1.jpg';
+    const fallbackList = [primaryUrl, '/images/banner3.jpg', '/images/hero_counseling.jpg'];
+
     if (hero?.banner_images && Array.isArray(hero.banner_images) && hero.banner_images.length > 0) {
-      return hero.banner_images.map((img, i) => {
-        if (typeof img === 'string') {
-          return { url: img, alt: `Banner Foto ${i + 1}` };
-        }
-        return img;
-      });
+      const urls = hero.banner_images
+        .map((img) => (typeof img === 'string' ? img : img?.url))
+        .filter(Boolean);
+
+      const otherUrls = urls.filter((u) => u !== primaryUrl);
+      const combined = [primaryUrl, ...otherUrls];
+
+      return combined.slice(0, 3).map((url, i) => ({
+        url,
+        alt: `Banner Foto ${i + 1}`,
+      }));
     }
-    return defaultBannerImages;
+
+    return fallbackList.map((url, i) => ({
+      url,
+      alt: `Banner Foto ${i + 1}`,
+    }));
   })();
 
   // Auto-play timer for hero banner slider (changes every 3 seconds, pauses on hover)

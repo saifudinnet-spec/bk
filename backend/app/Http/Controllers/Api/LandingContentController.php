@@ -351,6 +351,15 @@ class LandingContentController extends Controller
             'image' => 'required|image|mimes:jpeg,png,jpg,webp,svg,gif|max:10240', // Max 10MB
         ]);
 
+        // Clean up previous image file if specified
+        $previousImageUrl = $request->input('previous_image_url');
+        if ($previousImageUrl && str_contains($previousImageUrl, '/storage/banners/')) {
+            $prevFile = storage_path('app/public/banners/' . basename($previousImageUrl));
+            if (File::exists($prevFile)) {
+                @unlink($prevFile);
+            }
+        }
+
         $file = $request->file('image');
         $dir = storage_path('app/public/banners');
         if (!File::exists($dir)) {
@@ -362,6 +371,30 @@ class LandingContentController extends Controller
 
         $url = '/storage/banners/' . $filename;
 
+        // Auto-persist to DB immediately so the hero banner updates right away
+        $setting = SystemSetting::where('key', 'landing_content')->first();
+        $updatedData = null;
+        if ($setting && $setting->value) {
+            $data = is_array($setting->value) ? $setting->value : json_decode($setting->value, true);
+            // If old image exists in storage and is different, delete old file too
+            if (!empty($data['hero']['image_url']) && str_contains($data['hero']['image_url'], '/storage/banners/') && $data['hero']['image_url'] !== $url) {
+                $oldDiskFile = storage_path('app/public/banners/' . basename($data['hero']['image_url']));
+                if (File::exists($oldDiskFile)) {
+                    @unlink($oldDiskFile);
+                }
+            }
+
+            $data['hero']['image_url'] = $url;
+            $data['hero']['banner_images'] = [
+                $url,
+                '/images/banner3.jpg',
+                '/images/hero_counseling.jpg',
+            ];
+            $setting->value = json_encode($data);
+            $setting->save();
+            $updatedData = $data;
+        }
+
         AuditLogService::log(
             Auth::id(),
             'upload_banner_image',
@@ -370,8 +403,70 @@ class LandingContentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Gambar banner berhasil diunggah!',
+            'message' => 'Gambar banner berhasil diunggah dan disimpan!',
             'url' => $url,
+            'data' => $updatedData,
+        ]);
+    }
+
+    /**
+     * Delete banner image permanently from disk and database (Admin only).
+     */
+    public function deleteImage(Request $request): JsonResponse
+    {
+        $imageUrl = $request->input('image_url');
+        $deletedFromFileSystem = false;
+
+        // 1. Delete physical file from disk if located in storage/banners
+        if ($imageUrl && str_contains($imageUrl, '/storage/banners/')) {
+            $filename = basename($imageUrl);
+            $filePath = storage_path('app/public/banners/' . $filename);
+            if (File::exists($filePath)) {
+                @unlink($filePath);
+                $deletedFromFileSystem = true;
+            }
+        }
+
+        // 2. Also clean any other custom banner files in storage if all are cleared
+        if ($request->input('clean_all_custom_banners') === true) {
+            $customFiles = File::glob(storage_path('app/public/banners/*'));
+            foreach ($customFiles as $cf) {
+                @unlink($cf);
+            }
+        }
+
+        // 3. Immediately persist update in SystemSetting database
+        $setting = SystemSetting::where('key', 'landing_content')->first();
+        $updatedData = null;
+        if ($setting && $setting->value) {
+            $data = is_array($setting->value) ? $setting->value : json_decode($setting->value, true);
+
+            // Set image_url to empty
+            $data['hero']['image_url'] = '';
+
+            // Update banner_images to remove deleted image or reset to defaults
+            $data['hero']['banner_images'] = [
+                '/images/banner1.jpg',
+                '/images/banner3.jpg',
+                '/images/hero_counseling.jpg',
+            ];
+
+            $setting->value = json_encode($data);
+            $setting->save();
+            $updatedData = $data;
+        }
+
+        AuditLogService::log(
+            Auth::id(),
+            'delete_banner_image',
+            'Admin menghapus gambar banner secara permanen: ' . ($imageUrl ?: 'semua')
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto banner berhasil dihapus permanen dari server dan database!',
+            'deleted_from_disk' => $deletedFromFileSystem,
+            'data' => $updatedData,
         ]);
     }
 
