@@ -8,6 +8,27 @@
     <meta name="theme-color" content="#059669" />
     <meta name="description" content="Layanan Bimbingan Konseling Online modern, privat, dan terpercaya. Ruang aman untuk bertumbuh dan berkonsultasi." />
     <title>Ruang BK - Bimbingan Konseling Online</title>
+    <!-- Preload Hero Banner Instan dari Cache agar tidak ada jeda saat pertama kali dibuka -->
+    <script>
+      (function() {
+        try {
+          var c = localStorage.getItem('bk_landing_content');
+          if (c) {
+            var d = JSON.parse(c);
+            var item = d.data || d;
+            var u = (item.hero && item.hero.image_url) || (item.hero && item.hero.banner_images && item.hero.banner_images[0]);
+            if (u && typeof u === 'string') {
+              var l = document.createElement('link');
+              l.rel = 'preload';
+              l.as = 'image';
+              l.href = u;
+              l.fetchPriority = 'high';
+              document.head.appendChild(l);
+            }
+          }
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body class="bg-[#F6F8FA] text-darktext antialiased selection:bg-emerald-100 selection:text-emerald-900">
     <div id="root"></div>

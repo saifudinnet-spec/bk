@@ -214,7 +214,7 @@ export const ArticleDetailPage = () => {
       read_time: '4 min baca',
       date: '02 Sep 2026',
       author: 'Tim Konselor UINSSC',
-      image_url: '/images/banner1.jpg',
+      image_url: '/images/banner1.webp',
       snippet: 'Rasa jenuh dan kebuntuan tugas akhir adalah respons alami otak saat mengalami kelelahan mental. Kenali teknik micro-stepping untuk mengembalikan motivasi belajar.',
       content: `Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi.
 
@@ -236,7 +236,7 @@ Penelitian psikologi pendidikan menunjukkan bahwa prokrastinasi adalah masalah r
       read_time: '3 min baca',
       date: '28 Agu 2026',
       author: 'Psikolog Dian P., M.Psi.',
-      image_url: '/images/hero_counseling.jpg',
+      image_url: '/images/banner3.webp',
       snippet: 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
       content: `Kecemasan adalah sistem alarm alami tubuh kita yang dirancang untuk menjaga kita tetap aman dan waspada. Namun ketika alarm tersebut terus berbunyi tanpa henti padahal tidak ada bahaya nyata di depan mata, kita mulai memasuki fase overthinking yang menguras energi.
 
@@ -261,7 +261,7 @@ Teknik ini memaksa otak rasional Anda kembali ke momen masa kini (*here and now*
       read_time: '5 min baca',
       date: '20 Agu 2026',
       author: 'Ahmad Fauzi, S.Psi.',
-      image_url: '/images/banner1.jpg',
+      image_url: '/images/banner1.webp',
       snippet: 'Merasa gugup sebelum konseling adalah hal yang lumrah. Ruang konseling adalah tempat yang aman tanpa penghakiman untuk membagikan cerita Anda.',
       content: `Banyak mahasiswa yang ragu berkonsultasi karena membayangkan sesi konseling itu seperti "diinterogasi" atau "dihakimi". Faktanya, konseling modern adalah ruang dialog setara yang hangat dan penuh penerimaan.
 
@@ -395,7 +395,7 @@ Jawabannya: **Tidak ada yang wajib disiapkan.** Anda tidak perlu membuat catatan
         {/* Featured Image */}
         <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-soft-sm bg-slate-100 h-64 sm:h-80 w-full relative">
           <img
-            src={currentArticle.image_url || '/images/banner1.jpg'}
+            src={currentArticle.image_url || '/images/banner1.webp'}
             alt={currentArticle.title}
             className="w-full h-full object-cover"
           />

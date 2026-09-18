@@ -115,6 +115,24 @@ export const AdminDashboard = () => {
   const [isSavingCms, setIsSavingCms] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
+  // CMS Submenu Navigation State
+  const [cmsSubTab, setCmsSubTab] = useState(() => searchParams.get('sub') || 'hero');
+
+  useEffect(() => {
+    const subParam = searchParams.get('sub');
+    if (subParam && subParam !== cmsSubTab) {
+      setCmsSubTab(subParam);
+    }
+  }, [searchParams]);
+
+  const handleSelectCmsSubTab = (subId) => {
+    setCmsSubTab(subId);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('tab', 'cms');
+    newParams.set('sub', subId);
+    setSearchParams(newParams, { replace: true });
+  };
+
   // Article Manager State (WordPress Sederhana)
   const [editingArticle, setEditingArticle] = useState(null);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
@@ -441,53 +459,6 @@ export const AdminDashboard = () => {
       services: {
         ...prev?.services,
         items: prev?.services?.items?.filter((_, i) => i !== index),
-      },
-    }));
-  };
-
-  // Articles handlers
-  const handleArticleChange = (index, field, value) => {
-    setLandingContent((prev) => {
-      const items = [...(prev?.articles?.items || [])];
-      items[index][field] = value;
-      return {
-        ...prev,
-        articles: {
-          ...prev?.articles,
-          items,
-        },
-      };
-    });
-  };
-
-  const handleAddArticle = () => {
-    setLandingContent((prev) => ({
-      ...prev,
-      articles: {
-        ...prev?.articles,
-        items: [
-          ...(prev?.articles?.items || []),
-          {
-            id: Date.now(),
-            title: 'Judul Artikel Baru',
-            category: 'Kesehatan Mental',
-            read_time: '3 min baca',
-            date: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
-            author: 'Konselor UINSSC',
-            snippet: 'Ringkasan singkat artikel yang menarik perhatian pembaca...',
-            content: 'Isi lengkap artikel edukasi psikologi kampus...',
-          },
-        ],
-      },
-    }));
-  };
-
-  const handleRemoveArticle = (index) => {
-    setLandingContent((prev) => ({
-      ...prev,
-      articles: {
-        ...prev?.articles,
-        items: prev?.articles?.items?.filter((_, i) => i !== index),
       },
     }));
   };
@@ -841,85 +812,6 @@ export const AdminDashboard = () => {
 
   const stats = data?.stats || {};
 
-  const getSectionInfo = (tab) => {
-    switch (tab) {
-      case 'overview':
-        return {
-          badge: 'Dashboard Utama',
-          title: 'Ringkasan & Analitik Operasional',
-          desc: 'Statistik real-time, antrean kasus konseling aktif, dan ringkasan aktivitas sistem.'
-        };
-      case 'users':
-        return {
-          badge: 'Manajemen Pengguna',
-          title: 'Data & Hak Akses Pengguna',
-          desc: 'Kelola akun mahasiswa, pengguna umum, konselor/tutor, dan administrator.'
-        };
-      case 'articles':
-        return {
-          badge: 'CMS Artikel',
-          title: 'Kelola Artikel & Edukasi Psikologi',
-          desc: 'Tulis, sunting, dan publikasikan materi edukasi kesehatan mental untuk mahasiswa.'
-        };
-      case 'cms':
-        return {
-          badge: 'CMS Landing Page',
-          title: 'Editor Konten Website Publik',
-          desc: 'Kustomisasi tampilan hero banner, topik bimbingan, layanan, FAQ, dan footer website.'
-        };
-      case 'web_settings':
-        return {
-          badge: 'Pengaturan Web',
-          title: 'Identitas, SEO & Kontak Website',
-          desc: 'Konfigurasi judul portal, deskripsi Google SERP, hotline WhatsApp, dan banner pengumuman atas.'
-        };
-      case 'counseling_settings':
-        return {
-          badge: 'Aplikasi BK Online',
-          title: 'Aturan & Operasional Konseling',
-          desc: 'Konfigurasi durasi konseling, batas kuota mahasiswa, alur persetujuan, dan penugasan tutor.'
-        };
-      case 'zoom_settings':
-        return {
-          badge: 'Integrasi Eksternal',
-          title: 'Integrasi Akun Zoom Meeting (Server-to-Server OAuth)',
-          desc: 'Sinkronisasi otomatis pembuatan link video call konseling ke kalender akun Zoom resmi.'
-        };
-      case 'voice':
-        return {
-          badge: 'Asisten Virtual Nara',
-          title: 'Rekaman Suara Asisten Nara 🎙️',
-          desc: 'Manajemen file rekaman suara sambutan, panduan skrining, dan afirmasi Nara.'
-        };
-      case 'crisis_settings':
-        return {
-          badge: 'Keselamatan & Darurat',
-          title: 'Deteksi Krisis & Skrining Mental',
-          desc: 'Protokol deteksi otomatis risiko tinggi dan notifikasi darurat penanganan krisis kampus.'
-        };
-      case 'audit':
-        return {
-          badge: 'Keamanan Sistem',
-          title: 'Audit Logs & Jejak Aktivitas',
-          desc: 'Riwayat aktivitas sensitif, perubahan status akun, dan rekaman akses data konseling.'
-        };
-      case 'general_settings':
-        return {
-          badge: 'Konfigurasi Sistem',
-          title: 'Pengaturan Umum & Status Server',
-          desc: 'Status environment aplikasi, database, dan pembersihan cache sistem.'
-        };
-      default:
-        return {
-          badge: 'Admin Panel',
-          title: 'Panel Administrasi BK',
-          desc: 'Tata kelola sistem bimbingan konseling dan konten web.'
-        };
-    }
-  };
-
-  const currentSection = getSectionInfo(activeTab);
-
   // User Counts by Role & Status
   const userCounts = {
     all: users.length,
@@ -968,37 +860,60 @@ export const AdminDashboard = () => {
     return true;
   });
 
+  const cmsSubMenuTabs = [
+    {
+      id: 'hero',
+      label: 'Hero & Banner',
+      icon: Sparkles,
+      badge: landingContent?.hero?.slides?.length ? `${landingContent.hero.slides.length} Banner` : null,
+      desc: 'Banner slide gambar HD, headline utama, dan kartu layanan cepat'
+    },
+    {
+      id: 'navbar',
+      label: 'Top Bar & Navigasi',
+      icon: Compass,
+      badge: landingContent?.navbar?.menu?.length ? `${landingContent.navbar.menu.length} Menu` : null,
+      desc: 'Pengumuman bar atas, identitas brand kampus, dan tautan menu utama'
+    },
+    {
+      id: 'services',
+      label: 'Layanan Bimbingan',
+      icon: HeartHandshake,
+      badge: landingContent?.services?.items?.length ? `${landingContent.services.items.length} Layanan` : null,
+      desc: 'Daftar pilihan layanan konseling online/offline bagi mahasiswa'
+    },
+    {
+      id: 'problems',
+      label: 'Topik Masalah',
+      icon: MessageSquareHeart,
+      badge: landingContent?.problems?.items?.length ? `${landingContent.problems.items.length} Topik` : null,
+      desc: 'Kategori masalah psikologis & akademik yang sering dihadapi'
+    },
+    {
+      id: 'faqs',
+      label: 'Tanya Jawab (FAQ)',
+      icon: HelpCircle,
+      badge: landingContent?.faqs?.length ? `${landingContent.faqs.length} FAQ` : null,
+      desc: 'Daftar pertanyaan dan jawaban seputar prosedur bimbingan konseling'
+    },
+    {
+      id: 'screening_cta',
+      label: 'Banner Screening CTA',
+      icon: ShieldCheck,
+      badge: null,
+      desc: 'Banner ajakan cepat untuk deteksi dini dan asesmen mandiri mahasiswa'
+    },
+    {
+      id: 'footer',
+      label: 'Footer & Kontak',
+      icon: Building2,
+      badge: landingContent?.footer?.quick_links?.length ? `${landingContent.footer.quick_links.length} Link` : null,
+      desc: 'Hotline darurat, lokasi gedung, email resmi, copyright, & link footer'
+    },
+  ];
+
   return (
     <PageTransition className="space-y-6">
-      {/* Top Section Header (All navigation is in the Left Sidebar - No top tabs) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-softborder">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider">
-              {currentSection.badge}
-            </span>
-            <h2 className="text-xl font-black text-darktext tracking-tight">
-              {currentSection.title}
-            </h2>
-          </div>
-          <p className="text-xs text-mutedtext mt-1">
-            {currentSection.desc}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={loadData}
-            disabled={isLoading}
-            className="px-3.5 py-2 rounded-2xl bg-white border border-softborder text-xs font-bold text-slate-700 hover:text-darktext hover:bg-slate-50 shadow-soft-xs flex items-center gap-2 transition-all min-h-[38px]"
-            title="Segarkan Seluruh Data"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
-            <span>Segarkan Data</span>
-          </button>
-        </div>
-      </div>
-
       {/* 1. Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
@@ -1006,15 +921,6 @@ export const AdminDashboard = () => {
           <div className="relative overflow-hidden p-6 md:p-7 rounded-3xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-950 text-white shadow-soft-md border border-emerald-900/30">
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
               <div className="space-y-2 max-w-xl">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 backdrop-blur-md flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                    <span>Control Center Ruang BK</span>
-                  </span>
-                  <span className="text-xs text-slate-300 font-mono">
-                    {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                  </span>
-                </div>
                 <h3 className="text-xl md:text-2xl font-black tracking-tight text-white">
                   Dashboard Administrasi & Operasional Kampus
                 </h3>
@@ -2114,39 +2020,57 @@ export const AdminDashboard = () => {
       {/* 3. CMS Tab: Kelola Konten Landing Page (Admin Gonta-Ganti Konten) */}
       {activeTab === 'cms' && landingContent && (
         <form onSubmit={handleSaveLandingContent} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-darktext flex items-center gap-2">
-                <LayoutTemplate className="w-5 h-5 text-emerald-600" />
-                <span>Manajemen Konten Landing Page (CMS)</span>
-              </h3>
-              <p className="text-xs text-mutedtext mt-0.5">
-                Kustomisasi teks headline, gambar banner, area bimbingan, dan pertanyaan FAQ tanpa ubah kode.
-              </p>
-            </div>
+          {/* CMS Top Header & Action Card */}
+          <div className="p-5 md:p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shadow-sm">
+                    <LayoutTemplate className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-darktext">
+                      Editor Konten Landing Page
+                    </h3>
+                  </div>
+                </div>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleResetLandingContent}
-                className="px-3 py-2 rounded-xl border border-softborder bg-white text-mutedtext hover:text-rose-600 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Default</span>
-              </button>
-              <button
-                type="submit"
-                disabled={isSavingCms}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-soft-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 min-h-[40px]"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{isSavingCms ? 'Menyimpan...' : 'Simpan Konten'}</span>
-              </button>
+              <div className="flex items-center flex-wrap gap-2">
+                <a
+                  href="/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl border border-softborder bg-gray-50 hover:bg-gray-100 text-darktext text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                  title="Buka Landing Page di Tab Baru"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-mutedtext" />
+                  <span>Lihat Landing Page</span>
+                </a>
+                <button
+                  type="submit"
+                  disabled={isSavingCms}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-soft-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 min-h-[38px]"
+                >
+                  {isSavingCms ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Simpan Konten</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Section 0: Top Bar & Menu Navigasi (CMS) */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+          {(cmsSubTab === 'navbar' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
                 <Compass className="w-4 h-4 text-emerald-600" />
@@ -2286,9 +2210,11 @@ export const AdminDashboard = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* Section 1: Hero Banner */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+          {(cmsSubTab === 'hero' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
             <h4 className="text-sm font-bold text-darktext border-b border-gray-100 pb-2 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-600" />
               <span>Bagian Utama (Hero Section)</span>
@@ -2561,9 +2487,11 @@ export const AdminDashboard = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* Section 2: Comprehensive Services Manager ("Manajemen Seluruh Layanan Konseling") */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+          {(cmsSubTab === 'services' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-2">
               <div>
                 <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
@@ -2633,9 +2561,11 @@ export const AdminDashboard = () => {
               ))}
             </div>
           </div>
+          )}
 
-          {/* Section 2: Problem Topics ("Sedang Menghadapi Masalah Apa?") */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+          {/* Section 3: Problem Topics ("Sedang Menghadapi Masalah Apa?") */}
+          {(cmsSubTab === 'problems' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-2">
               <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
                 <MessageSquareHeart className="w-4 h-4 text-emerald-600" />
@@ -2688,108 +2618,11 @@ export const AdminDashboard = () => {
               ))}
             </div>
           </div>
+          )}
 
-          {/* Section: Manajemen Artikel & Wawasan Edukasi */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-              <div>
-                <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-emerald-600" />
-                  <span>Manajemen Artikel & Edukasi ({landingContent?.articles?.items?.length || 0})</span>
-                </h4>
-                <p className="text-[11px] text-mutedtext mt-0.5">
-                  Publikasikan tips akademik, edukasi kesehatan mental, dan panduan konseling untuk mahasiswa.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddArticle}
-                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Tambah Artikel</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {landingContent?.articles?.items?.map((art, idx) => (
-                <div key={art.id || idx} className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-2.5">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Judul Artikel..."
-                      value={art.title}
-                      onChange={(e) => handleArticleChange(idx, 'title', e.target.value)}
-                      className="flex-1 h-10 px-3 rounded-xl border border-softborder bg-white text-xs font-bold text-darktext"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Kategori (misal: Tips Akademik)"
-                      value={art.category}
-                      onChange={(e) => handleArticleChange(idx, 'category', e.target.value)}
-                      className="w-full sm:w-36 h-10 px-3 rounded-xl border border-softborder bg-white text-xs font-medium text-darktext"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Waktu baca (misal: 3 min baca)"
-                      value={art.read_time}
-                      onChange={(e) => handleArticleChange(idx, 'read_time', e.target.value)}
-                      className="w-full sm:w-28 h-10 px-3 rounded-xl border border-softborder bg-white text-xs font-medium text-darktext"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveArticle(idx)}
-                      className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center hover:bg-rose-100 shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      placeholder="Penulis (misal: Tim Konselor UINSSC)"
-                      value={art.author || ''}
-                      onChange={(e) => handleArticleChange(idx, 'author', e.target.value)}
-                      className="h-9 px-3 rounded-xl border border-softborder bg-white text-xs text-darktext"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Tanggal (misal: 02 Sep 2026)"
-                      value={art.date || ''}
-                      onChange={(e) => handleArticleChange(idx, 'date', e.target.value)}
-                      className="h-9 px-3 rounded-xl border border-softborder bg-white text-xs text-darktext"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-mutedtext uppercase mb-1">Ringkasan / Snippet</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Ringkasan singkat yang memikat..."
-                      value={art.snippet || ''}
-                      onChange={(e) => handleArticleChange(idx, 'snippet', e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-softborder bg-white text-xs text-darktext"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-mutedtext uppercase mb-1">Isi Lengkap Artikel</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Tuliskan isi lengkap artikel di sini..."
-                      value={art.content || ''}
-                      onChange={(e) => handleArticleChange(idx, 'content', e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-softborder bg-white text-xs text-darktext"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 3: FAQs */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+          {/* Section 4: FAQs */}
+          {(cmsSubTab === 'faqs' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-2">
               <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
                 <HelpCircle className="w-4 h-4 text-emerald-600" />
@@ -2835,9 +2668,11 @@ export const AdminDashboard = () => {
               ))}
             </div>
           </div>
+          )}
 
-          {/* Section 4: Screening CTA Banner */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
+          {/* Section 6: Screening CTA Banner */}
+          {(cmsSubTab === 'screening_cta' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
             <h4 className="text-sm font-bold text-darktext border-b border-gray-100 pb-2">
               Banner Ajakan Screening
             </h4>
@@ -2883,9 +2718,11 @@ export const AdminDashboard = () => {
               />
             </div>
           </div>
+          )}
 
-          {/* Section: Pengaturan Footer & Kontak Resmi Kampus */}
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+          {/* Section 7: Pengaturan Footer & Kontak Resmi Kampus */}
+          {(cmsSubTab === 'footer' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-emerald-600" />
@@ -3082,18 +2919,7 @@ export const AdminDashboard = () => {
               </div>
             </div>
           </div>
-
-          {/* Bottom Save CTA */}
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="submit"
-              disabled={isSavingCms}
-              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center gap-2 transition-all min-h-[48px]"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{isSavingCms ? 'Menyimpan Perubahan...' : 'Simpan Seluruh Perubahan Landing Page'}</span>
-            </button>
-          </div>
+          )}
         </form>
       )}
 
@@ -3134,7 +2960,7 @@ export const AdminDashboard = () => {
 
       {/* 5. Web CMS & SEO Settings Tab */}
       {activeTab === 'web_settings' && (
-        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl mx-auto">
           {/* Card 1: Identitas & SEO Website */}
           <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
             <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
@@ -3387,7 +3213,7 @@ export const AdminDashboard = () => {
 
       {/* 6. BK Online App Settings Tab */}
       {(activeTab === 'counseling_settings' || activeTab === 'settings') && (
-        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl mx-auto">
           {/* Card 1: Parameter Sesi Konseling Mahasiswa */}
           <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
             <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
@@ -3589,7 +3415,7 @@ export const AdminDashboard = () => {
 
       {/* 7. Dedicated Zoom OAuth Settings Tab */}
       {activeTab === 'zoom_settings' && (
-        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl mx-auto">
           <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
               <div className="flex items-center gap-3">
@@ -3969,7 +3795,7 @@ export const AdminDashboard = () => {
 
       {/* 8. Crisis & Screening Settings Tab */}
       {activeTab === 'crisis_settings' && (
-        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl mx-auto">
           <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
             <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
               <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
@@ -4058,7 +3884,7 @@ export const AdminDashboard = () => {
 
       {/* 9. General System Settings & Health Tab */}
       {activeTab === 'general_settings' && (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-6 max-w-4xl mx-auto">
           <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
             <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
               <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">

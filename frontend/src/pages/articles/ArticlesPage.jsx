@@ -50,7 +50,7 @@ export const ArticlesPage = () => {
       read_time: '4 min baca',
       date: '02 Sep 2026',
       author: 'Tim Konselor UINSSC',
-      image_url: '/images/banner1.jpg',
+      image_url: '/images/banner1.webp',
       snippet: 'Rasa jenuh dan kebuntuan tugas akhir adalah respons alami otak saat mengalami kelelahan mental. Kenali teknik micro-stepping untuk mengembalikan motivasi belajar.',
       content: 'Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi. Kunci utamanya adalah membagi target besar menjadi langkah-langkah mikro (micro-stepping) yang hanya membutuhkan waktu 15 menit setiap sesinya.'
     },
@@ -61,7 +61,7 @@ export const ArticlesPage = () => {
       read_time: '3 min baca',
       date: '28 Agu 2026',
       author: 'Psikolog Dian P., M.Psi.',
-      image_url: '/images/hero_counseling.jpg',
+      image_url: '/images/banner3.webp',
       snippet: 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
       content: 'Rasa cemas sebelum ujian atau presentasi sidang adalah wajar dan membantu kita tetap waspada. Namun jika kekhawatiran itu terjadi terus menerus tanpa pemicu yang jelas hingga mengganggu pola tidur dan makan, saatnya berkonsultasi dengan konselor atau psikolog profesional.'
     },
@@ -72,7 +72,7 @@ export const ArticlesPage = () => {
       read_time: '5 min baca',
       date: '20 Agu 2026',
       author: 'Ahmad Fauzi, S.Psi.',
-      image_url: '/images/banner1.jpg',
+      image_url: '/images/banner1.webp',
       snippet: 'Merasa gugup sebelum konseling adalah hal yang lumrah. Ruang konseling adalah tempat yang aman tanpa penghakiman untuk membagikan cerita Anda.',
       content: 'Ruang konseling adalah zona aman tanpa penilaian. Anda tidak perlu menyusun cerita secara rapi atau runtut. Cukup sampaikan apa yang paling membebani pikiran Anda saat ini. Konselor kampus kami siap mendengarkan dan membantu Anda menemukan perspektif baru.'
     }
@@ -220,7 +220,7 @@ export const ArticlesPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
                   <div className="md:col-span-6 relative h-60 md:h-auto overflow-hidden bg-slate-100">
                     <img
-                      src={featuredArticle.image_url || '/images/banner1.jpg'}
+                      src={featuredArticle.image_url || '/images/banner1.webp'}
                       alt={featuredArticle.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -325,7 +325,7 @@ export const ArticlesPage = () => {
                       {/* Thumbnail Image */}
                       <div className="h-44 w-full relative overflow-hidden bg-slate-100">
                         <img
-                          src={art.image_url || '/images/banner1.jpg'}
+                          src={art.image_url || '/images/banner1.webp'}
                           alt={art.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />

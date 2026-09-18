@@ -22,12 +22,8 @@ class LandingContentController extends Controller
                 'tagline' => '',
                 'title' => "Ada Hal yang Sedang Membebani Pikiranmu?",
                 'subtitle' => 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
-                'image_url' => '/images/banner1.jpg',
-                'banner_images' => [
-                    '/images/banner1.jpg',
-                    '/images/banner3.jpg',
-                    '/images/hero_counseling.jpg',
-                ],
+                'image_url' => '',
+                'banner_images' => [],
                 'layout_style' => 'banner_wide',
                 'online_card_title' => 'Konseling Online via Zoom & Chat',
                 'online_card_desc' => 'Sesi privat fleksibel dari mana saja, aman dan nyaman.',
@@ -216,7 +212,7 @@ class LandingContentController extends Controller
                         'read_time' => '3 min baca',
                         'date' => '28 Agu 2026',
                         'author' => 'Psikolog Dian P., M.Psi.',
-                        'image_url' => '/images/hero_counseling.jpg',
+                        'image_url' => '/images/banner3.jpg',
                         'snippet' => 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
                         'content' => "Kecemasan adalah sistem alarm alami tubuh kita yang dirancang untuk menjaga kita tetap aman dan waspada. Namun ketika alarm tersebut terus berbunyi tanpa henti padahal tidak ada bahaya nyata di depan mata, kita mulai memasuki fase overthinking yang menguras energi.\n\n### Cemas Wajar vs Cemas Berlebihan\n* **Cemas Wajar:** Membantu kita bersiap menghadapi ujian, memotivasi kita belajar, dan mereda begitu situasi telah selesai dihadapi.\n* **Overthinking Berlebihan:** Pikiran berputar pada skenario terburuk (\"Bagaimana jika saya gagal total? Bagaimana jika semua orang menertawakan saya?\"), memicu gejala fisik seperti jantung berdebar, insomnia, dan asam lambung naik.\n\n### Pertolongan Pertama: Teknik Grounding 5-4-3-2-1\nSaat Anda merasa pikiran mulai melayang ke mana-mana, tarik napas dalam-dalam dan sebutkan di sekitar Anda:\n* **5 hal** yang bisa Anda lihat dengan mata.\n* **4 hal** yang bisa Anda raba/sentuh fisiknya.\n* **3 suara** yang bisa Anda dengar saat ini.\n* **2 aroma** yang bisa Anda cium.\n* **1 rasa** di lidah Anda atau 1 hal baik tentang diri Anda.\n\nTeknik ini memaksa otak rasional Anda kembali ke momen masa kini (*here and now*) dan menurunkan aktivitas sistem saraf simpatik."
                     ],
@@ -285,6 +281,37 @@ class LandingContentController extends Controller
             $content = json_decode($setting->value, true);
             if (is_array($content)) {
                 $base = array_replace_recursive($base, $content);
+                $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
+
+                // Ensure hero banner_images and image_url reflect the saved DB data exactly,
+                // and prune any banner files that no longer exist on disk:
+                if (isset($content['hero']['banner_images']) && is_array($content['hero']['banner_images'])) {
+                    $base['hero']['banner_images'] = array_values(array_filter(
+                        $content['hero']['banner_images'],
+                        function ($img) use ($hardcodedDefaults) {
+                            $u = is_array($img) ? ($img['url'] ?? '') : (string)$img;
+                            if (empty($u) || in_array($u, $hardcodedDefaults)) return false;
+                            if (str_starts_with($u, '/storage/banners/')) {
+                                return File::exists(storage_path('app/public/banners/' . basename($u)));
+                            }
+                            return true;
+                        }
+                    ));
+                } else {
+                    $base['hero']['banner_images'] = [];
+                }
+
+                if (isset($content['hero']['image_url'])) {
+                    $heroImg = (string) $content['hero']['image_url'];
+                    if (str_starts_with($heroImg, '/storage/banners/')) {
+                        if (!File::exists(storage_path('app/public/banners/' . basename($heroImg)))) {
+                            $heroImg = $base['hero']['banner_images'][0] ?? '';
+                        }
+                    } elseif (in_array($heroImg, $hardcodedDefaults)) {
+                        $heroImg = $base['hero']['banner_images'][0] ?? '';
+                    }
+                    $base['hero']['image_url'] = $heroImg;
+                }
                 $isCustom = true;
             }
         }
@@ -324,15 +351,44 @@ class LandingContentController extends Controller
         // Safety: If any image is sent as a large base64 string, write it to file storage to prevent MySQL max_allowed_packet error
         $this->processBase64Images($content);
 
+        // Sanitize banner_images and articles to purge hero_counseling.jpg and missing banner files
+        $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
+        if (isset($content['hero']['banner_images']) && is_array($content['hero']['banner_images'])) {
+            $content['hero']['banner_images'] = array_values(array_filter(
+                $content['hero']['banner_images'],
+                function ($img) use ($hardcodedDefaults) {
+                    $u = is_array($img) ? ($img['url'] ?? '') : (string)$img;
+                    if (empty($u) || in_array($u, $hardcodedDefaults)) return false;
+                    if (str_starts_with($u, '/storage/banners/')) {
+                        return File::exists(storage_path('app/public/banners/' . basename($u)));
+                    }
+                    return true;
+                }
+            ));
+        }
+        $heroImg = $content['hero']['image_url'] ?? '';
+        if (in_array($heroImg, $hardcodedDefaults) || (str_starts_with($heroImg, '/storage/banners/') && !File::exists(storage_path('app/public/banners/' . basename($heroImg))))) {
+            $content['hero']['image_url'] = !empty($content['hero']['banner_images']) ? $content['hero']['banner_images'][0] : '';
+        }
+        if (isset($content['articles']['items']) && is_array($content['articles']['items'])) {
+            foreach ($content['articles']['items'] as &$art) {
+                if (($art['image_url'] ?? '') === '/images/hero_counseling.jpg') {
+                    $art['image_url'] = '/images/banner3.jpg';
+                }
+            }
+        }
+
         SystemSetting::updateOrCreate(
             ['key' => 'landing_content'],
             ['value' => json_encode($content)]
         );
 
         AuditLogService::log(
-            Auth::id(),
             'update_landing_content',
-            'Konten landing page diperbarui oleh admin'
+            'landing_content',
+            null,
+            ['desc' => 'Konten landing page diperbarui oleh admin'],
+            Auth::id()
         );
 
         return response()->json([
@@ -344,6 +400,7 @@ class LandingContentController extends Controller
 
     /**
      * Upload banner or promotional image (Admin only).
+     * Automatically converts to WebP format if GD extension is available (smaller file size).
      */
     public function uploadImage(Request $request): JsonResponse
     {
@@ -351,23 +408,30 @@ class LandingContentController extends Controller
             'image' => 'required|image|mimes:jpeg,png,jpg,webp,svg,gif|max:10240', // Max 10MB
         ]);
 
-        // Clean up previous image file if specified
-        $previousImageUrl = $request->input('previous_image_url');
-        if ($previousImageUrl && str_contains($previousImageUrl, '/storage/banners/')) {
-            $prevFile = storage_path('app/public/banners/' . basename($previousImageUrl));
-            if (File::exists($prevFile)) {
-                @unlink($prevFile);
-            }
-        }
-
         $file = $request->file('image');
         $dir = storage_path('app/public/banners');
         if (!File::exists($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 
-        $filename = 'banner_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
-        $file->move($dir, $filename);
+        $uniqueSuffix = time() . '_' . bin2hex(random_bytes(4));
+        $originalExt = strtolower($file->getClientOriginalExtension());
+
+        $qualityMode = $request->input('quality_mode', 'original'); // 'original' (default HD) | 'webp_hd'
+
+        // ── Konversi ke WebP jika admin memilih mode 'webp_hd' & GD tersedia ──
+        $convertedToWebp = false;
+        if ($qualityMode === 'webp_hd' && extension_loaded('gd') && !in_array($originalExt, ['svg', 'gif', 'webp'])) {
+            $filename = 'banner_' . $uniqueSuffix . '.webp';
+            $destPath = $dir . DIRECTORY_SEPARATOR . $filename;
+            $convertedToWebp = $this->convertToWebp($file->getRealPath(), $destPath, $originalExt, 95);
+        }
+
+        // Mode 'original' (100% HD asli) atau fallback jika WebP gagal: simpan file asli tanpa kompresi
+        if (!$convertedToWebp) {
+            $filename = 'banner_' . $uniqueSuffix . '.' . $originalExt;
+            $file->move($dir, $filename);
+        }
 
         $url = '/storage/banners/' . $filename;
 
@@ -376,37 +440,119 @@ class LandingContentController extends Controller
         $updatedData = null;
         if ($setting && $setting->value) {
             $data = is_array($setting->value) ? $setting->value : json_decode($setting->value, true);
-            // If old image exists in storage and is different, delete old file too
-            if (!empty($data['hero']['image_url']) && str_contains($data['hero']['image_url'], '/storage/banners/') && $data['hero']['image_url'] !== $url) {
-                $oldDiskFile = storage_path('app/public/banners/' . basename($data['hero']['image_url']));
-                if (File::exists($oldDiskFile)) {
-                    @unlink($oldDiskFile);
+
+            $data['hero']['image_url'] = $url;
+
+            // Maintain banner_images: keep only files that physically exist on disk (avoid broken 404 slides)
+            $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
+            $existingBanners = [];
+            if (!empty($data['hero']['banner_images']) && is_array($data['hero']['banner_images'])) {
+                foreach ($data['hero']['banner_images'] as $img) {
+                    $imgUrl = is_array($img) ? ($img['url'] ?? '') : (string)$img;
+                    if ($imgUrl && !in_array($imgUrl, $hardcodedDefaults) && $imgUrl !== $url) {
+                        if (str_starts_with($imgUrl, '/storage/banners/')) {
+                            if (File::exists(storage_path('app/public/banners/' . basename($imgUrl)))) {
+                                $existingBanners[] = $imgUrl;
+                            }
+                        } else {
+                            $existingBanners[] = $imgUrl;
+                        }
+                    }
                 }
             }
 
-            $data['hero']['image_url'] = $url;
-            $data['hero']['banner_images'] = [
-                $url,
-                '/images/banner3.jpg',
-                '/images/hero_counseling.jpg',
-            ];
+            // Put the newly uploaded banner at position 0 (primary slide), followed by other existing valid slides (max 5)
+            $data['hero']['banner_images'] = array_slice(array_values(array_unique(array_merge([$url], $existingBanners))), 0, 5);
             $setting->value = json_encode($data);
             $setting->save();
             $updatedData = $data;
         }
 
         AuditLogService::log(
-            Auth::id(),
             'upload_banner_image',
-            'Admin mengunggah gambar banner baru: ' . $filename
+            'banner',
+            null,
+            ['desc' => 'Admin mengunggah gambar banner baru: ' . $filename . ($convertedToWebp ? ' (converted to WebP)' : '')],
+            Auth::id()
         );
 
         return response()->json([
             'success' => true,
-            'message' => 'Gambar banner berhasil diunggah dan disimpan!',
+            'message' => $convertedToWebp ? 'Gambar banner berhasil diunggah (WebP Ultra HD 95%)!' : 'Gambar banner berhasil diunggah (Kualitas Asli HD 100%)!',
             'url' => $url,
+            'converted_to_webp' => $convertedToWebp,
             'data' => $updatedData,
         ]);
+    }
+
+    /**
+     * Convert image to WebP format using GD library.
+     * Preserves Ultra HD quality (up to 2560px 2K QHD, quality 95) with EXIF correction.
+     * Returns true on success, false on failure (caller will use original file).
+     */
+    private function convertToWebp(string $sourcePath, string $destPath, string $ext, int $quality = 95): bool
+    {
+        try {
+            $image = match ($ext) {
+                'jpg', 'jpeg' => @imagecreatefromjpeg($sourcePath),
+                'png'         => @imagecreatefrompng($sourcePath),
+                default       => null,
+            };
+
+            if (!$image) {
+                return false;
+            }
+
+            // Correct EXIF orientation for JPEG
+            if (function_exists('exif_read_data') && in_array($ext, ['jpg', 'jpeg'])) {
+                $exif = @exif_read_data($sourcePath);
+                if (!empty($exif['Orientation'])) {
+                    switch ($exif['Orientation']) {
+                        case 8:
+                            $image = imagerotate($image, 90, 0);
+                            break;
+                        case 3:
+                            $image = imagerotate($image, 180, 0);
+                            break;
+                        case 6:
+                            $image = imagerotate($image, -90, 0);
+                            break;
+                    }
+                }
+            }
+
+            $width = imagesx($image);
+            $height = imagesy($image);
+            // Ultra-HD cap: 2560px width or 1440px height (2K QHD)
+            $maxWidth = 2560;
+            $maxHeight = 1440;
+
+            if ($width > $maxWidth || $height > $maxHeight) {
+                $ratio = min($maxWidth / $width, $maxHeight / $height);
+                $newWidth = (int) round($width * $ratio);
+                $newHeight = (int) round($height * $ratio);
+
+                $resized = imagecreatetruecolor($newWidth, $newHeight);
+                if ($ext === 'png') {
+                    imagealphablending($resized, false);
+                    imagesavealpha($resized, true);
+                }
+                imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                imagedestroy($image);
+                $image = $resized;
+            } elseif ($ext === 'png') {
+                imagepalettetotruecolor($image);
+                imagealphablending($image, true);
+                imagesavealpha($image, true);
+            }
+
+            $result = imagewebp($image, $destPath, $quality);
+            imagedestroy($image);
+
+            return $result && File::exists($destPath) && filesize($destPath) > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
@@ -427,6 +573,20 @@ class LandingContentController extends Controller
             }
         }
 
+        // Also if user explicitly targeted hero_counseling.jpg, delete it from public images as well
+        if ($imageUrl === '/images/hero_counseling.jpg' || $imageUrl === 'hero_counseling.jpg') {
+            $publicFile = public_path('images/hero_counseling.jpg');
+            if (File::exists($publicFile)) {
+                @unlink($publicFile);
+                $deletedFromFileSystem = true;
+            }
+            $frontendPublicFile = base_path('../frontend/public/images/hero_counseling.jpg');
+            if (File::exists($frontendPublicFile)) {
+                @unlink($frontendPublicFile);
+                $deletedFromFileSystem = true;
+            }
+        }
+
         // 2. Also clean any other custom banner files in storage if all are cleared
         if ($request->input('clean_all_custom_banners') === true) {
             $customFiles = File::glob(storage_path('app/public/banners/*'));
@@ -441,15 +601,45 @@ class LandingContentController extends Controller
         if ($setting && $setting->value) {
             $data = is_array($setting->value) ? $setting->value : json_decode($setting->value, true);
 
-            // Set image_url to empty
-            $data['hero']['image_url'] = '';
+            // Filter out the deleted image, hero_counseling.jpg, AND hardcoded default images from banner_images
+            // (database might have old hardcoded URLs from before this fix was applied)
+            $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
+            $currentBanners = $data['hero']['banner_images'] ?? [];
+            $newBanners = [];
+            foreach ($currentBanners as $b) {
+                $bUrl = is_array($b) ? ($b['url'] ?? '') : (string)$b;
+                if ($bUrl && $bUrl !== $imageUrl && !in_array($bUrl, $hardcodedDefaults)) {
+                    if (str_starts_with($bUrl, '/storage/banners/')) {
+                        if (File::exists(storage_path('app/public/banners/' . basename($bUrl)))) {
+                            $newBanners[] = $bUrl;
+                        }
+                    } else {
+                        $newBanners[] = $bUrl;
+                    }
+                }
+            }
 
-            // Update banner_images to remove deleted image or reset to defaults
-            $data['hero']['banner_images'] = [
-                '/images/banner1.jpg',
-                '/images/banner3.jpg',
-                '/images/hero_counseling.jpg',
-            ];
+            // Jika kosong setelah hapus, biarkan array kosong (tidak ada fallback hardcode)
+            if (empty($newBanners)) {
+                $newBanners = [];
+            }
+
+            $data['hero']['banner_images'] = array_values(array_unique($newBanners));
+
+            // Jika primary image adalah URL yang dihapus atau URL hardcode, update ke banner berikutnya (atau kosong)
+            $currentPrimary = $data['hero']['image_url'] ?? '';
+            if ($currentPrimary === $imageUrl || in_array($currentPrimary, $hardcodedDefaults)) {
+                $data['hero']['image_url'] = $newBanners[0] ?? '';
+            }
+
+            // Also clean article 2 if it was pointing to hero_counseling.jpg
+            if (isset($data['articles']['items']) && is_array($data['articles']['items'])) {
+                foreach ($data['articles']['items'] as &$art) {
+                    if (($art['image_url'] ?? '') === '/images/hero_counseling.jpg') {
+                        $art['image_url'] = '/images/banner3.jpg';
+                    }
+                }
+            }
 
             $setting->value = json_encode($data);
             $setting->save();
@@ -457,9 +647,11 @@ class LandingContentController extends Controller
         }
 
         AuditLogService::log(
-            Auth::id(),
             'delete_banner_image',
-            'Admin menghapus gambar banner secara permanen: ' . ($imageUrl ?: 'semua')
+            'banner',
+            null,
+            ['desc' => 'Admin menghapus gambar banner secara permanen: ' . ($imageUrl ?: 'semua')],
+            Auth::id()
         );
 
         return response()->json([
@@ -525,9 +717,11 @@ class LandingContentController extends Controller
         SystemSetting::where('key', 'landing_content')->delete();
 
         AuditLogService::log(
-            Auth::id(),
             'reset_landing_content',
-            'Konten landing page di-reset ke pengaturan awal oleh admin'
+            'landing_content',
+            null,
+            ['desc' => 'Konten landing page di-reset ke pengaturan awal oleh admin'],
+            Auth::id()
         );
 
         return response()->json([

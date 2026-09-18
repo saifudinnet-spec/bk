@@ -27,7 +27,8 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
 import api from '../../services/api';
 import BottomSheet from '../../components/common/BottomSheet';
@@ -167,23 +168,61 @@ export const LandingPage = () => {
   const [selectedServiceMode, setSelectedServiceMode] = useState('online'); // online | offline
   const [activeFaq, setActiveFaq] = useState(null);
   const [activeArticleModal, setActiveArticleModal] = useState(null);
-  const [content, setContent] = useState(null);
+  const CACHE_KEY = 'bk_landing_content';
+  const CACHE_TTL = 30 * 60 * 1000; // 30 menit
+
+  // Helper sinkron membaca cache agar foto hero langsung tampil di frame 0 tanpa jeda
+  const getCachedLandingData = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const data = parsed?.data || parsed;
+        if (data && typeof data === 'object') return data;
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  const initialCachedData = getCachedLandingData();
+  const [content, setContent] = useState(initialCachedData);
+  const [isLoadingContent, setIsLoadingContent] = useState(!initialCachedData);
   const [tutors, setTutors] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSliderHovered, setIsSliderHovered] = useState(false);
+  const [failedImages, setFailedImages] = useState(new Set());
   const navigate = useNavigate();
   const { startWithTopic, startWithCounselor } = useCounselingFlow();
 
   useEffect(() => {
+    // Preload hero banner segera dari cache
+    const firstUrl = initialCachedData?.hero?.image_url || initialCachedData?.hero?.banner_images?.[0];
+    if (firstUrl && typeof firstUrl === 'string') {
+      preloadImage(firstUrl);
+    }
+
     // 1. Fetch dynamic landing content from backend
     const fetchContent = async () => {
       try {
         const res = await api.get('/landing-content');
         if (res.data) {
           setContent(res.data);
+          setIsLoadingContent(false);
+          // Simpan ke cache untuk kunjungan berikutnya
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ data: res.data, ts: Date.now() }));
+          } catch (_) { /* ignore storage quota errors */ }
+          // Preload gambar pertama agar browser mulai download segera
+          const firstUrl = res.data?.hero?.image_url ||
+            res.data?.hero?.banner_images?.[0];
+          if (firstUrl && typeof firstUrl === 'string') {
+            preloadImage(firstUrl);
+          }
         }
       } catch (err) {
         console.error('Failed to load landing content:', err);
+      } finally {
+        setIsLoadingContent(false);
       }
     };
 
@@ -203,6 +242,17 @@ export const LandingPage = () => {
     fetchTutors();
   }, []);
 
+  // ── Helper: inject <link rel="preload" as="image"> agar browser download lebih awal ──
+  const preloadImage = (url) => {
+    if (!url || document.querySelector(`link[rel="preload"][href="${url}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = url;
+    link.fetchPriority = 'high';
+    document.head.appendChild(link);
+  };
+
   const handleSelectCategory = (type) => {
     setShowCategorySheet(false);
     if (type === 'student') {
@@ -216,49 +266,56 @@ export const LandingPage = () => {
     tagline: '',
     title: "Ada Hal yang Sedang Membebani Pikiranmu?",
     subtitle: 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
-    image_url: '/images/banner1.jpg',
-    banner_images: [
-      '/images/banner1.jpg',
-      '/images/banner3.jpg',
-      '/images/hero_counseling.jpg',
-    ],
+    image_url: '',
+    banner_images: [],
     online_card_title: 'Konseling Online via Zoom & Chat',
     online_card_desc: 'Sesi privat fleksibel dari mana saja, aman dan nyaman.',
     offline_card_title: 'Konseling Tatap Muka di Kampus',
     offline_card_desc: 'Pertemuan langsung di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2.',
   };
 
-  // Dynamic Hero Banner Slider (supports 2 - 3 photos with fallback)
+  // Dynamic Hero Banner Slider — hanya dari data admin, tanpa foto hardcode
   const heroBanners = (() => {
-    const primaryUrl = hero?.image_url || '/images/banner1.jpg';
-    const fallbackList = [primaryUrl, '/images/banner3.jpg', '/images/hero_counseling.jpg'];
+    const primaryUrl = hero?.image_url || '';
 
     if (hero?.banner_images && Array.isArray(hero.banner_images) && hero.banner_images.length > 0) {
       const urls = hero.banner_images
         .map((img) => (typeof img === 'string' ? img : img?.url))
-        .filter(Boolean);
+        .filter((u) => u && u !== '/images/hero_counseling.jpg' && u !== '/images/banner1.jpg' && u !== '/images/banner3.jpg' && !failedImages.has(u));
 
-      const otherUrls = urls.filter((u) => u !== primaryUrl);
-      const combined = [primaryUrl, ...otherUrls];
-
-      return combined.slice(0, 3).map((url, i) => ({
-        url,
-        alt: `Banner Foto ${i + 1}`,
-      }));
+      // Jika masih ada URL valid setelah filter hardcode, gunakan
+      if (urls.length > 0) {
+        const otherUrls = urls.filter((u) => u !== primaryUrl);
+        const combined = primaryUrl && !urls.includes(primaryUrl) && !failedImages.has(primaryUrl) ? [primaryUrl, ...otherUrls] : urls;
+        return combined.slice(0, 5).map((url, i) => ({
+          url,
+          alt: `Banner Foto ${i + 1}`,
+        }));
+      }
     }
 
-    return fallbackList.map((url, i) => ({
-      url,
-      alt: `Banner Foto ${i + 1}`,
-    }));
+    // Jika primaryUrl valid (bukan hardcode), gunakan saja
+    if (primaryUrl && primaryUrl !== '/images/banner1.jpg' && primaryUrl !== '/images/banner3.jpg' && !failedImages.has(primaryUrl)) {
+      return [{ url: primaryUrl, alt: 'Banner Foto 1' }];
+    }
+
+    // Tidak ada foto dari admin — kembalikan array kosong (tidak tampilkan banner)
+    return [];
   })();
 
-  // Auto-play timer for hero banner slider (changes every 3 seconds, pauses on hover)
+  // Reset slide jika index melebihi total banner aktif
+  useEffect(() => {
+    if (heroBanners.length > 0 && currentSlide >= heroBanners.length) {
+      setCurrentSlide(0);
+    }
+  }, [heroBanners.length, currentSlide]);
+
+  // Auto-play timer for hero banner slider (changes every 4 seconds, pauses on hover)
   useEffect(() => {
     if (isSliderHovered || heroBanners.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
-    }, 3000);
+    }, 4000);
     return () => clearInterval(timer);
   }, [isSliderHovered, heroBanners.length]);
 
@@ -270,6 +327,33 @@ export const LandingPage = () => {
   const handleNextSlide = (e) => {
     e?.stopPropagation();
     setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
+  };
+
+  // Touch swipe support for mobile
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isLeftSwipe && heroBanners.length > 1) {
+      setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
+    }
+    if (isRightSwipe && heroBanners.length > 1) {
+      setCurrentSlide((prev) => (prev === 0 ? heroBanners.length - 1 : prev - 1));
+    }
   };
 
   const trustBadges = content?.trust_badges || [
@@ -325,7 +409,7 @@ export const LandingPage = () => {
       read_time: '4 min baca',
       date: '02 Sep 2026',
       author: 'Tim Konselor UINSSC',
-      image_url: '/images/banner1.jpg',
+      image_url: '',
       snippet: 'Rasa jenuh dan kebuntuan tugas akhir adalah respons alami otak saat mengalami kelelahan mental. Kenali teknik micro-stepping untuk mengembalikan motivasi belajar.',
       content: 'Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi. Kunci utamanya adalah membagi target besar menjadi langkah-langkah mikro (micro-stepping) yang hanya membutuhkan waktu 15 menit setiap sesinya.'
     },
@@ -336,7 +420,7 @@ export const LandingPage = () => {
       read_time: '3 min baca',
       date: '28 Agu 2026',
       author: 'Psikolog Dian P., M.Psi.',
-      image_url: '/images/hero_counseling.jpg',
+      image_url: '',
       snippet: 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
       content: 'Rasa cemas sebelum ujian atau presentasi sidang adalah wajar dan membantu kita tetap waspada. Namun jika kekhawatiran itu terjadi terus menerus tanpa pemicu yang jelas hingga mengganggu pola tidur dan makan, saatnya berkonsultasi dengan konselor atau psikolog profesional.'
     },
@@ -347,7 +431,7 @@ export const LandingPage = () => {
       read_time: '5 min baca',
       date: '20 Agu 2026',
       author: 'Ahmad Fauzi, S.Psi.',
-      image_url: '/images/banner1.jpg',
+      image_url: '',
       snippet: 'Merasa gugup sebelum konseling adalah hal yang lumrah. Ruang konseling adalah tempat yang aman tanpa penghakiman untuk membagikan cerita Anda.',
       content: 'Ruang konseling adalah zona aman tanpa penilaian. Anda tidak perlu menyusun cerita secara rapi atau runtut. Cukup sampaikan apa yang paling membebani pikiran Anda saat ini. Konselor kampus kami siap mendengarkan dan membantu Anda menemukan perspektif baru.'
     }
@@ -470,35 +554,8 @@ export const LandingPage = () => {
     }
   ];
 
-  const displayTutors = tutors.length > 0 ? tutors : [
-    {
-      id: 1,
-      name: 'Dr. Ahmad Fauzi, M.Psi., Psikolog',
-      specialization: 'Kesehatan Mental, Adaptasi Kampus & Regulasi Emosi',
-      bio: 'Konselor psikologi berpengalaman mendampingi mahasiswa dalam mengelola stres akademik, overthinking, dan krisis adaptasi.',
-      photo: '/images/counselor_ahmad.jpg',
-      avatar: '/images/counselor_ahmad.jpg',
-      alumni: 'Psikolog Klinis Terlisensi',
-    },
-    {
-      id: 2,
-      name: 'Nurlina Permata, S.Pd., M.Kons.',
-      specialization: 'Bimbingan Karier, Motivasi Belajar & Perencanaan Masa Depan',
-      bio: 'Fokus pada eksplorasi potensi diri, kesiapan karier, dan mengatasi kecemasan quarter-life crisis masa depan.',
-      photo: '/images/counselor_dian.jpg',
-      avatar: '/images/counselor_dian.jpg',
-      alumni: 'Konselor Pengembangan Diri',
-    },
-    {
-      id: 3,
-      name: 'Bambang Sudarsono, M.A.',
-      specialization: 'Hubungan Sosial, Resolusi Konflik Keluarga & Pribadi',
-      bio: 'Pendekatan humanistik yang ramah, hangat, dan mengedepankan ruang aman tanpa penghakiman.',
-      photo: '/images/counselor_bambang.jpg',
-      avatar: '/images/counselor_bambang.jpg',
-      alumni: 'Konselor Interpersonal & Sosial',
-    }
-  ];
+  // Tampilkan hanya tutor dari API — tidak ada fallback data palsu
+  const displayTutors = tutors;
 
   return (
     <PageTransition className="min-h-screen bg-[#F6F8FA] flex flex-col justify-between selection:bg-emerald-200 selection:text-emerald-950 font-sans relative">
@@ -594,59 +651,103 @@ export const LandingPage = () => {
       {/* 3. Hero Section - Banner Foto Memanjang Bersih di Atas & Teks/Pilihan Layanan di Bawahnya */}
       <section className="relative overflow-hidden bg-white border-b border-emerald-100">
 
-        {/* Foto Banner Utama - Slider 2-3 Foto Melebar ke Samping */}
-        <ScrollReveal direction="none" delay={0.05} duration={0.8}>
-          <div
-            className="relative w-full h-[250px] sm:h-[340px] lg:h-[410px] overflow-hidden bg-slate-900 border-b border-emerald-100/60 group select-none"
-            onMouseEnter={() => setIsSliderHovered(true)}
-            onMouseLeave={() => setIsSliderHovered(false)}
-          >
-            {/* Foto Slides dengan Transisi Halus (Cross-fade) */}
-            {heroBanners.map((banner, index) => (
-              <div
-                key={index}
-                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                  index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-                }`}
-              >
-                <img
-                  src={banner.url}
-                  alt={banner.alt || `Banner Foto ${index + 1}`}
-                  className="w-full h-full object-cover object-center transform scale-100"
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                />
-                {/* Gradien halus untuk kontras dan estetika premium */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+        {/* Foto Banner Utama - Slider Foto Melebar ke Samping dengan Horizontal Slide Transition */}
+        <div
+          className="relative w-full h-[250px] sm:h-[340px] lg:h-[410px] overflow-hidden bg-slate-900 border-b border-emerald-100/60 group select-none"
+          onMouseEnter={() => setIsSliderHovered(true)}
+          onMouseLeave={() => setIsSliderHovered(false)}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Skeleton saat masih loading hanya jika benar-benar belum ada data banner */}
+          {isLoadingContent && !content?.hero && heroBanners.length === 0 && (
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-pulse z-10" />
+          )}
+
+          {/* Placeholder jika sudah load tapi tidak ada foto dari admin */}
+          {!isLoadingContent && heroBanners.length === 0 && (
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-[#046c4e] to-teal-900 flex items-center justify-center">
+              <div className="text-center space-y-2 opacity-30">
+                <div className="w-16 h-16 mx-auto rounded-2xl border-2 border-white/30 flex items-center justify-center">
+                  <ImageIcon className="w-8 h-8 text-white" />
+                </div>
+                <p className="text-white/60 text-xs font-medium">Foto banner belum diatur di Admin</p>
               </div>
-            ))}
-
-            {/* Indikator Titik Paginasi di Bawah Tengah */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20 bg-black/35 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-md">
-              {heroBanners.map((_, dotIdx) => (
-                <button
-                  key={dotIdx}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentSlide(dotIdx);
-                  }}
-                  className={`transition-all duration-300 rounded-full cursor-pointer ${
-                    dotIdx === currentSlide
-                      ? 'w-7 h-2 bg-emerald-400 shadow-sm'
-                      : 'w-2 h-2 bg-white/60 hover:bg-white'
-                  }`}
-                  aria-label={`Pindah ke foto ${dotIdx + 1}`}
-                />
-              ))}
             </div>
+          )}
 
-            {/* Badge resmi mengambang di pojok kanan bawah foto */}
+          {/* Carousel Slide Track dengan Horisontal Slide Transition yang Sangat Mulus */}
+          {heroBanners.length > 0 && (
+            <div
+              className="flex w-full h-full transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] will-change-transform"
+              style={{
+                transform: `translateX(-${currentSlide * 100}%)`,
+              }}
+            >
+              {heroBanners.map((banner, index) => {
+                const isActive = index === currentSlide;
+                return (
+                  <div
+                    key={banner.url || index}
+                    className="w-full h-full shrink-0 relative overflow-hidden"
+                  >
+                    <img
+                      src={banner.url}
+                      alt={banner.alt || `Banner Foto ${index + 1}`}
+                      className={`w-full h-full object-cover object-center transition-transform duration-1000 ease-out ${
+                        isActive ? 'scale-100' : 'scale-105'
+                      }`}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      fetchPriority={index === 0 ? 'high' : 'low'}
+                      decoding={index === 0 ? 'sync' : 'async'}
+                      onError={() => {
+                        setFailedImages((prev) => {
+                          const next = new Set(prev);
+                          next.add(banner.url);
+                          return next;
+                        });
+                      }}
+                    />
+                    {/* Gradien halus untuk kontras dan estetika premium */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none" />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Tombol Navigasi Panah Kiri & Kanan (Muncul saat hover di desktop / responsif) */}
+          {heroBanners.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrevSlide}
+                aria-label="Slide Sebelumnya"
+                className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/25 flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 z-20 cursor-pointer shadow-lg"
+              >
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextSlide}
+                aria-label="Slide Berikutnya"
+                className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/25 flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 z-20 cursor-pointer shadow-lg"
+              >
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </>
+          )}
+
+          {/* Badge resmi mengambang di pojok kanan bawah foto - hanya jika ada banner */}
+          {(heroBanners.length > 0 || isLoadingContent) && (
             <div className="absolute bottom-3 right-4 sm:right-8 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-emerald-200/90 shadow-soft-sm z-20">
               <ShieldCheck className="w-4 h-4 text-emerald-700" />
               <span className="text-[11px] font-bold text-darktext">Fasilitas Resmi UINSSC • 100% Bebas Biaya</span>
             </div>
-          </div>
-        </ScrollReveal>
+          )}
+        </div>
 
         {/* Konten Hero (Tagline, Judul, Deskripsi, Tombol Aksi & Pilihan Layanan) Berada Bersih di Bawah Banner */}
         <div className="max-w-6xl mx-auto px-4 sm:px-8 py-7 lg:py-10">
@@ -881,12 +982,21 @@ export const LandingPage = () => {
                       <div className="flex items-center gap-2">
                         <div className="flex -space-x-2 overflow-hidden">
                           {displayTutors.slice(0, 3).map((tutor, tIdx) => (
-                            <img
-                              key={tIdx}
-                              src={tutor.photo || tutor.avatar || (tIdx === 1 ? '/images/counselor_dian.jpg' : (tIdx === 2 ? '/images/counselor_bambang.jpg' : '/images/counselor_ahmad.jpg'))}
-                              alt={tutor.name}
-                              className="inline-block w-6 h-6 rounded-full ring-2 ring-white object-cover shadow-2xs"
-                            />
+                            tutor.photo || tutor.avatar ? (
+                              <img
+                                key={tIdx}
+                                src={tutor.photo || tutor.avatar}
+                                alt={tutor.name}
+                                className="inline-block w-6 h-6 rounded-full ring-2 ring-white object-cover shadow-2xs"
+                              />
+                            ) : (
+                              <div
+                                key={tIdx}
+                                className="inline-block w-6 h-6 rounded-full ring-2 ring-white bg-emerald-700 text-white text-[9px] font-bold flex items-center justify-center shadow-2xs"
+                              >
+                                {tutor.name?.charAt(0)?.toUpperCase() || 'K'}
+                              </div>
+                            )
                           ))}
                         </div>
                         <span className="text-[11px] font-semibold text-slate-600">
@@ -939,6 +1049,7 @@ export const LandingPage = () => {
             </div>
           </ScrollReveal>
 
+          {displayTutors.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {displayTutors.slice(0, 3).map((tutor, idx) => (
               <ScrollReveal
@@ -953,19 +1064,20 @@ export const LandingPage = () => {
                   <div>
                     {/* Photo Header */}
                     <div className="relative h-56 bg-gray-100 overflow-hidden">
-                      <img
-                        src={
-                          tutor.photo ||
-                          tutor.avatar ||
-                          ((tutor.name?.toLowerCase().includes('nurlina') || tutor.name?.toLowerCase().includes('dian') || idx === 1)
-                            ? '/images/counselor_dian.jpg'
-                            : ((tutor.name?.toLowerCase().includes('bambang') || idx === 2)
-                              ? '/images/counselor_bambang.jpg'
-                              : '/images/counselor_ahmad.jpg'))
-                        }
-                        alt={tutor.name}
-                        className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                      />
+                      {tutor.photo || tutor.avatar ? (
+                        <img
+                          src={tutor.photo || tutor.avatar}
+                          alt={tutor.name}
+                          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        /* Avatar placeholder dengan inisial jika tidak ada foto */
+                        <div className="w-full h-full bg-gradient-to-br from-emerald-800 via-[#046c4e] to-teal-700 flex items-center justify-center">
+                          <span className="text-6xl font-black text-white/80 select-none">
+                            {tutor.name?.charAt(0)?.toUpperCase() || '?'}
+                          </span>
+                        </div>
+                      )}
                       <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-200 text-[10px] font-bold text-emerald-900 shadow-sm flex items-center gap-1">
                         <ShieldCheck className="w-3 h-3 text-emerald-600" />
                         <span>Berlisensi Resmi</span>
@@ -1022,6 +1134,14 @@ export const LandingPage = () => {
               </ScrollReveal>
             ))}
           </div>
+          ) : (
+            /* Placeholder jika tidak ada konselor terdaftar di sistem */
+            <div className="text-center py-12 text-slate-400">
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-medium">Data konselor sedang disiapkan.</p>
+              <p className="text-xs mt-1">Silakan masuk ke Admin Dashboard untuk menambahkan konselor.</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1209,18 +1329,30 @@ export const LandingPage = () => {
                 className="group bg-white rounded-3xl border border-emerald-100/90 shadow-soft-xs hover:shadow-soft-md hover:border-emerald-400 transition-all flex flex-col justify-between overflow-hidden h-full"
               >
                 <div>
-                  <div className="h-44 w-full relative overflow-hidden bg-slate-100">
-                    <img
-                      src={art.image_url || '/images/banner1.jpg'}
-                      alt={art.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <span className="px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-sm text-[10px] font-bold text-emerald-900 shadow-sm border border-emerald-100">
-                        {art.category || 'Edukasi'}
-                      </span>
+                  {art.image_url ? (
+                    <div className="h-44 w-full relative overflow-hidden bg-slate-100">
+                      <img
+                        src={art.image_url}
+                        alt={art.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-sm text-[10px] font-bold text-emerald-900 shadow-sm border border-emerald-100">
+                          {art.category || 'Edukasi'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* Placeholder warna jika tidak ada gambar */
+                    <div className="h-44 w-full relative overflow-hidden bg-gradient-to-br from-emerald-900 via-[#046c4e] to-teal-800 flex items-center justify-center">
+                      <BookOpen className="w-10 h-10 text-white/20" />
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-[10px] font-bold text-white shadow-sm border border-white/20">
+                          {art.category || 'Edukasi'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="p-5 space-y-2.5">
                     <div className="flex items-center gap-2 text-[11px] text-mutedtext">

@@ -49,7 +49,7 @@ const PRESET_AVATARS = [
   { id: 'counselor_ahmad', label: 'Ahmad Fauzi (Jas Kampus)', url: '/images/counselor_ahmad.jpg' },
   { id: 'counselor_bambang', label: 'Bambang Sudarsono (Batik & Blazer)', url: '/images/counselor_bambang.jpg' },
   { id: 'nara_formal', label: 'Nara (Blazer & Hijab)', url: '/images/guidance/nara_intro.jpg' },
-  { id: 'hero_counseling', label: 'Ruang Konseling UINSSC', url: '/images/hero_counseling.jpg' },
+  { id: 'banner3', label: 'Lounge Konseling Kampus', url: '/images/banner3.jpg' },
 ];
 
 // Recommended tags for counseling expertise

@@ -50,9 +50,10 @@ export const NaraVoiceManager = () => {
   const [isVoiceConfigModalOpen, setIsVoiceConfigModalOpen] = useState(false);
   const [voiceChoice, setVoiceChoice] = useState(() => {
     try {
-      return localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
+      const saved = localStorage.getItem('bk_nara_voice_choice');
+      return saved === 'google' ? 'google' : 'browser';
     } catch {
-      return 'custom_recording';
+      return 'browser';
     }
   });
   const [voiceRate, setVoiceRate] = useState(() => {

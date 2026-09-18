@@ -17,7 +17,13 @@ import {
   Sparkles,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Compass,
+  HeartHandshake,
+  MessageSquareHeart,
+  HelpCircle,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 
@@ -38,13 +44,40 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
     return 'overview';
   })();
 
+  const currentSubTab = searchParams.get('sub') || 'hero';
+
+  const cmsSubMenuItems = [
+    { id: 'hero', label: 'Hero & Banner', icon: Sparkles },
+    { id: 'navbar', label: 'Top Bar & Navigasi', icon: Compass },
+    { id: 'services', label: 'Layanan Bimbingan', icon: HeartHandshake },
+    { id: 'problems', label: 'Topik Masalah', icon: MessageSquareHeart },
+    { id: 'faqs', label: 'Tanya Jawab (FAQ)', icon: HelpCircle },
+    { id: 'screening_cta', label: 'Banner Screening', icon: ShieldCheck },
+    { id: 'footer', label: 'Footer & Kontak', icon: Building2 },
+  ];
+
   const handleNavClick = (tabId) => {
     setIsMobileOpen(false);
+    const targetParams = { tab: tabId };
+    if (tabId === 'cms') {
+      targetParams.sub = searchParams.get('sub') || 'hero';
+    }
     // If not on /admin/dashboard, navigate there with tab query
     if (location.pathname !== '/admin/dashboard') {
-      navigate(`/admin/dashboard?tab=${tabId}`);
+      const search = new URLSearchParams(targetParams).toString();
+      navigate(`/admin/dashboard?${search}`);
     } else {
-      setSearchParams({ tab: tabId });
+      setSearchParams(targetParams);
+    }
+  };
+
+  const handleCmsSubClick = (subId, e) => {
+    e.stopPropagation();
+    setIsMobileOpen(false);
+    if (location.pathname !== '/admin/dashboard') {
+      navigate(`/admin/dashboard?tab=cms&sub=${subId}`);
+    } else {
+      setSearchParams({ tab: 'cms', sub: subId });
     }
   };
 
@@ -193,20 +226,6 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Quick External Link to Landing Page */}
-        <a
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-200 text-[11px] font-semibold text-slate-600 hover:text-emerald-800 transition-all group"
-        >
-          <span className="flex items-center gap-1.5">
-            <Globe className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
-            <span>Lihat Website Utama</span>
-          </span>
-          <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-emerald-600" />
-        </a>
       </div>
 
       {/* Navigation Groups List */}
@@ -220,43 +239,85 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavClick(item.id)}
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-all group ${
-                      isActive
-                        ? 'bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white font-bold shadow-md shadow-emerald-900/15'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
-                          isActive
-                            ? 'bg-white/20 text-white border-white/30 shadow-inner'
-                            : `${item.iconColor} group-hover:scale-105 shadow-sm`
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-xs truncate block">{item.label}</span>
-                      </div>
-                    </div>
+                const isCms = item.id === 'cms';
 
-                    {item.badge && (
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 transition-all ${
-                          isActive
-                            ? 'bg-white/25 text-white border border-white/30 shadow-sm'
-                            : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
+                return (
+                  <div key={item.id} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => handleNavClick(item.id)}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-all group ${
+                        isActive
+                          ? 'bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white font-bold shadow-md shadow-emerald-900/15'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
+                            isActive
+                              ? 'bg-white/20 text-white border-white/30 shadow-inner'
+                              : `${item.iconColor} group-hover:scale-105 shadow-sm`
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs truncate block">{item.label}</span>
+                        </div>
+                      </div>
+
+                      {isCms && isActive ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-white/80 shrink-0 ml-1.5" />
+                      ) : item.badge ? (
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 transition-all ${
+                            isActive
+                              ? 'bg-white/25 text-white border border-white/30 shadow-sm'
+                              : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </button>
+
+                    {/* Submenu directly under Editor Landing Page */}
+                    {isCms && isActive && (
+                      <div className="mt-1 ml-3.5 pl-2.5 border-l-2 border-emerald-700/30 space-y-0.5 py-0.5 animate-in fade-in duration-200">
+                        {cmsSubMenuItems.map((sub) => {
+                          const SubIcon = sub.icon;
+                          const isSubActive = currentSubTab === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={(e) => handleCmsSubClick(sub.id, e)}
+                              className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left transition-all text-xs group/sub ${
+                                isSubActive
+                                  ? 'bg-emerald-100 text-emerald-900 font-bold shadow-xs border border-emerald-200/80'
+                                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <SubIcon
+                                  className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                                    isSubActive
+                                      ? 'text-emerald-700'
+                                      : 'text-slate-400 group-hover/sub:text-slate-600'
+                                  }`}
+                                />
+                                <span className="truncate text-[11px]">{sub.label}</span>
+                              </div>
+                              {isSubActive && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mr-0.5" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>

@@ -130,48 +130,18 @@ export const findRecordedAudio = (text = '', dialogueKey = null) => {
 };
 
 /**
- * List of available Indonesian voices for Nara
+ * List of available Indonesian voices for Nara (Synthesizer Lokal Browser & Nara Google)
  */
 export const NARA_VOICES = [
   {
-    id: 'custom_recording',
-    name: 'Suara Rekaman Konselor / Sistem Bawaan',
-    badge: '⭐ Standar Sistem',
-    gender: 'Konselor',
-    color: 'emerald',
-    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-extrabold',
-    character: 'Memutar suara rekaman asli konselor/admin jika sudah diisi di database. Jika belum diisi, otomatis memutar synthesizer lokal bawaan perangkat Anda.',
-    sampleText: 'Halo! Saya Nara, asisten virtual Anda. Yuk luangkan 2-3 menit menjawab pertanyaan ini dengan santai.',
-  },
-  {
     id: 'browser',
     name: 'Synthesizer Lokal Browser',
-    badge: '💻 Bawaan Komputer',
+    badge: '⭐ Standar Default',
     gender: 'Sistem',
-    color: 'slate',
-    badgeClass: 'bg-slate-100 text-slate-700 border-slate-300',
-    character: 'Synthesizer lokal bawaan dari perangkat atau sistem operasi Anda (bisa diakses offline).',
-    sampleText: 'Ini adalah uji coba suara sintetis bawaan sistem operasi komputer Anda.',
-  },
-  {
-    id: 'gadis',
-    name: 'Nara Gadis (Neural Studio)',
-    badge: '🌟 Neural Alami',
-    gender: 'Wanita',
-    color: 'teal',
-    badgeClass: 'bg-teal-100 text-teal-800 border-teal-300',
-    character: 'Suara perempuan Indonesia neural berintonasi halus, ramah, dan sangat alami.',
-    sampleText: 'Halo! Saya Nara, asisten virtual Anda. Yuk luangkan dua menit menjawab pertanyaan ini dengan santai.',
-  },
-  {
-    id: 'siti',
-    name: 'Nara Siti (Santun & Tenang)',
-    badge: '🍃 Lembut & Santun',
-    gender: 'Wanita',
-    color: 'teal',
-    badgeClass: 'bg-teal-100 text-teal-800 border-teal-300',
-    character: 'Karakter suara yang lebih tenang, teduh, santun, dan sangat menenangkan untuk suasana rileks.',
-    sampleText: 'Tarik napas sejenak ya. Ceritamu aman dan dijamin kerahasiaannya bersama konselor.',
+    color: 'emerald',
+    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-extrabold',
+    character: 'Synthesizer lokal bawaan dari browser atau sistem operasi perangkat Anda (lancar, responsif, dan bekerja langsung tanpa dependensi jaringan).',
+    sampleText: 'Halo! Saya Nara. Ini adalah uji coba suara synthesizer lokal bawaan browser Anda.',
   },
   {
     id: 'google',
@@ -179,9 +149,9 @@ export const NARA_VOICES = [
     badge: '⚡ Artikulasi Jelas',
     gender: 'Wanita',
     color: 'blue',
-    badgeClass: 'bg-blue-100 text-blue-800 border-blue-300',
+    badgeClass: 'bg-blue-100 text-blue-800 border-blue-300 font-bold',
     character: 'Suara jernih khas Google berbahasa Indonesia dengan artikulasi tegas dan tempo teratur.',
-    sampleText: 'Yuk pilih salah satu jawaban yang paling mewakili situasimu saat ini.',
+    sampleText: 'Halo! Saya Nara, asisten virtual Anda. Yuk luangkan 2-3 menit menjawab pertanyaan ini dengan santai.',
   },
 ];
 
@@ -335,58 +305,16 @@ export const speakNaraVoice = (
     return false;
   }
 
-  const selectedVoice = voiceId || localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
+  const selectedVoice = voiceId || localStorage.getItem('bk_nara_voice_choice') || 'browser';
   const selectedRate = rate || localStorage.getItem('bk_nara_voice_rate') || '+0%';
 
-  // 1. Default Mode: Admin Recorded Audio -> Fallback to Local Browser Synthesizer!
-  if (selectedVoice === 'custom_recording') {
-    const recordedAudio = findRecordedAudio(cleanText, dialogueKey);
-    if (recordedAudio && recordedAudio.audio_url) {
-      try {
-        const audio = new Audio(recordedAudio.audio_url);
-        currentAudioInstance = audio;
-
-        audio.onplay = () => {
-          if (onStart) onStart();
-        };
-
-        audio.onended = () => {
-          currentAudioInstance = null;
-          if (onEnd) onEnd();
-        };
-
-        audio.onerror = (e) => {
-          console.warn('Recorded audio playback error, falling back to local browser synthesizer:', e);
-          currentAudioInstance = null;
-          speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
-        };
-
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn('Audio play interrupted:', err);
-            currentAudioInstance = null;
-            if (onEnd) onEnd();
-          });
-        }
-
-        return true;
-      } catch (err) {
-        console.warn('Error playing recorded audio:', err);
-      }
-    }
-
-    // Default Fallback when not yet recorded by admin: Synthesizer lokal bawaan dari perangkat / sistem!
-    return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
+  // 1. Nara Google (Jernih & Lancar)
+  if (selectedVoice === 'google') {
+    return speakWithNeuralTts(cleanText, 'google', selectedRate, { onStart, onEnd, onError });
   }
 
-  // 2. Local Browser Synthesizer explicitly chosen
-  if (selectedVoice === 'browser') {
-    return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
-  }
-
-  // 3. Chosen Neural Voice (gadis, siti, google)
-  return speakWithNeuralTts(cleanText, selectedVoice, selectedRate, { onStart, onEnd, onError });
+  // 2. Default: Synthesizer Lokal Browser (Bawaan Perangkat)
+  return speakWithBrowserVoice(cleanText, { onStart, onEnd, onError });
 };
 
 /**
@@ -608,12 +536,13 @@ export const VirtualGuide = ({
   // Custom Recordings Cache state
   const [hasRecordingsCount, setHasRecordingsCount] = useState(0);
 
-  // Voice Settings State (Default: 'custom_recording' with local browser synth fallback)
+  // Voice Settings State (Default: 'browser' Synthesizer Lokal Browser)
   const [voiceChoice, setVoiceChoice] = useState(() => {
     try {
-      return localStorage.getItem('bk_nara_voice_choice') || 'custom_recording';
+      const saved = localStorage.getItem('bk_nara_voice_choice');
+      return saved === 'google' ? 'google' : 'browser';
     } catch {
-      return 'custom_recording';
+      return 'browser';
     }
   });
 
@@ -641,7 +570,8 @@ export const VirtualGuide = ({
   useEffect(() => {
     const handleStorageChange = () => {
       try {
-        setVoiceChoice(localStorage.getItem('bk_nara_voice_choice') || 'custom_recording');
+        const saved = localStorage.getItem('bk_nara_voice_choice');
+        setVoiceChoice(saved === 'google' ? 'google' : 'browser');
         setVoiceRate(localStorage.getItem('bk_nara_voice_rate') || '+0%');
         const auto = localStorage.getItem('bk_nara_autovoice');
         setAutoVoice(auto === null ? true : auto === 'true');
