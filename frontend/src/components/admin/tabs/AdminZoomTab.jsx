@@ -172,10 +172,7 @@ export const AdminZoomTab = ({
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-                  <span>Zoom Meeting Standby / Tetap</span>
-                  <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    Siap Pakai Kapan Saja
-                  </span>
+                  <span>Zoom Meeting Standby</span>
                 </h4>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Tautan permanen untuk uji coba langsung dan konseling darurat. Bisa dibuka langsung di web atau app Zoom.
