@@ -266,18 +266,7 @@ export const AdminZoomTab = ({
               <Monitor className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-black text-slate-900">1. Konfigurasi Zoom Meeting SDK (Video di Web)</h3>
-                <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Gratis
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
-                  Frontend Web
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Kredensial ini digunakan agar video Zoom tampil langsung di halaman web Ruang BK tanpa aplikasi Zoom eksternal.
-              </p>
+              <h3 className="text-sm font-black text-slate-900">1. Konfigurasi Zoom Meeting SDK (Video di Web)</h3>
             </div>
           </div>
 
