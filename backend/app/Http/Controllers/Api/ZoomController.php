@@ -104,4 +104,16 @@ class ZoomController extends Controller
             'server_time' => microtime(true),
         ])->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
+
+    /**
+     * Clear WebRTC signaling cache for a session (called on new video session start)
+     */
+    public function clearSignals(Request $request)
+    {
+        $sessionId = (string)$request->input('session_id');
+        if ($sessionId) {
+            Cache::forget("zoom_signals_{$sessionId}");
+        }
+        return response()->json(['status' => 'cleared']);
+    }
 }

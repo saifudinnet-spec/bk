@@ -114,3 +114,20 @@ button, a, input, select, textarea {
   animation-play-state: paused;
 }
 
+/* Fullscreen styling for Zoom Counseling Session */
+:fullscreen,
+::backdrop {
+  background-color: #020617 !important;
+}
+
+[data-zoom-fullscreen="true"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background-color: #020617 !important;
+  padding: 6px !important;
+  margin: 0 !important;
+}
+

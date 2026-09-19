@@ -23,7 +23,7 @@ import api from '../../services/api';
 import Modal from '../common/Modal';
 import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
 
-export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTutor = false }) => {
+export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, onSwitchToLiveSDK, isTutor = false }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -65,6 +65,8 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
   const animFrameIdRef = useRef(null);
   const processedSignalIdsRef = useRef(new Set());
   const signalingPollingRef = useRef(null);
+  // Buffer for ICE candidates that arrive before remoteDescription is set
+  const iceCandidateBufferRef = useRef([]);
 
   const handleCopyLink = () => {
     try {
@@ -299,14 +301,26 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
   };
 
   useEffect(() => {
-    // 1. Setup WebRTC PeerConnection FIRST so tracks can be attached immediately
+    // Reset ICE buffer on new session
+    iceCandidateBufferRef.current = [];
+
+    // 1. Setup WebRTC PeerConnection
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
       ],
     });
     peerConnectionRef.current = pc;
+
+    // Log ICE connection state changes for debugging
+    pc.oniceconnectionstatechange = () => {
+      console.log('[WebRTC] ICE state:', pc.iceConnectionState, '| signaling:', pc.signalingState);
+    };
+    pc.onsignalingstatechange = () => {
+      console.log('[WebRTC] Signaling state changed:', pc.signalingState);
+    };
 
     // Helper to ensure current local stream tracks are attached to pc
     const attachLocalTracks = () => {
@@ -317,6 +331,20 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
             pc.addTrack(track, streamRef.current);
           }
         });
+      }
+    };
+
+    // Drain the ICE candidate buffer once remoteDescription is set
+    const drainIceCandidateBuffer = async () => {
+      if (!pc.remoteDescription) return;
+      const buf = iceCandidateBufferRef.current.splice(0);
+      for (const candidate of buf) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log('[WebRTC] Drained buffered ICE candidate');
+        } catch (e) {
+          console.warn('[WebRTC] Failed to drain ICE candidate:', e);
+        }
       }
     };
 
@@ -336,72 +364,113 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('[WebRTC] Sending ICE candidate:', event.candidate.candidate.substring(0, 60));
         broadcastSignal({
           type: 'ICE_CANDIDATE',
           sender: myPeerId.current,
           candidate: event.candidate,
         });
+      } else {
+        console.log('[WebRTC] ICE gathering complete');
       }
     };
 
     const sendOffer = async () => {
       try {
-        if (pc.signalingState !== 'closed') {
-          attachLocalTracks();
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          broadcastSignal({
-            type: 'OFFER',
-            sender: myPeerId.current,
-            sdp: pc.localDescription,
-          });
+        // Prevent re-offering if already negotiating
+        if (pc.signalingState !== 'stable' && pc.signalingState !== 'closed') {
+          console.log('[WebRTC] Skipping offer – not stable. State:', pc.signalingState);
+          return;
         }
+        if (pc.signalingState === 'closed') return;
+        attachLocalTracks();
+        console.log('[WebRTC] Creating offer...');
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        broadcastSignal({
+          type: 'OFFER',
+          sender: myPeerId.current,
+          sdp: pc.localDescription,
+        });
+        console.log('[WebRTC] Offer sent');
       } catch (e) {
-        console.warn('WebRTC offer creation error:', e);
+        console.warn('[WebRTC] Offer creation error:', e);
       }
     };
 
     // Central incoming signal dispatcher (handles messages from either BroadcastChannel or Network Relay)
     const handleIncomingSignal = async (data) => {
       if (!data || data.sender === myPeerId.current) return;
+      console.log('[WebRTC] Received signal:', data.type, 'from', data.sender);
 
       if (data.type === 'PEER_HELLO') {
-        attachLocalTracks();
-        // When counterpart arrives, primary offerer creates offer
-        if (isTutor || pc.signalingState === 'stable') {
+        // *** FIX: Only tutor initiates offer. Student waits for offer. ***
+        // This prevents both sides from simultaneously trying to create offers
+        // which corrupts the WebRTC signaling state machine.
+        if (isTutor && pc.signalingState === 'stable') {
+          attachLocalTracks();
           await sendOffer();
+        } else if (!isTutor) {
+          // Student acknowledges and attaches tracks, ready to receive offer
+          attachLocalTracks();
+          console.log('[WebRTC] Student: ready, awaiting offer from tutor');
         }
       } else if (data.type === 'OFFER') {
         try {
-          if (pc.signalingState !== 'closed') {
-            attachLocalTracks();
-            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            broadcastSignal({
-              type: 'ANSWER',
-              sender: myPeerId.current,
-              sdp: pc.localDescription,
-            });
+          if (pc.signalingState === 'closed') return;
+          // If we're also an offerer in a collision, student always rolls back
+          if (pc.signalingState === 'have-local-offer') {
+            if (!isTutor) {
+              // Student rolls back its own offer to accept tutor's
+              await pc.setLocalDescription({ type: 'rollback' });
+            } else {
+              // Tutor ignores student's duplicate offer attempt
+              console.log('[WebRTC] Tutor ignoring incoming offer (glare), already offered');
+              return;
+            }
           }
+          attachLocalTracks();
+          console.log('[WebRTC] Setting remote description (offer)...');
+          await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          await drainIceCandidateBuffer();
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          broadcastSignal({
+            type: 'ANSWER',
+            sender: myPeerId.current,
+            sdp: pc.localDescription,
+          });
+          console.log('[WebRTC] Answer sent');
         } catch (e) {
-          console.warn('WebRTC offer handling error:', e);
+          console.warn('[WebRTC] Offer handling error:', e);
         }
       } else if (data.type === 'ANSWER') {
         try {
           if (pc.signalingState === 'have-local-offer') {
+            console.log('[WebRTC] Setting remote description (answer)...');
             await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            await drainIceCandidateBuffer();
+            console.log('[WebRTC] Answer applied, ICE buffer drained');
+          } else {
+            console.warn('[WebRTC] Received ANSWER in unexpected state:', pc.signalingState);
           }
         } catch (e) {
-          console.warn('WebRTC answer handling error:', e);
+          console.warn('[WebRTC] Answer handling error:', e);
         }
       } else if (data.type === 'ICE_CANDIDATE') {
         try {
-          if (data.candidate && pc.remoteDescription) {
+          if (!data.candidate) return;
+          if (pc.remoteDescription) {
+            // remoteDescription already set → apply immediately
             await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            console.log('[WebRTC] ICE candidate applied immediately');
+          } else {
+            // *** FIX: Buffer the candidate instead of dropping it ***
+            iceCandidateBufferRef.current.push(data.candidate);
+            console.log('[WebRTC] ICE candidate buffered (no remoteDesc yet). Buffer size:', iceCandidateBufferRef.current.length);
           }
         } catch (e) {
-          console.warn('WebRTC ICE candidate error:', e);
+          console.warn('[WebRTC] ICE candidate error:', e);
         }
       } else if (data.type === 'CHAT_MSG') {
         setChatMessages((prev) => {
@@ -413,7 +482,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       }
     };
 
-    // 2. Inter-tab BroadcastChannel
+    // 3. Inter-tab BroadcastChannel
     if (typeof BroadcastChannel !== 'undefined') {
       const channel = new BroadcastChannel(channelName);
       broadcastChannelRef.current = channel;
@@ -422,7 +491,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
       };
     }
 
-    // 3. Network Signaling Relay Poller (Connects Laptop 1 & Laptop 2 over WiFi / LAN)
+    // 4. Network Signaling Relay Poller (Connects Laptop 1 & Laptop 2 over WiFi / LAN)
     let lastSignalTime = 0;
     const pollNetworkSignals = async () => {
       try {
@@ -439,7 +508,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
           }
         }
       } catch (e) {
-        // Silent error
+        // Silent network error
       }
     };
 
@@ -447,8 +516,14 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
     signalingPollingRef.current = setInterval(pollNetworkSignals, 800);
     pollNetworkSignals();
 
-    // Announce arrival to room
-    broadcastSignal({ type: 'PEER_HELLO', sender: myPeerId.current });
+    // Clear stale signals from previous attempts, then announce arrival
+    const sessionIdForSignal = session?.id || sessionData?.meeting_number;
+    api.delete(`/zoom/signaling?session_id=${sessionIdForSignal}`).catch(() => {});
+    // Announce arrival to room (with small delay so camera has time to initialize)
+    setTimeout(() => {
+      console.log('[WebRTC] Sending PEER_HELLO as', isTutor ? 'TUTOR' : 'STUDENT');
+      broadcastSignal({ type: 'PEER_HELLO', sender: myPeerId.current });
+    }, 1500);
 
     return () => {
       if (signalingPollingRef.current) {
@@ -581,6 +656,17 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, isTu
             >
               <Stethoscope className="w-3.5 h-3.5 text-teal-200" />
               <span className="hidden sm:inline">Data Konseli</span>
+            </button>
+          )}
+          {onSwitchToLiveSDK && (
+            <button
+              type="button"
+              onClick={onSwitchToLiveSDK}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-soft-xs cursor-pointer"
+              title="Beralih ke Live Zoom Meeting SDK Resmi"
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Ke Live Zoom SDK</span>
             </button>
           )}
           <span className="hidden lg:inline-block bg-slate-800 text-slate-300 px-3 py-1 rounded-xl text-[11px] font-mono border border-slate-700">

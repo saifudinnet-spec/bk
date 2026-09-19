@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruang BK - Zoom Meeting Web</title>
+
+  <!-- Zoom Meeting SDK Component View CSS -->
+  <link type="text/css" rel="stylesheet" href="https://source.zoom.us/3.8.5/css/bootstrap.css" />
+  <link type="text/css" rel="stylesheet" href="https://source.zoom.us/3.8.5/css/react-select.css" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      background-color: #020617;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #f8fafc;
+    }
+
+    #loading-container {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      padding: 24px;
+      text-align: center;
+      transition: opacity 0.4s ease;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(59, 130, 246, 0.2);
+      border-left-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 8px;
+    }
+
+    .status-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      max-width: 420px;
+      line-height: 1.5;
+    }
+
+    .btn-action {
+      margin-top: 18px;
+      padding: 10px 20px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-action:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #334155;
+      margin-left: 8px;
+    }
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    #meetingSDKElement {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background-color: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Video canvas styling */
+    #meetingSDKElement video,
+    #meetingSDKElement canvas {
+      border-radius: 8px;
+    }
+
+    /* Video Helper Tip Pill */
+    .video-tip {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #e2e8f0;
+      padding: 7px 16px;
+      border-radius: 9999px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      animation: fadeInDown 0.3s ease;
+      pointer-events: auto;
+      white-space: nowrap;
+    }
+    .video-tip strong {
+      color: #60a5fa;
+    }
+    .tip-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 16px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .tip-close:hover {
+      color: #fff;
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translate(-50%, -10px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading & Status Screen -->
+  <div id="loading-container">
+    <div id="spinner" class="spinner"></div>
+    <div id="status-title" class="status-title">Menghubungkan ke Ruang Zoom SDK...</div>
+    <div id="status-desc" class="status-desc">Menyiapkan koneksi audio & video terenkripsi untuk sesi konseling.</div>
+    <div id="action-buttons" style="display: none;"></div>
+  </div>
+
+  <!-- Video Activation Tip Banner -->
+  <div id="video-tip" class="video-tip" style="display: none;">
+    <span>📹 Kamera dinonaktifkan oleh Zoom. Klik <strong>Mulai Video</strong> di bilah bawah untuk menampilkan wajah Anda.</span>
+    <button type="button" onclick="document.getElementById('video-tip').style.display='none'" class="tip-close" title="Tutup">&times;</button>
+  </div>
+
+  <!-- Zoom Meeting Component Root Container -->
+  <div id="meetingSDKElement"></div>
+
+  <!-- Zoom Meeting SDK Dependencies -->
+  <script src="https://source.zoom.us/3.8.5/lib/vendor/react.min.js"></script>
+  <script src="https://source.zoom.us/3.8.5/lib/vendor/react-dom.min.js"></script>
+  <script src="https://source.zoom.us/3.8.5/lib/vendor/redux.min.js"></script>
+  <script src="https://source.zoom.us/3.8.5/lib/vendor/redux-thunk.min.js"></script>
+  <script src="https://source.zoom.us/3.8.5/lib/vendor/lodash.min.js"></script>
+  <script src="https://source.zoom.us/3.8.5/zoom-meeting-embedded-3.8.5.min.js"></script>
+
+  <script>
+    (function () {
+      const loadingContainer = document.getElementById('loading-container');
+      const spinner = document.getElementById('spinner');
+      const statusTitle = document.getElementById('status-title');
+      const statusDesc = document.getElementById('status-desc');
+      const actionButtons = document.getElementById('action-buttons');
+      const meetingSDKElement = document.getElementById('meetingSDKElement');
+      const videoTip = document.getElementById('video-tip');
+
+      function updateStatus(title, desc, isError = false, actions = null) {
+        statusTitle.textContent = title;
+        statusDesc.textContent = desc;
+        if (isError) {
+          spinner.style.display = 'none';
+          statusTitle.style.color = '#f87171';
+        }
+        if (actions) {
+          actionButtons.innerHTML = actions;
+          actionButtons.style.display = 'block';
+        }
+      }
+
+      function hideLoading() {
+        loadingContainer.style.opacity = '0';
+        setTimeout(() => {
+          loadingContainer.style.display = 'none';
+        }, 400);
+      }
+
+      function handleVideoAutoActivation() {
+        let attempts = 0;
+        let videoTurnedOn = false;
+
+        const checkAndClickVideo = () => {
+          const buttons = document.querySelectorAll('button');
+          for (const btn of buttons) {
+            const label = (btn.getAttribute('aria-label') || btn.getAttribute('title') || btn.textContent || '').toLowerCase();
+            if (label.includes('mulai video') || label.includes('start video')) {
+              try {
+                btn.click();
+                videoTurnedOn = true;
+              } catch (e) {
+                // browser user gesture policy
+              }
+              return;
+            } else if (label.includes('hentikan video') || label.includes('stop video')) {
+              videoTurnedOn = true;
+              if (videoTip) videoTip.style.display = 'none';
+              return;
+            }
+          }
+        };
+
+        // Try clicking after a slight delay
+        setTimeout(checkAndClickVideo, 1200);
+
+        const interval = setInterval(() => {
+          attempts++;
+          checkAndClickVideo();
+
+          // If still not turned on after 2 seconds, show the helpful reminder banner
+          if (attempts === 3 && !videoTurnedOn && videoTip) {
+            videoTip.style.display = 'flex';
+            setTimeout(() => {
+              if (videoTip) videoTip.style.display = 'none';
+            }, 9000);
+          }
+
+          if (videoTurnedOn || attempts >= 8) {
+            clearInterval(interval);
+          }
+        }, 1000);
+      }
+
+      // Check if Zoom SDK library loaded properly
+      if (typeof ZoomMtgEmbedded === 'undefined') {
+        updateStatus(
+          'Pustaka Zoom SDK Tidak Termuat',
+          'Tidak dapat memuat berkas Zoom Web SDK dari CDN. Pastikan koneksi internet aktif.',
+          true,
+          '<button class="btn-action" onclick="window.location.reload()">Muat Ulang</button>'
+        );
+        window.parent.postMessage({ type: 'ZOOM_SDK_LOAD_ERROR' }, '*');
+        return;
+      }
+
+      let client;
+      try {
+        client = ZoomMtgEmbedded.createClient();
+      } catch (clientErr) {
+        console.error('Failed to create Zoom SDK client:', clientErr);
+        updateStatus(
+          'Inisialisasi Zoom Gagal',
+          'Gagal membuat instance Zoom SDK: ' + (clientErr.message || clientErr),
+          true,
+          '<button class="btn-action" onclick="window.location.reload()">Muat Ulang</button>'
+        );
+        return;
+      }
+
+      // Parse parameters from query string or wait for parent message
+      function getQueryParams() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+          signature: params.get('signature') || '',
+          meetingNumber: params.get('mn') || '',
+          password: params.get('pwd') || '',
+          userName: params.get('name') || 'Peserta BK',
+          userEmail: params.get('email') || '',
+          sdkKey: params.get('sdkKey') || '',
+          directJoinUrl: params.get('url') || '',
+        };
+      }
+
+      let isJoining = false;
+
+      function joinMeeting(config) {
+        if (isJoining) return;
+        isJoining = true;
+
+        if (!config.signature || !config.meetingNumber) {
+          updateStatus(
+            'Konfigurasi Sesi Tidak Lengkap',
+            'Signature atau Meeting Number Zoom belum disediakan.',
+            true
+          );
+          return;
+        }
+
+        updateStatus(
+          'Menginisialisasi Zoom SDK...',
+          'Menyiapkan komponen video di dalam halaman web...'
+        );
+
+        // Timeout fallback: after 25s show error with options
+        const joinTimeout = setTimeout(() => {
+          if (loadingContainer.style.display !== 'none') {
+            let actionHtml = '<button class="btn-action" onclick="window.location.reload()">Coba Lagi</button>';
+            if (config.directJoinUrl) {
+              actionHtml += `<a class="btn-action btn-secondary" href="${config.directJoinUrl}" target="_blank">Buka di App Zoom</a>`;
+            }
+            actionHtml += '<button class="btn-action btn-secondary" onclick="window.parent.postMessage({type:\'SWITCH_TO_MOCK\'},\'*\')">Gunakan Mode Simulasi (WebRTC)</button>';
+            updateStatus(
+              'Koneksi Zoom SDK Timeout',
+              'Melebihi batas waktu koneksi. Anda bisa membuka di aplikasi Zoom langsung atau beralih ke Mode Simulasi.',
+              true,
+              actionHtml
+            );
+          }
+        }, 25000);
+
+        // Calculate container dimensions for full autofit
+        const rect = meetingSDKElement.getBoundingClientRect();
+        const availableW = Math.max(Math.round(rect.width || window.innerWidth || 1200), 800);
+        const availableH = Math.max(Math.round(rect.height || window.innerHeight || 600), 400);
+
+        // Deduct 130px for top tabs (~42px), bottom toolbar (~66px), and margin buffer
+        const targetWidth = availableW;
+        const targetHeight = Math.max(availableH - 130, 300);
+
+        // 1. Initialize Zoom SDK client with responsive viewSizes
+        client.init({
+          zoomAppRoot: meetingSDKElement,
+          language: 'id-ID',
+          patchJsMedia: true,
+          leaveOnPageUnload: true,
+          customize: {
+            video: {
+              isResizable: true,
+              defaultViewType: 'gallery',
+              viewSizes: {
+                default: {
+                  width: targetWidth,
+                  height: targetHeight
+                },
+                ribbon: {
+                  width: 320,
+                  height: targetHeight
+                }
+              }
+            }
+          }
+        }).then(() => {
+          // Dynamic resize listener to auto-update viewSizes
+          let resizeDebounce = null;
+          function updateZoomDimensions() {
+            try {
+              const r = meetingSDKElement.getBoundingClientRect();
+              const nw = Math.max(Math.round(r.width || window.innerWidth || 1200), 800);
+              const nh = Math.max(Math.round(r.height || window.innerHeight || 600) - 130, 300);
+              if (client && typeof client.updateVideoOptions === 'function') {
+                client.updateVideoOptions({
+                  viewSizes: {
+                    default: { width: nw, height: nh },
+                    ribbon: { width: 320, height: nh }
+                  }
+                });
+              }
+            } catch (resErr) {
+              // ignore
+            }
+          }
+
+          window.addEventListener('resize', () => {
+            clearTimeout(resizeDebounce);
+            resizeDebounce = setTimeout(updateZoomDimensions, 100);
+          });
+
+          window.addEventListener('message', (ev) => {
+            if (ev.data && ev.data.type === 'FULLSCREEN_CHANGE') {
+              setTimeout(updateZoomDimensions, 80);
+              setTimeout(updateZoomDimensions, 280);
+            }
+          });
+
+          // 2. Safe to register events AFTER init (when internal event registry is populated)
+          try {
+            client.on('user-added', (payload) => {
+              window.parent.postMessage({ type: 'ZOOM_USER_ADDED', payload }, '*');
+            });
+            client.on('user-removed', (payload) => {
+              window.parent.postMessage({ type: 'ZOOM_USER_REMOVED', payload }, '*');
+            });
+          } catch (evtErr) {
+            console.warn('Notice: event registration skipped', evtErr);
+          }
+
+          // 3. Immediately hide our custom loading screen so the Zoom SDK's own UI takes over
+          hideLoading();
+          clearTimeout(joinTimeout);
+          window.parent.postMessage({ type: 'ZOOM_INIT_SUCCESS' }, '*');
+
+          // 4. Start joining Zoom Meeting
+          return client.join({
+            sdkKey: config.sdkKey,
+            signature: config.signature,
+            meetingNumber: String(config.meetingNumber),
+            password: String(config.password || ''),
+            passWord: String(config.password || ''),
+            userName: String(config.userName || 'Peserta BK'),
+            userEmail: String(config.userEmail || ''),
+            tk: '',
+            zak: '',
+          });
+        }).then((joinResult) => {
+          console.log('Zoom joined successfully:', joinResult);
+          window.parent.postMessage({ type: 'ZOOM_JOIN_SUCCESS', payload: joinResult }, '*');
+
+          // Helper to trigger start video and show gentle tip
+          handleVideoAutoActivation();
+        }).catch((err) => {
+          clearTimeout(joinTimeout);
+          console.error('Zoom Meeting SDK error:', err);
+          const errorMsg = (err && (err.reason || err.message)) || (typeof err === 'string' ? err : 'Gagal bergabung ke sesi Zoom');
+
+          let actionHtml = '<button class="btn-action" onclick="window.location.reload()">Coba Lagi</button>';
+          if (config.directJoinUrl) {
+            actionHtml += `<a class="btn-action btn-secondary" href="${config.directJoinUrl}" target="_blank">Buka di App Zoom</a>`;
+          }
+          actionHtml += '<button class="btn-action btn-secondary" onclick="window.parent.postMessage({type:\'SWITCH_TO_MOCK\'},\'*\')">Gunakan Mode Simulasi (WebRTC)</button>';
+
+          updateStatus(
+            'Gagal Terhubung ke Zoom SDK',
+            'Keterangan: ' + errorMsg,
+            true,
+            actionHtml
+          );
+
+          // Restore loading overlay so the user sees the error message & buttons
+          loadingContainer.style.display = 'flex';
+          loadingContainer.style.opacity = '1';
+
+          window.parent.postMessage({ type: 'ZOOM_JOIN_ERROR', error: { reason: errorMsg } }, '*');
+        });
+      }
+
+      // Check URL parameters first
+      const initialParams = getQueryParams();
+      if (initialParams.signature && initialParams.meetingNumber) {
+        joinMeeting(initialParams);
+      } else {
+        // Wait for message from parent window
+        window.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'START_ZOOM' && event.data.config) {
+            joinMeeting(event.data.config);
+          }
+        });
+        window.parent.postMessage({ type: 'ZOOM_EMBED_READY' }, '*');
+      }
+    })();
+  </script>
+</body>
+</html>

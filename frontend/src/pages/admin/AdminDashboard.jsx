@@ -58,6 +58,12 @@ export const AdminDashboard = () => {
     zoom_permanent_meeting_url: '',
     zoom_permanent_meeting_id: '',
     zoom_permanent_meeting_password: '',
+    // Zoom Meeting SDK (Video Konseling Web)
+    zoom_sdk_key: '',
+    zoom_sdk_secret: '',
+    zoom_sdk_secret_masked: '',
+    zoom_has_sdk_secret: false,
+    zoom_sdk_is_configured: false,
   });
 
   // CMS Landing Content State
@@ -140,6 +146,7 @@ export const AdminDashboard = () => {
           announcement_bar_enabled: Boolean(settingsRes.announcement_bar_enabled),
           zoom_mock_mode: settingsRes.zoom_mock_mode === true || settingsRes.zoom_mock_mode === 'true',
           zoom_is_configured: Boolean(settingsRes.zoom_is_configured),
+          zoom_sdk_is_configured: Boolean(settingsRes.zoom_sdk_is_configured),
         }));
       }
       setIsLoading(false);

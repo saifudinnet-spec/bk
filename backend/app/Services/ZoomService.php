@@ -3,18 +3,24 @@
 namespace App\Services;
 
 use App\Models\CounselingSession;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Carbon\Carbon;
 
 class ZoomService
 {
+    public static function isConfigured(): bool
+    {
+        $key = SystemSetting::get('zoom_sdk_key', env('ZOOM_SDK_KEY', ''));
+        $secret = SystemSetting::get('zoom_sdk_secret', env('ZOOM_SDK_SECRET', ''));
+
+        return !empty($key) && !empty($secret);
+    }
+
     public static function isMockMode(): bool
     {
-        $mock = env('ZOOM_MOCK_MODE', 'true');
-        $key = env('ZOOM_SDK_KEY');
-        $secret = env('ZOOM_SDK_SECRET');
-
-        return filter_var($mock, FILTER_VALIDATE_BOOLEAN) || empty($key) || empty($secret);
+        $mock = SystemSetting::get('zoom_mock_mode', env('ZOOM_MOCK_MODE', 'true'));
+        return filter_var($mock, FILTER_VALIDATE_BOOLEAN) || !self::isConfigured();
     }
 
     /**
@@ -59,28 +65,50 @@ class ZoomService
             }
         }
 
-        // Determine role: 1 for tutor (host), 0 for student (attendee)
-        $role = ($session->tutor_id === $user->id || $user->isAdmin()) ? 1 : 0;
-        $meetingNumber = $session->meeting_number ?: 'BK' . $session->id . rand(1000, 9999);
-        $passWord = $session->meeting_password ?: 'bk1234';
+        $permanentId = SystemSetting::get('zoom_permanent_meeting_id', '');
+        $permanentPassword = SystemSetting::get('zoom_permanent_meeting_password', '');
+        $permanentUrl = SystemSetting::get('zoom_permanent_meeting_url', '');
+
+        // Determine meeting number: Zoom requires purely numeric digits (9-11 digits)
+        $meetingNumber = $session->meeting_number;
+        if (empty($meetingNumber) || !ctype_digit((string)$meetingNumber)) {
+            $cleanedPermanent = preg_replace('/\D/', '', $permanentId);
+            if (!empty($cleanedPermanent)) {
+                $meetingNumber = $cleanedPermanent;
+            } else {
+                $meetingNumber = '9' . str_pad((string)$session->id, 4, '0', STR_PAD_LEFT) . rand(10000, 99999);
+            }
+
+            // Sync meeting info back to session record so both peers use the exact same room
+            $session->update([
+                'meeting_number' => $meetingNumber,
+                'meeting_password' => $session->meeting_password ?: ($permanentPassword ?: 'bk1234'),
+                'meeting_url' => $session->meeting_url ?: $permanentUrl,
+            ]);
+        }
+
+        $passWord = $session->meeting_password ?: ($permanentPassword ?: 'bk1234');
+        $isUserTutor = $session->tutor_id === $user->id || $user->isAdmin();
 
         if (self::isMockMode()) {
             return [
                 'is_mock' => true,
                 'signature' => 'MOCK_ZOOM_TOKEN_' . base64_encode($user->id . '_' . $session->id . '_' . time()),
-                'meeting_number' => $meetingNumber,
-                'password' => $passWord,
-                'role' => $role,
+                'meeting_number' => (string)$meetingNumber,
+                'password' => (string)$passWord,
+                'role' => $isUserTutor ? 1 : 0,
                 'user_name' => $user->name,
                 'user_email' => $user->email,
                 'session_title' => 'Konseling Online: ' . ($session->counselingCase ? $session->counselingCase->category : 'Sesi BK'),
                 'tutor_name' => $session->tutor ? $session->tutor->name : 'Tutor BK',
                 'student_name' => $session->user ? $session->user->name : 'Peserta',
+                'direct_join_url' => $session->meeting_url ?: $permanentUrl,
+                'is_tutor' => $isUserTutor,
             ];
         }
 
-        $sdkKey = env('ZOOM_SDK_KEY');
-        $sdkSecret = env('ZOOM_SDK_SECRET');
+        $sdkKey = SystemSetting::get('zoom_sdk_key', env('ZOOM_SDK_KEY', ''));
+        $sdkSecret = SystemSetting::get('zoom_sdk_secret', env('ZOOM_SDK_SECRET', ''));
         $iat = time() - 30;
         $exp = $iat + 60 * 60 * 2; // 2 hours
 
@@ -88,8 +116,8 @@ class ZoomService
         $payload = [
             'appKey' => $sdkKey,
             'sdkKey' => $sdkKey,
-            'mn' => $meetingNumber,
-            'role' => $role,
+            'mn' => (string)$meetingNumber,
+            'role' => 0, // 0 allows both tutor and student to join reliably without requiring ZAK token
             'iat' => $iat,
             'exp' => $exp,
             'tokenExp' => $exp,
@@ -106,14 +134,16 @@ class ZoomService
             'is_mock' => false,
             'signature' => $jwt,
             'sdk_key' => $sdkKey,
-            'meeting_number' => $meetingNumber,
-            'password' => $passWord,
-            'role' => $role,
+            'meeting_number' => (string)$meetingNumber,
+            'password' => (string)$passWord,
+            'role' => 0,
             'user_name' => $user->name,
             'user_email' => $user->email,
             'session_title' => 'Konseling Online: ' . ($session->counselingCase ? $session->counselingCase->category : 'Sesi BK'),
             'tutor_name' => $session->tutor ? $session->tutor->name : 'Tutor BK',
             'student_name' => $session->user ? $session->user->name : 'Peserta',
+            'direct_join_url' => $session->meeting_url ?: $permanentUrl,
+            'is_tutor' => $isUserTutor,
         ];
     }
 

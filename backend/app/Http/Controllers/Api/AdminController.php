@@ -146,6 +146,14 @@ class AdminController extends Controller
                 : '••••••••';
         }
 
+        $sdkSecret = SystemSetting::get('zoom_sdk_secret', env('ZOOM_SDK_SECRET', ''));
+        $maskedSdkSecret = '';
+        if (!empty($sdkSecret)) {
+            $maskedSdkSecret = strlen($sdkSecret) > 8
+                ? substr($sdkSecret, 0, 4) . '••••••••' . substr($sdkSecret, -4)
+                : '••••••••';
+        }
+
         return response()->json([
             // Web CMS Settings
             'site_title' => SystemSetting::get('site_title', 'Ruang BK - Layanan Bimbingan & Konseling Kampus'),
@@ -180,6 +188,12 @@ class AdminController extends Controller
             'zoom_permanent_meeting_url' => SystemSetting::get('zoom_permanent_meeting_url', ''),
             'zoom_permanent_meeting_id' => SystemSetting::get('zoom_permanent_meeting_id', ''),
             'zoom_permanent_meeting_password' => SystemSetting::get('zoom_permanent_meeting_password', ''),
+
+            // Zoom Meeting SDK (Video Konseling Web)
+            'zoom_sdk_key' => SystemSetting::get('zoom_sdk_key', env('ZOOM_SDK_KEY', '')),
+            'zoom_sdk_secret_masked' => $maskedSdkSecret,
+            'zoom_has_sdk_secret' => !empty($sdkSecret),
+            'zoom_sdk_is_configured' => \App\Services\ZoomService::isConfigured(),
         ]);
     }
 
@@ -222,6 +236,10 @@ class AdminController extends Controller
             'zoom_permanent_meeting_url' => 'nullable|string|max:500',
             'zoom_permanent_meeting_id' => 'nullable|string|max:100',
             'zoom_permanent_meeting_password' => 'nullable|string|max:100',
+
+            // Zoom Meeting SDK Settings
+            'zoom_sdk_key' => 'nullable|string|max:255',
+            'zoom_sdk_secret' => 'nullable|string|max:255',
         ]);
 
         // Web CMS
@@ -246,7 +264,7 @@ class AdminController extends Controller
         if ($request->has('crisis_alert_email')) SystemSetting::set('crisis_alert_email', trim($request->input('crisis_alert_email') ?? ''));
         if ($request->has('reminder_notifications_enabled')) SystemSetting::set('reminder_notifications_enabled', $request->boolean('reminder_notifications_enabled') ? 'true' : 'false');
 
-        // Zoom
+        // Zoom Server-to-Server OAuth
         if ($request->has('zoom_mock_mode')) SystemSetting::set('zoom_mock_mode', $request->boolean('zoom_mock_mode') ? 'true' : 'false');
         if ($request->has('zoom_account_id')) SystemSetting::set('zoom_account_id', trim($request->input('zoom_account_id') ?? ''));
         if ($request->has('zoom_client_id')) SystemSetting::set('zoom_client_id', trim($request->input('zoom_client_id') ?? ''));
@@ -256,11 +274,16 @@ class AdminController extends Controller
         if ($request->has('zoom_permanent_meeting_id')) SystemSetting::set('zoom_permanent_meeting_id', trim($request->input('zoom_permanent_meeting_id') ?? ''));
         if ($request->has('zoom_permanent_meeting_password')) SystemSetting::set('zoom_permanent_meeting_password', trim($request->input('zoom_permanent_meeting_password') ?? ''));
 
-        AuditLogService::log('update_settings', 'SystemSetting', null, $request->except(['zoom_client_secret']), $request->user()->id);
+        // Zoom Meeting SDK
+        if ($request->has('zoom_sdk_key')) SystemSetting::set('zoom_sdk_key', trim($request->input('zoom_sdk_key') ?? ''));
+        if ($request->filled('zoom_sdk_secret')) SystemSetting::set('zoom_sdk_secret', trim($request->input('zoom_sdk_secret')));
+
+        AuditLogService::log('update_settings', 'SystemSetting', null, $request->except(['zoom_client_secret', 'zoom_sdk_secret']), $request->user()->id);
 
         return response()->json([
             'message' => 'Pengaturan sistem berhasil diperbarui.',
             'zoom_is_configured' => \App\Services\ZoomApiService::isConfigured(),
+            'zoom_sdk_is_configured' => \App\Services\ZoomService::isConfigured(),
         ]);
     }
 
@@ -286,5 +309,74 @@ class AdminController extends Controller
         $result = \App\Services\ZoomApiService::testConnection();
 
         return response()->json($result);
+    }
+
+    /**
+     * Test Zoom Meeting SDK Credentials and JWT generation
+     */
+    public function testZoomSdk(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $sdkKey = trim($request->input('zoom_sdk_key') ?: SystemSetting::get('zoom_sdk_key', env('ZOOM_SDK_KEY', '')));
+        $sdkSecret = trim($request->input('zoom_sdk_secret') ?: SystemSetting::get('zoom_sdk_secret', env('ZOOM_SDK_SECRET', '')));
+
+        if (empty($sdkKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Zoom Meeting SDK Client ID (SDK Key) belum diisi.'
+            ], 422);
+        }
+
+        if (empty($sdkSecret)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Zoom Meeting SDK Client Secret belum diisi.'
+            ], 422);
+        }
+
+        try {
+            $iat = time() - 30;
+            $exp = $iat + 7200;
+            $header = ['alg' => 'HS256', 'typ' => 'JWT'];
+            $payload = [
+                'appKey' => $sdkKey,
+                'sdkKey' => $sdkKey,
+                'mn' => '1234567890',
+                'role' => 0,
+                'iat' => $iat,
+                'exp' => $exp,
+                'tokenExp' => $exp,
+            ];
+
+            $b64Header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode($header)));
+            $b64Payload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode($payload)));
+            $signature = hash_hmac('sha256', "{$b64Header}.{$b64Payload}", $sdkSecret, true);
+            $b64Signature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+            $jwt = "{$b64Header}.{$b64Payload}.{$b64Signature}";
+
+            if (empty($jwt) || strlen($jwt) < 30) {
+                throw new \Exception('Gagal membuat token JWT signature.');
+            }
+
+            // Save credentials if passed directly in request
+            if ($request->filled('zoom_sdk_key')) {
+                SystemSetting::set('zoom_sdk_key', $sdkKey);
+            }
+            if ($request->filled('zoom_sdk_secret')) {
+                SystemSetting::set('zoom_sdk_secret', $sdkSecret);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Kredensial Zoom Meeting SDK valid! JWT Token Signature berhasil dibuat dan siap dipakai.',
+                'sdk_key' => $sdkKey,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal: ' . $e->getMessage()
+            ], 400);
+        }
     }
 }

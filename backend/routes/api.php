@@ -127,6 +127,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/zoom/signature', [ZoomController::class, 'getSignature']);
     Route::post('/zoom/signaling', [ZoomController::class, 'postSignal']);
     Route::get('/zoom/signaling', [ZoomController::class, 'getSignals']);
+    Route::delete('/zoom/signaling', [ZoomController::class, 'clearSignals']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
@@ -142,6 +143,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/settings', [AdminController::class, 'getSettings']);
         Route::put('/settings', [AdminController::class, 'updateSettings']);
         Route::post('/zoom/test-connection', [AdminController::class, 'testZoomConnection']);
+        Route::post('/zoom/test-sdk', [AdminController::class, 'testZoomSdk']);
         Route::put('/landing-content', [LandingContentController::class, 'update']);
         Route::post('/landing-content/reset', [LandingContentController::class, 'resetDefault']);
         Route::post('/landing-content/upload-image', [LandingContentController::class, 'uploadImage']);

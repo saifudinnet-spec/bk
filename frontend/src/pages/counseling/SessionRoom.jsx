@@ -7,6 +7,7 @@ import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import WaitingRoom from '../../components/zoom/WaitingRoom';
 import ZoomMockView from '../../components/zoom/ZoomMockView';
+import ZoomSDKView from '../../components/zoom/ZoomSDKView';
 import CounselingChatRoom from '../../components/counseling/CounselingChatRoom';
 import OfflineSessionView from '../../components/counseling/OfflineSessionView';
 import { CardSkeleton } from '../../components/common/LoadingSkeleton';
@@ -23,6 +24,7 @@ export const SessionRoom = () => {
   const [isInMeeting, setIsInMeeting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
+  const [forceMock, setForceMock] = useState(null);
 
   // Load session information
   useEffect(() => {
@@ -44,10 +46,15 @@ export const SessionRoom = () => {
     try {
       // Obtain secure Zoom SDK signature from backend
       const res = await api.post('/zoom/signature', { session_id: id, force_test: forceTest });
-      if (res.data) {
-        setSignatureData(res.data);
+      const payload = res?.data || res;
+      if (payload) {
+        setSignatureData(payload);
         setIsInMeeting(true);
-        showSuccess('Terhubung ke ruang konseling Zoom.');
+        if (payload.is_mock) {
+          showSuccess('Terhubung ke simulasi video konseling (WebRTC).');
+        } else {
+          showSuccess('Terhubung ke ruang konseling Zoom Meeting SDK.');
+        }
       }
     } catch (err) {
       showError(err.response?.data?.message || err.message || 'Gagal memulai ruang konseling.');
@@ -58,6 +65,7 @@ export const SessionRoom = () => {
 
   const handleLeaveSession = () => {
     setIsInMeeting(false);
+    setForceMock(null);
     if (isTutor) {
       // Tutor redirected to write session summary & notes
       navigate(`/counseling/session/${id}/summary`);
@@ -128,18 +136,30 @@ export const SessionRoom = () => {
             </motion.div>
           ) : isInMeeting && signatureData ? (
             <motion.div
-              key="meeting"
+              key={(forceMock !== null ? forceMock : Boolean(signatureData?.is_mock)) ? 'meeting-mock' : 'meeting-sdk'}
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full flex-1 flex flex-col"
             >
-              <ZoomMockView
-                sessionData={signatureData}
-                session={session}
-                isTutor={isTutor}
-                onLeaveSession={handleLeaveSession}
-              />
+              {(forceMock !== null ? forceMock : Boolean(signatureData?.is_mock)) ? (
+                <ZoomMockView
+                  sessionData={signatureData}
+                  session={session}
+                  isTutor={isTutor}
+                  onLeaveSession={handleLeaveSession}
+                  onSwitchToLiveSDK={() => setForceMock(false)}
+                />
+              ) : (
+                <ZoomSDKView
+                  sessionData={signatureData}
+                  session={session}
+                  isTutor={isTutor}
+                  onLeaveSession={handleLeaveSession}
+                  onSwitchToMock={() => setForceMock(true)}
+                />
+              )}
             </motion.div>
           ) : (
             <motion.div
@@ -147,6 +167,7 @@ export const SessionRoom = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              className="w-full h-full flex flex-col justify-center"
             >
               <WaitingRoom
                 session={session}

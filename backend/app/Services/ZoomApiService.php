@@ -197,10 +197,10 @@ class ZoomApiService
                 'settings' => [
                     'host_video' => true,
                     'participant_video' => true,
-                    'waiting_room' => true,
-                    'join_before_host' => false,
+                    'waiting_room' => false,
+                    'join_before_host' => true,
                     'mute_upon_entry' => false,
-                    'approval_type' => 0, // Automatically Approve
+                    'approval_type' => 2, // 2 = No Registration Required (Crucial for Web SDK)
                     'audio' => 'both',
                     'auto_recording' => 'none',
                 ],
