@@ -133,7 +133,7 @@ export const AdminZoomTab = ({
             </div>
             <div>
               <h3 className="text-sm font-black text-slate-900">Integrasi Video Konseling Zoom</h3>
-              <p className="text-xs text-slate-500">Konfigurasi Zoom Meeting SDK (Tatap Maya di Web) & Server-to-Server OAuth (Jadwal Otomatis).</p>
+              <p className="text-xs text-slate-500">Konfigurasi Zoom Meeting SDK & Server-to-Server OAuth.</p>
             </div>
           </div>
 
