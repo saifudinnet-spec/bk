@@ -95,7 +95,7 @@ export const StudentDashboard = () => {
       setTodayMood(res.today_mood || res.latest_mood || null);
       setActionPlans(res.action_plans || []);
     } catch (e) {
-      console.error('Failed to load dashboard:', e);
+      // Silently fail — user will see empty state UI
     } finally {
       setIsLoading(false);
     }

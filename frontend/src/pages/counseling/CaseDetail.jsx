@@ -32,7 +32,7 @@ export const CaseDetail = () => {
       const res = await api.get(`/cases/${id}`);
       setCaseItem(res.data);
     } catch (err) {
-      console.error('Failed to load case:', err);
+      // Silently fail — UI will show 'case not found' state
     } finally {
       setIsLoading(false);
     }

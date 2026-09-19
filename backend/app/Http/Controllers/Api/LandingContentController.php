@@ -13,221 +13,27 @@ use Illuminate\Support\Facades\File;
 class LandingContentController extends Controller
 {
     /**
-     * Get default landing page content (Bicarakan.id inspired, Campus tailored).
+     * Default landing page structure and texts.
      */
     public static function getDefaultContent(): array
     {
         return [
             'hero' => [
                 'tagline' => '',
-                'title' => "Ada Hal yang Sedang Membebani Pikiranmu?",
+                'title' => 'Ada Hal yang Sedang Membebani Pikiranmu?',
                 'subtitle' => 'Akses layanan bimbingan konseling dan pendampingan psikologis profesional tanpa biaya. Ceritamu aman, rahasia, dan didengarkan dengan penuh empati.',
-                'image_url' => '',
-                'banner_images' => [],
+                'image_url' => '/images/banner1.jpg',
+                'banner_images' => [
+                    '/images/banner1.jpg',
+                    '/images/banner3.jpg',
+                ],
                 'layout_style' => 'banner_wide',
-                'online_card_title' => 'Konseling Online via Zoom & Chat',
-                'online_card_desc' => 'Sesi privat fleksibel dari mana saja, aman dan nyaman.',
-                'offline_card_title' => 'Konseling Tatap Muka di Kampus',
-                'offline_card_desc' => 'Pertemuan langsung di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2.',
-            ],
-            'trust_badges' => [
-                ['icon' => 'ShieldCheck', 'text' => 'Bebas Biaya'],
-                ['icon' => 'Award', 'text' => 'Psikolog & Konselor Berlisensi'],
-                ['icon' => 'Lock', 'text' => 'Kerahasiaan Data Terjamin'],
-                ['icon' => 'Video', 'text' => 'Pilihan Online & Tatap Muka'],
-            ],
-            'problems' => [
-                'title' => 'Sedang Menghadapi Masalah Apa?',
-                'subtitle' => 'Setiap tantangan memiliki jalan keluar. Temukan konselor dengan keahlian yang tepat untuk mendampingimu:',
-                'items' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Akademik & Skripsi',
-                        'desc' => 'Prokrastinasi, kebuntuan menyusun tugas akhir, motivasi belajar turun, atau kesulitan bimbingan.',
-                        'tag' => 'Akademik',
-                        'icon' => 'GraduationCap'
-                    ],
-                    [
-                        'id' => 2,
-                        'title' => 'Kecemasan & Overthinking',
-                        'desc' => 'Pikiran cemas berlebihan tentang masa depan, panic attack, overthinking, atau insomnia.',
-                        'tag' => 'Emosi',
-                        'icon' => 'Brain'
-                    ],
-                    [
-                        'id' => 3,
-                        'title' => 'Stres Perkuliahan & Burnout',
-                        'desc' => 'Kelelahan emosional akibat beban tugas, organisasi, dan tuntutan akademik yang menumpuk.',
-                        'tag' => 'Kesehatan Mental',
-                        'icon' => 'Sparkles'
-                    ],
-                    [
-                        'id' => 4,
-                        'title' => 'Relasi Pertemanan & Sosial',
-                        'desc' => 'Konflik dengan teman satu angkatan, kesepian di perantauan, atau adaptasi lingkungan baru.',
-                        'tag' => 'Sosial',
-                        'icon' => 'Users'
-                    ],
-                    [
-                        'id' => 5,
-                        'title' => 'Keluarga & Ekonomi',
-                        'desc' => 'Dilema ekspektasi orang tua, konflik internal keluarga, atau kecemasan finansial kuliah.',
-                        'tag' => 'Keluarga',
-                        'icon' => 'Home'
-                    ],
-                    [
-                        'id' => 6,
-                        'title' => 'Arah Karier & Masa Depan',
-                        'desc' => 'Bingung menentukan peminatan, magang, persiapan karier profesional, atau krisis quarter-life.',
-                        'tag' => 'Karier',
-                        'icon' => 'Compass'
-                    ],
-                ]
-            ],
-            'steps' => [
-                'title' => 'Langkah Mudah Memulai Konseling',
-                'subtitle' => 'Hanya butuh 3 langkah sederhana untuk mendapatkan ruang aman bercerita',
-                'items' => [
-                    [
-                        'step_number' => '01',
-                        'title' => 'Isi Screening Mandiri Singkat',
-                        'desc' => 'Evaluasi kondisi emosional dan kebutuhan bimbinganmu dalam 3 menit kuesioner terstruktur.'
-                    ],
-                    [
-                        'step_number' => '02',
-                        'title' => 'Pilih Konselor & Waktu Pertemuan',
-                        'desc' => 'Pilih konselor yang sesuai dengan topikmu dan tentukan jam yang tidak bertabrakan dengan jadwal kuliah.'
-                    ],
-                    [
-                        'step_number' => '03',
-                        'title' => 'Mulai Sesi Konseling Privat',
-                        'desc' => 'Masuk ke ruang video Zoom terenkripsi langsung dari aplikasi atau hadir di Ruang BK kampus.'
-                    ]
-                ]
-            ],
-            'screening_cta' => [
-                'tag' => 'Tes Kesehatan Mental Kampus',
-                'title' => 'Ingin Tahu Kondisi Emosi dan Kebutuhanmu Saat Ini?',
-                'desc' => 'Screening terstruktur kami membantu memetakan area stres akademik, emosional, dan sosial tanpa label penghakiman. Bebas biaya dan rahasia.',
-                'button_text' => 'Mulai Screening Mandiri'
-            ],
-            'faqs' => [
-                [
-                    'question' => 'Apakah layanan bimbingan konseling ini berbayar?',
-                    'answer' => 'Tidak sama sekali. Seluruh layanan bimbingan konseling ini 100% GRATIS dan merupakan hak fasilitas resmi kampus bagi seluruh mahasiswa aktif dan sivitas akademika.'
-                ],
-                [
-                    'question' => 'Apakah rahasia dan cerita saya dijamin aman?',
-                    'answer' => 'Sangat aman. Konselor kami terikat oleh kode etik profesi dan standar kerahasiaan institusi. Cerita dan catatan sesi Anda tidak akan dipublikasikan atau dibagikan kepada dosen maupun pihak luar.'
-                ],
-                [
-                    'question' => 'Apakah sesi konseling dilakukan secara online atau tatap muka?',
-                    'answer' => 'Anda bebas memilih! Kami menyediakan sesi video online (terintegrasi Zoom SDK tanpa instalasi rumit) maupun tatap muka langsung di Ruang Konseling Gedung Kemahasiswaan Kampus.'
-                ],
-                [
-                    'question' => 'Bagaimana jika saya merasa gugup atau tidak tahu harus mulai dari mana?',
-                    'answer' => 'Itu sangat wajar dan normal. Konselor kami sangat ramah, hangat, dan siap membimbing percakapan dengan santai. Anda tidak dituntut untuk langsung berbicara terstruktur.'
-                ],
-                [
-                    'question' => 'Berapa lama durasi satu sesi konseling?',
-                    'answer' => 'Satu sesi berlangsung selama 50 hingga 60 menit, memberikan waktu yang cukup untuk berdiskusi mendalam dan merumuskan langkah praktis.'
-                ]
-            ],
-            'testimonials' => [
-                [
-                    'id' => 1,
-                    'name' => 'Fadhil R.',
-                    'faculty' => 'Mahasiswa Teknik Informatika - Semester 7',
-                    'text' => 'Sangat terbantu saat stuck skripsi dan overthinking masa depan. Konselornya ramah dan tidak menghakimi sama sekali. Sekarang jauh lebih lega dan fokus.',
-                    'rating' => 5
-                ],
-                [
-                    'id' => 2,
-                    'name' => 'Nabila S.',
-                    'faculty' => 'Mahasiswi Psikologi - Semester 5',
-                    'text' => 'Platformnya nyaman banget, bisa langsung video call tanpa ribet. Ruang yang benar-benar aman buat menumpahkan unek-unek tanpa takut di-judge.',
-                    'rating' => 5
-                ],
-                [
-                    'id' => 3,
-                    'name' => 'Rian H.',
-                    'faculty' => 'Mahasiswa Manajemen - Semester 3',
-                    'text' => 'Adaptasi kuliah rantau sempat bikin stres berat. Setelah 2 sesi konseling, saya dapat tips regulasi emosi yang praktis dan aplikatif.',
-                    'rating' => 5
-                ]
-            ],
-            'services' => [
-                'title' => 'Layanan Bimbingan & Konseling Terpadu',
-                'subtitle' => 'Dukungan komprehensif dari konselor & psikolog berlisensi untuk kenyamanan dan kesehatan mental sivitas akademika',
-                'items' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Konseling Individu Online',
-                        'desc' => 'Sesi video privat via Zoom terenkripsi dari mana saja, fleksibel dengan jadwal perkuliahan Anda.',
-                        'tag' => 'Online',
-                        'icon' => 'Video'
-                    ],
-                    [
-                        'id' => 2,
-                        'title' => 'Konseling Tatap Muka Kampus',
-                        'desc' => 'Pertemuan tatap muka langsung di Ruang Konseling Gedung Pusat Kemahasiswaan yang privat dan nyaman.',
-                        'tag' => 'Offline',
-                        'icon' => 'Building2'
-                    ],
-                    [
-                        'id' => 3,
-                        'title' => 'Screening Kebutuhan Psikologis',
-                        'desc' => 'Evaluasi mandiri terstruktur untuk memetakan beban emosi, stres akademik, dan kesiapan mental.',
-                        'tag' => 'Mandiri',
-                        'icon' => 'Sparkles'
-                    ],
-                    [
-                        'id' => 4,
-                        'title' => 'Konsultasi Karier & Masa Depan',
-                        'desc' => 'Eksplorasi minat bakat, persiapan magang, dan strategi mengatasi kecemasan quarter-life crisis.',
-                        'tag' => 'Karier',
-                        'icon' => 'Compass'
-                    ]
-                ]
-            ],
-            'articles' => [
-                'title' => 'Artikel & Wawasan Kesehatan Mental',
-                'subtitle' => 'Tips psikologis praktis, edukasi kesehatan mental, dan panduan menjalani kehidupan perkuliahan yang sehat',
-                'items' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Strategi Praktis Mengatasi Prokrastinasi Skripsi & Tugas Akhir',
-                        'category' => 'Akademik',
-                        'read_time' => '4 min baca',
-                        'date' => '02 Sep 2026',
-                        'author' => 'Tim Konselor UINSSC',
-                        'image_url' => '/images/banner1.jpg',
-                        'snippet' => 'Rasa jenuh dan kebuntuan tugas akhir adalah respons alami otak saat mengalami kelelahan mental. Kenali teknik micro-stepping untuk mengembalikan motivasi belajar.',
-                        'content' => "Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi.\n\nKetika kita memandang skripsi sebagai satu buku tebal utuh dengan ratusan halaman, otak kita secara psikologis mempersepsikannya sebagai \"ancaman besar\". Reaksi defensif alami kita adalah menghindari pekerjaan tersebut dengan mencari distraksi seperti membuka media sosial atau bermain game.\n\n### Mengapa Kita Menunda? (Procrastination vs Laziness)\nPenelitian psikologi pendidikan menunjukkan bahwa prokrastinasi adalah masalah regulasi emosi, bukan manajemen waktu semata. Kita menunda karena ingin menghindari perasaan tidak nyaman: takut salah, takut revisi berulang, atau cemas akan respons dosen pembimbing.\n\n### Teknik Praktis Micro-Stepping (Langkah Mikro):\n1. **Pecah Target Menjadi Potongan Sangat Kecil:** Alih-alih menulis \"Selesaikan Bab 2 hari ini\", ubah menjadi \"Tulis 2 paragraf pengantar teori hari ini\".\n2. **Gunakan Prinsip 15 Menit:** Berjanjilah pada diri sendiri untuk hanya duduk dan mengetik selama 15 menit. Jika setelah 15 menit ingin berhenti, Anda boleh berhenti. Seringkali setelah 15 menit berjalan, momentum positif akan terbentuk secara otomatis.\n3. **Turunkan Standar Draf Pertama:** Draf pertama dibuat untuk dievaluasi, bukan untuk langsung sempurna. Izinkan diri Anda menulis dengan bebas tanpa self-censorship.\n4. **Jadwalkan Konsultasi Rutin:** Jangan menunggu tulisan rapi untuk menemui Dosen Pembimbing Akademik atau Konselor. Mendiskusikan kerangka berpikir justru menghemat waktu berbulan-bulan."
-                    ],
-                    [
-                        'id' => 2,
-                        'title' => 'Mengenal Perbedaan Cemas Wajar vs Overthinking Berlebihan',
-                        'category' => 'Kesehatan Mental',
-                        'read_time' => '3 min baca',
-                        'date' => '28 Agu 2026',
-                        'author' => 'Psikolog Dian P., M.Psi.',
-                        'image_url' => '/images/banner3.jpg',
-                        'snippet' => 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
-                        'content' => "Kecemasan adalah sistem alarm alami tubuh kita yang dirancang untuk menjaga kita tetap aman dan waspada. Namun ketika alarm tersebut terus berbunyi tanpa henti padahal tidak ada bahaya nyata di depan mata, kita mulai memasuki fase overthinking yang menguras energi.\n\n### Cemas Wajar vs Cemas Berlebihan\n* **Cemas Wajar:** Membantu kita bersiap menghadapi ujian, memotivasi kita belajar, dan mereda begitu situasi telah selesai dihadapi.\n* **Overthinking Berlebihan:** Pikiran berputar pada skenario terburuk (\"Bagaimana jika saya gagal total? Bagaimana jika semua orang menertawakan saya?\"), memicu gejala fisik seperti jantung berdebar, insomnia, dan asam lambung naik.\n\n### Pertolongan Pertama: Teknik Grounding 5-4-3-2-1\nSaat Anda merasa pikiran mulai melayang ke mana-mana, tarik napas dalam-dalam dan sebutkan di sekitar Anda:\n* **5 hal** yang bisa Anda lihat dengan mata.\n* **4 hal** yang bisa Anda raba/sentuh fisiknya.\n* **3 suara** yang bisa Anda dengar saat ini.\n* **2 aroma** yang bisa Anda cium.\n* **1 rasa** di lidah Anda atau 1 hal baik tentang diri Anda.\n\nTeknik ini memaksa otak rasional Anda kembali ke momen masa kini (*here and now*) dan menurunkan aktivitas sistem saraf simpatik."
-                    ],
-                    [
-                        'id' => 3,
-                        'title' => 'Panduan Membuka Diri saat Pertama Kali Menjalani Sesi Konseling',
-                        'category' => 'Tips Konseling',
-                        'read_time' => '5 min baca',
-                        'date' => '20 Agu 2026',
-                        'author' => 'Ahmad Fauzi, S.Psi.',
-                        'image_url' => '/images/banner1.jpg',
-                        'snippet' => 'Merasa gugup sebelum konseling adalah hal yang lumrah. Ruang konseling adalah tempat yang aman tanpa penghakiman untuk membagikan cerita Anda.',
-                        'content' => "Banyak mahasiswa yang ragu berkonsultasi karena membayangkan sesi konseling itu seperti \"diinterogasi\" atau \"dihakimi\". Faktanya, konseling modern adalah ruang dialog setara yang hangat dan penuh penerimaan.\n\n### Mitos Umum Seputar Bimbingan Konseling:\n1. **Mitos:** \"Hanya mahasiswa yang bermasalah berat atau sakit jiwa yang ke BK.\"\n   * **Fakta:** Lebih dari 80% mahasiswa datang untuk konsultasi perencanaan karier, manajemen stres skripsi, atau sekadar membutuhkan teman bicara netral yang objektif.\n2. **Mitos:** \"Cerita saya nanti bocor ke dosen penguji atau fakultas.\"\n   * **Fakta:** Kerahasiaan konseling dilindungi undang-undang dan kode etik psikologi. Tidak ada informasi yang dibagikan tanpa izin tertulis dari Anda.\n\n### Apa yang Harus Dipersiapkan?\nJawabannya: **Tidak ada yang wajib disiapkan.** Anda tidak perlu membuat catatan rapi atau menghafalkan kronologi masalah. Datanglah apa adanya. Konselor kami yang berpengalaman akan membimbing percakapan dengan ritme yang membuat Anda merasa aman dan nyaman."
-                    ]
-                ]
+                'online_card_title' => 'Konseling Individu Online',
+                'online_card_badge' => 'Online',
+                'online_card_desc' => 'Sesi video privat via Zoom terenkripsi dari mana saja, fleksibel dengan jadwal perkuliahan Anda.',
+                'offline_card_title' => 'Konseling Tatap Muka Kampus',
+                'offline_card_badge' => 'Offline',
+                'offline_card_desc' => 'Pertemuan tatap muka langsung di Ruang Konseling Gedung Pusat Kemahasiswaan yang privat dan nyaman.',
             ],
             'navbar' => [
                 'top_announcement' => 'Pusat Layanan Bimbingan & Konseling Mahasiswa',
@@ -236,6 +42,7 @@ class LandingContentController extends Controller
                 'brand_name' => 'Ruang BK',
                 'brand_campus' => 'UINSSC',
                 'brand_tagline' => 'Bimbingan & Konseling Terpadu',
+                'logo_url' => '/logobk.png',
                 'menu' => [
                     ['label' => 'Layanan', 'href' => '#layanan'],
                     ['label' => 'Topik Bimbingan', 'href' => '#masalah'],
@@ -243,7 +50,7 @@ class LandingContentController extends Controller
                     ['label' => 'Konselor Kami', 'href' => '#konselor'],
                     ['label' => 'Cara Kerja', 'href' => '#cara-kerja'],
                     ['label' => 'FAQ', 'href' => '#faq'],
-                ]
+                ],
             ],
             'footer' => [
                 'brand_title' => 'Ruang BK UIN Siber Syekh Nurjati Cirebon',
@@ -263,8 +70,196 @@ class LandingContentController extends Controller
                     ['label' => 'Artikel Edukasi', 'href' => '/artikel'],
                     ['label' => 'Daftar Konselor', 'href' => '#konselor'],
                     ['label' => 'Masuk Akun', 'href' => '/login'],
-                ]
-            ]
+                ],
+            ],
+            'services' => [
+                'tag' => 'Pilihan Layanan Terpadu',
+                'title' => 'Layanan Bimbingan yang Tersedia',
+                'subtitle' => 'Pilih metode bimbingan konseling yang paling nyaman dan sesuai dengan preferensi privasi Anda.',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'title' => 'Konseling Individu Online',
+                        'desc' => 'Sesi video privat via Zoom terenkripsi dari mana saja, fleksibel dengan jadwal perkuliahan Anda.',
+                        'tag' => 'Online',
+                        'icon' => 'Video',
+                    ],
+                    [
+                        'id' => 2,
+                        'title' => 'Konseling Tatap Muka Kampus',
+                        'desc' => 'Pertemuan tatap muka langsung di Ruang Konseling Gedung Pusat Kemahasiswaan yang privat dan nyaman.',
+                        'tag' => 'Offline',
+                        'icon' => 'Building2',
+                    ],
+                ],
+            ],
+            'problems' => [
+                'tag' => 'Kategori Pendampingan',
+                'title' => 'Sedang Menghadapi Masalah Apa?',
+                'subtitle' => 'Tidak ada masalah yang terlalu sepele. Konselor kami siap mendampingi berbagai dinamika kehidupan mahasiswa.',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'title' => 'Akademik & Skripsi',
+                        'desc' => 'Prokrastinasi, kebuntuan tugas akhir, motivasi belajar turun, atau kesulitan bimbingan.',
+                        'tag' => 'Akademik',
+                        'icon' => 'GraduationCap',
+                    ],
+                    [
+                        'id' => 2,
+                        'title' => 'Kecemasan & Overthinking',
+                        'desc' => 'Pikiran cemas berlebihan tentang masa depan, panic attack, overthinking, atau insomnia.',
+                        'tag' => 'Emosi',
+                        'icon' => 'Brain',
+                    ],
+                    [
+                        'id' => 3,
+                        'title' => 'Stres Perkuliahan & Burnout',
+                        'desc' => 'Kelelahan emosional akibat beban tugas, organisasi, dan tuntutan akademik yang menumpuk.',
+                        'tag' => 'Kesehatan Mental',
+                        'icon' => 'Sparkles',
+                    ],
+                    [
+                        'id' => 4,
+                        'title' => 'Relasi Pertemanan & Sosial',
+                        'desc' => 'Konflik dengan teman satu angkatan, kesepian di perantauan, atau adaptasi lingkungan baru.',
+                        'tag' => 'Sosial',
+                        'icon' => 'Users',
+                    ],
+                    [
+                        'id' => 5,
+                        'title' => 'Keluarga & Ekonomi',
+                        'desc' => 'Dilema ekspektasi orang tua, konflik internal keluarga, atau kecemasan finansial kuliah.',
+                        'tag' => 'Keluarga',
+                        'icon' => 'Home',
+                    ],
+                    [
+                        'id' => 6,
+                        'title' => 'Arah Karier & Masa Depan',
+                        'desc' => 'Bingung menentukan peminatan, magang, persiapan karier profesional, atau krisis quarter-life.',
+                        'tag' => 'Karier',
+                        'icon' => 'Compass',
+                    ],
+                ],
+            ],
+            'steps' => [
+                'tag' => 'Alur Konseling',
+                'title' => '3 Langkah Mudah Memulai Konseling',
+                'subtitle' => 'Proses pendaftaran cepat, transparan, dan terintegrasi langsung dengan jadwal konselor.',
+                'items' => [
+                    [
+                        'step_number' => '01',
+                        'title' => 'Isi Screening Mandiri Singkat',
+                        'desc' => 'Evaluasi kondisi emosional dan kebutuhan bimbinganmu dalam 3 menit kuesioner terstruktur.',
+                    ],
+                    [
+                        'step_number' => '02',
+                        'title' => 'Pilih Konselor & Waktu Pertemuan',
+                        'desc' => 'Pilih konselor yang sesuai dengan topikmu dan tentukan jam yang cocok dengan jadwal kuliah.',
+                    ],
+                    [
+                        'step_number' => '03',
+                        'title' => 'Mulai Sesi Konseling Privat',
+                        'desc' => 'Masuk ke ruang video Zoom terenkripsi langsung dari aplikasi atau hadir di Ruang BK kampus.',
+                    ],
+                ],
+            ],
+            'screening_cta' => [
+                'tag' => 'Deteksi Dini Kesehatan Mental',
+                'title' => 'Ingin Tahu Kondisi Emosi dan Kebutuhanmu Saat Ini?',
+                'desc' => 'Screening terstruktur kami membantu memetakan area stres akademik, emosional, dan sosial tanpa label penghakiman. Bebas biaya dan rahasia.',
+                'button_text' => 'Mulai Screening Mandiri',
+            ],
+            'faqs' => [
+                [
+                    'question' => 'Apakah layanan bimbingan konseling ini berbayar?',
+                    'answer' => 'Tidak sama sekali. Seluruh layanan bimbingan konseling ini 100% GRATIS dan merupakan hak fasilitas resmi kampus bagi seluruh mahasiswa aktif dan sivitas akademika.',
+                ],
+                [
+                    'question' => 'Apakah rahasia dan cerita saya dijamin aman?',
+                    'answer' => 'Sangat aman. Konselor kami terikat oleh kode etik profesi dan standar kerahasiaan institusi. Cerita dan catatan sesi Anda tidak akan dipublikasikan atau dibagikan kepada dosen maupun pihak luar.',
+                ],
+                [
+                    'question' => 'Apakah sesi konseling dilakukan secara online atau tatap muka?',
+                    'answer' => 'Anda bebas memilih! Kami menyediakan sesi video online (terintegrasi Zoom SDK tanpa instalasi rumit) maupun tatap muka langsung di Ruang Konseling Gedung Kemahasiswaan Kampus.',
+                ],
+                [
+                    'question' => 'Bagaimana jika saya merasa gugup atau tidak tahu harus mulai dari mana?',
+                    'answer' => 'Itu sangat wajar dan normal. Konselor kami sangat ramah, hangat, dan siap membimbing percakapan dengan santai. Anda tidak dituntut untuk langsung berbicara terstruktur.',
+                ],
+                [
+                    'question' => 'Berapa lama durasi satu sesi konseling?',
+                    'answer' => 'Satu sesi berlangsung selama 50 hingga 60 menit, memberikan waktu yang cukup untuk berdiskusi mendalam dan merumuskan langkah praktis.',
+                ],
+            ],
+            'testimonials' => [
+                'tag' => 'Pengalaman Mahasiswa',
+                'title' => 'Cerita Mahasiswa yang Telah Bertumbuh',
+                'subtitle' => 'Mendengar pengalaman mereka yang menemukan kembali ketenangan dan kejelasan pikiran.',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'name' => 'Fadhil R.',
+                        'faculty' => 'Mahasiswa Teknik Informatika - Semester 7',
+                        'text' => 'Sangat terbantu saat stuck skripsi dan overthinking masa depan. Konselornya ramah dan tidak menghakimi sama sekali. Sekarang jauh lebih lega dan fokus.',
+                        'rating' => 5,
+                    ],
+                    [
+                        'id' => 2,
+                        'name' => 'Nabila S.',
+                        'faculty' => 'Mahasiswi Psikologi - Semester 5',
+                        'text' => 'Platformnya nyaman banget, bisa langsung video call tanpa ribet. Ruang yang benar-benar aman buat menumpahkan unek-unek tanpa takut di judge.',
+                        'rating' => 5,
+                    ],
+                    [
+                        'id' => 3,
+                        'name' => 'Rian H.',
+                        'faculty' => 'Mahasiswa Manajemen - Semester 3',
+                        'text' => 'Adaptasi kuliah rantau sempat bikin stres berat. Setelah 2 sesi konseling, saya dapat tips regulasi emosi yang praktis dan aplikatif.',
+                        'rating' => 5,
+                    ],
+                ],
+            ],
+            'articles' => [
+                'tag' => 'Edukasi & Tips Kampus',
+                'title' => 'Artikel & Panduan Kesehatan Mental',
+                'subtitle' => 'Bacaan ringan dan berbasis bukti untuk mendukung kesejahteraan psikologis dan produktivitas studi Anda.',
+                'items' => [
+                    [
+                        'id' => 1,
+                        'title' => '5 Trik Mengatasi Burnout & Prokrastinasi Saat Menyusun Skripsi',
+                        'category' => 'Tips Akademik',
+                        'read_time' => '4 min baca',
+                        'date' => '02 Sep 2026',
+                        'author' => 'Tim Konselor UINSSC',
+                        'image_url' => '',
+                        'snippet' => 'Rasa jenuh dan kebuntuan tugas akhir adalah respons alami otak saat mengalami kelelahan mental. Kenali teknik micro-stepping untuk mengembalikan motivasi belajar.',
+                        'content' => 'Banyak mahasiswa tingkat akhir merasa terjebak dalam siklus menunda-nunda bukan karena malas, melainkan karena rasa cemas berlebihan terhadap standar kesempurnaan skripsi. Kunci utamanya adalah membagi target besar menjadi langkah-langkah mikro (micro-stepping) yang hanya membutuhkan waktu 15 menit setiap sesinya.',
+                    ],
+                    [
+                        'id' => 2,
+                        'title' => 'Mengenal Perbedaan Cemas Wajar vs Overthinking Berlebihan',
+                        'category' => 'Kesehatan Mental',
+                        'read_time' => '3 min baca',
+                        'date' => '28 Agu 2026',
+                        'author' => 'Psikolog Dian P., M.Psi.',
+                        'image_url' => '',
+                        'snippet' => 'Kecemasan adalah sistem alarm alami tubuh. Namun jika pikiran terus berputar tanpa solusi nyata, kenali teknik grounding 5-4-3-2-1 untuk menenangkan sistem saraf.',
+                        'content' => 'Rasa cemas sebelum ujian atau presentasi sidang adalah wajar dan membantu kita tetap waspada. Namun jika kekhawatiran itu terjadi terus menerus tanpa pemicu yang jelas hingga mengganggu pola tidur dan makan, saatnya berkonsultasi dengan konselor atau psikolog profesional.',
+                    ],
+                    [
+                        'id' => 3,
+                        'title' => 'Panduan Membuka Diri saat Pertama Kali Menjalani Sesi Konseling',
+                        'category' => 'Tips Konseling',
+                        'read_time' => '5 min baca',
+                        'date' => '20 Agu 2026',
+                        'author' => 'Ahmad Fauzi, S.Psi.',
+                        'image_url' => '',
+                        'snippet' => 'Merasa gugup sebelum konseling adalah hal yang lumrah. Ruang konseling adalah tempat yang aman tanpa penghakiman untuk membagikan cerita Anda.',
+                        'content' => 'Ruang konseling adalah zona aman tanpa penilaian. Anda tidak perlu menyusun cerita secara rapi atau runtut. Cukup sampaikan apa yang paling membebani pikiran Anda saat ini. Konselor kampus kami siap mendengarkan dan membantu Anda menemukan perspektif baru.',
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -281,36 +276,31 @@ class LandingContentController extends Controller
             $content = json_decode($setting->value, true);
             if (is_array($content)) {
                 $base = array_replace_recursive($base, $content);
-                $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
 
-                // Ensure hero banner_images and image_url reflect the saved DB data exactly,
-                // and prune any banner files that no longer exist on disk:
+                // Explicitly override banner_images from $content if defined
+                // (array_replace_recursive merges numeric arrays by index, which leads to mixing default and custom banners)
                 if (isset($content['hero']['banner_images']) && is_array($content['hero']['banner_images'])) {
                     $base['hero']['banner_images'] = array_values(array_filter(
                         $content['hero']['banner_images'],
-                        function ($img) use ($hardcodedDefaults) {
+                        function ($img) {
                             $u = is_array($img) ? ($img['url'] ?? '') : (string)$img;
-                            if (empty($u) || in_array($u, $hardcodedDefaults)) return false;
+                            if (empty($u)) return false;
                             if (str_starts_with($u, '/storage/banners/')) {
                                 return File::exists(storage_path('app/public/banners/' . basename($u)));
                             }
                             return true;
                         }
                     ));
-                } else {
-                    $base['hero']['banner_images'] = [];
                 }
 
                 if (isset($content['hero']['image_url'])) {
                     $heroImg = (string) $content['hero']['image_url'];
-                    if (str_starts_with($heroImg, '/storage/banners/')) {
-                        if (!File::exists(storage_path('app/public/banners/' . basename($heroImg)))) {
-                            $heroImg = $base['hero']['banner_images'][0] ?? '';
-                        }
-                    } elseif (in_array($heroImg, $hardcodedDefaults)) {
+                    if (str_starts_with($heroImg, '/storage/banners/') && !File::exists(storage_path('app/public/banners/' . basename($heroImg)))) {
                         $heroImg = $base['hero']['banner_images'][0] ?? '';
                     }
                     $base['hero']['image_url'] = $heroImg;
+                } else {
+                    $base['hero']['image_url'] = $base['hero']['banner_images'][0] ?? '';
                 }
                 $isCustom = true;
             }
@@ -348,17 +338,16 @@ class LandingContentController extends Controller
 
         $content = $request->all();
 
-        // Safety: If any image is sent as a large base64 string, write it to file storage to prevent MySQL max_allowed_packet error
+        // Process any base64 images to file storage
         $this->processBase64Images($content);
 
-        // Sanitize banner_images and articles to purge hero_counseling.jpg and missing banner files
-        $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
+        // Sanitize missing storage banner files
         if (isset($content['hero']['banner_images']) && is_array($content['hero']['banner_images'])) {
             $content['hero']['banner_images'] = array_values(array_filter(
                 $content['hero']['banner_images'],
-                function ($img) use ($hardcodedDefaults) {
+                function ($img) {
                     $u = is_array($img) ? ($img['url'] ?? '') : (string)$img;
-                    if (empty($u) || in_array($u, $hardcodedDefaults)) return false;
+                    if (empty($u)) return false;
                     if (str_starts_with($u, '/storage/banners/')) {
                         return File::exists(storage_path('app/public/banners/' . basename($u)));
                     }
@@ -366,17 +355,12 @@ class LandingContentController extends Controller
                 }
             ));
         }
+
         $heroImg = $content['hero']['image_url'] ?? '';
-        if (in_array($heroImg, $hardcodedDefaults) || (str_starts_with($heroImg, '/storage/banners/') && !File::exists(storage_path('app/public/banners/' . basename($heroImg))))) {
-            $content['hero']['image_url'] = !empty($content['hero']['banner_images']) ? $content['hero']['banner_images'][0] : '';
+        if (str_starts_with($heroImg, '/storage/banners/') && !File::exists(storage_path('app/public/banners/' . basename($heroImg)))) {
+            $heroImg = !empty($content['hero']['banner_images']) ? $content['hero']['banner_images'][0] : '';
         }
-        if (isset($content['articles']['items']) && is_array($content['articles']['items'])) {
-            foreach ($content['articles']['items'] as &$art) {
-                if (($art['image_url'] ?? '') === '/images/hero_counseling.jpg') {
-                    $art['image_url'] = '/images/banner3.jpg';
-                }
-            }
-        }
+        $content['hero']['image_url'] = $heroImg;
 
         SystemSetting::updateOrCreate(
             ['key' => 'landing_content'],
@@ -400,194 +384,114 @@ class LandingContentController extends Controller
 
     /**
      * Upload banner or promotional image (Admin only).
-     * Automatically converts to WebP format if GD extension is available (smaller file size).
+     * Supports single or multiple file uploads.
      */
     public function uploadImage(Request $request): JsonResponse
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp,svg,gif|max:10240', // Max 10MB
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg,gif|max:10240',
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp,svg,gif|max:10240',
         ]);
 
-        $file = $request->file('image');
+        $files = [];
+        if ($request->hasFile('images')) {
+            $files = $request->file('images');
+        } elseif ($request->hasFile('image')) {
+            $files = [$request->file('image')];
+        }
+
+        if (empty($files)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada file gambar yang diunggah.',
+            ], 422);
+        }
+
         $dir = storage_path('app/public/banners');
         if (!File::exists($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 
-        $uniqueSuffix = time() . '_' . bin2hex(random_bytes(4));
-        $originalExt = strtolower($file->getClientOriginalExtension());
-
-        $qualityMode = $request->input('quality_mode', 'original'); // 'original' (default HD) | 'webp_hd'
-
-        // ── Konversi ke WebP jika admin memilih mode 'webp_hd' & GD tersedia ──
-        $convertedToWebp = false;
-        if ($qualityMode === 'webp_hd' && extension_loaded('gd') && !in_array($originalExt, ['svg', 'gif', 'webp'])) {
-            $filename = 'banner_' . $uniqueSuffix . '.webp';
-            $destPath = $dir . DIRECTORY_SEPARATOR . $filename;
-            $convertedToWebp = $this->convertToWebp($file->getRealPath(), $destPath, $originalExt, 95);
-        }
-
-        // Mode 'original' (100% HD asli) atau fallback jika WebP gagal: simpan file asli tanpa kompresi
-        if (!$convertedToWebp) {
+        $uploadedUrls = [];
+        foreach ($files as $file) {
+            $uniqueSuffix = time() . '_' . bin2hex(random_bytes(4));
+            $originalExt = strtolower($file->getClientOriginalExtension());
             $filename = 'banner_' . $uniqueSuffix . '.' . $originalExt;
             $file->move($dir, $filename);
+            $uploadedUrls[] = '/storage/banners/' . $filename;
         }
 
-        $url = '/storage/banners/' . $filename;
-
-        // Auto-persist to DB immediately so the hero banner updates right away
+        // Auto-persist to DB immediately so all banner slides update right away
         $setting = SystemSetting::where('key', 'landing_content')->first();
-        $updatedData = null;
         if ($setting && $setting->value) {
             $data = is_array($setting->value) ? $setting->value : json_decode($setting->value, true);
+        } else {
+            $data = self::getDefaultContent();
+        }
 
-            $data['hero']['image_url'] = $url;
-
-            // Maintain banner_images: keep only files that physically exist on disk (avoid broken 404 slides)
-            $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
-            $existingBanners = [];
-            if (!empty($data['hero']['banner_images']) && is_array($data['hero']['banner_images'])) {
-                foreach ($data['hero']['banner_images'] as $img) {
-                    $imgUrl = is_array($img) ? ($img['url'] ?? '') : (string)$img;
-                    if ($imgUrl && !in_array($imgUrl, $hardcodedDefaults) && $imgUrl !== $url) {
-                        if (str_starts_with($imgUrl, '/storage/banners/')) {
-                            if (File::exists(storage_path('app/public/banners/' . basename($imgUrl)))) {
-                                $existingBanners[] = $imgUrl;
-                            }
-                        } else {
+        $existingBanners = [];
+        if (isset($data['hero']['banner_images']) && is_array($data['hero']['banner_images'])) {
+            foreach ($data['hero']['banner_images'] as $img) {
+                $imgUrl = is_array($img) ? ($img['url'] ?? '') : (string)$img;
+                if ($imgUrl && !in_array($imgUrl, $uploadedUrls)) {
+                    if (str_starts_with($imgUrl, '/storage/banners/')) {
+                        if (File::exists(storage_path('app/public/banners/' . basename($imgUrl)))) {
                             $existingBanners[] = $imgUrl;
                         }
+                    } else {
+                        $existingBanners[] = $imgUrl;
                     }
                 }
             }
-
-            // Put the newly uploaded banner at position 0 (primary slide), followed by other existing valid slides (max 5)
-            $data['hero']['banner_images'] = array_slice(array_values(array_unique(array_merge([$url], $existingBanners))), 0, 5);
-            $setting->value = json_encode($data);
-            $setting->save();
-            $updatedData = $data;
         }
+
+        // Append new banners to existing list
+        $mergedBanners = array_values(array_unique(array_merge($existingBanners, $uploadedUrls)));
+        $data['hero']['banner_images'] = $mergedBanners;
+        if (empty($data['hero']['image_url']) || !in_array($data['hero']['image_url'], $mergedBanners)) {
+            $data['hero']['image_url'] = $mergedBanners[0] ?? '';
+        }
+
+        SystemSetting::updateOrCreate(
+            ['key' => 'landing_content'],
+            ['value' => json_encode($data)]
+        );
 
         AuditLogService::log(
             'upload_banner_image',
             'banner',
             null,
-            ['desc' => 'Admin mengunggah gambar banner baru: ' . $filename . ($convertedToWebp ? ' (converted to WebP)' : '')],
+            ['desc' => 'Admin mengunggah ' . count($uploadedUrls) . ' gambar banner baru'],
             Auth::id()
         );
 
         return response()->json([
             'success' => true,
-            'message' => $convertedToWebp ? 'Gambar banner berhasil diunggah (WebP Ultra HD 95%)!' : 'Gambar banner berhasil diunggah (Kualitas Asli HD 100%)!',
-            'url' => $url,
-            'converted_to_webp' => $convertedToWebp,
-            'data' => $updatedData,
+            'message' => count($uploadedUrls) . ' foto banner berhasil diunggah & disimpan!',
+            'url' => $uploadedUrls[0],
+            'urls' => $uploadedUrls,
+            'data' => $data,
         ]);
     }
 
     /**
-     * Convert image to WebP format using GD library.
-     * Preserves Ultra HD quality (up to 2560px 2K QHD, quality 95) with EXIF correction.
-     * Returns true on success, false on failure (caller will use original file).
-     */
-    private function convertToWebp(string $sourcePath, string $destPath, string $ext, int $quality = 95): bool
-    {
-        try {
-            $image = match ($ext) {
-                'jpg', 'jpeg' => @imagecreatefromjpeg($sourcePath),
-                'png'         => @imagecreatefrompng($sourcePath),
-                default       => null,
-            };
-
-            if (!$image) {
-                return false;
-            }
-
-            // Correct EXIF orientation for JPEG
-            if (function_exists('exif_read_data') && in_array($ext, ['jpg', 'jpeg'])) {
-                $exif = @exif_read_data($sourcePath);
-                if (!empty($exif['Orientation'])) {
-                    switch ($exif['Orientation']) {
-                        case 8:
-                            $image = imagerotate($image, 90, 0);
-                            break;
-                        case 3:
-                            $image = imagerotate($image, 180, 0);
-                            break;
-                        case 6:
-                            $image = imagerotate($image, -90, 0);
-                            break;
-                    }
-                }
-            }
-
-            $width = imagesx($image);
-            $height = imagesy($image);
-            // Ultra-HD cap: 2560px width or 1440px height (2K QHD)
-            $maxWidth = 2560;
-            $maxHeight = 1440;
-
-            if ($width > $maxWidth || $height > $maxHeight) {
-                $ratio = min($maxWidth / $width, $maxHeight / $height);
-                $newWidth = (int) round($width * $ratio);
-                $newHeight = (int) round($height * $ratio);
-
-                $resized = imagecreatetruecolor($newWidth, $newHeight);
-                if ($ext === 'png') {
-                    imagealphablending($resized, false);
-                    imagesavealpha($resized, true);
-                }
-                imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-                imagedestroy($image);
-                $image = $resized;
-            } elseif ($ext === 'png') {
-                imagepalettetotruecolor($image);
-                imagealphablending($image, true);
-                imagesavealpha($image, true);
-            }
-
-            $result = imagewebp($image, $destPath, $quality);
-            imagedestroy($image);
-
-            return $result && File::exists($destPath) && filesize($destPath) > 0;
-        } catch (\Throwable $e) {
-            return false;
-        }
-    }
-
-    /**
-     * Delete banner image permanently from disk and database (Admin only).
+     * Delete a single or multiple banner images.
      */
     public function deleteImage(Request $request): JsonResponse
     {
         $imageUrl = $request->input('image_url');
-        $deletedFromFileSystem = false;
+        if (!$imageUrl && !$request->input('clean_all_custom_banners')) {
+            return response()->json(['success' => false, 'message' => 'Parameter image_url diperlukan.'], 422);
+        }
 
-        // 1. Delete physical file from disk if located in storage/banners
-        if ($imageUrl && str_contains($imageUrl, '/storage/banners/')) {
-            $filename = basename($imageUrl);
-            $filePath = storage_path('app/public/banners/' . $filename);
+        if ($imageUrl && str_starts_with($imageUrl, '/storage/banners/')) {
+            $filePath = storage_path('app/public/banners/' . basename($imageUrl));
             if (File::exists($filePath)) {
                 @unlink($filePath);
-                $deletedFromFileSystem = true;
             }
         }
 
-        // Also if user explicitly targeted hero_counseling.jpg, delete it from public images as well
-        if ($imageUrl === '/images/hero_counseling.jpg' || $imageUrl === 'hero_counseling.jpg') {
-            $publicFile = public_path('images/hero_counseling.jpg');
-            if (File::exists($publicFile)) {
-                @unlink($publicFile);
-                $deletedFromFileSystem = true;
-            }
-            $frontendPublicFile = base_path('../frontend/public/images/hero_counseling.jpg');
-            if (File::exists($frontendPublicFile)) {
-                @unlink($frontendPublicFile);
-                $deletedFromFileSystem = true;
-            }
-        }
-
-        // 2. Also clean any other custom banner files in storage if all are cleared
         if ($request->input('clean_all_custom_banners') === true) {
             $customFiles = File::glob(storage_path('app/public/banners/*'));
             foreach ($customFiles as $cf) {
@@ -595,20 +499,23 @@ class LandingContentController extends Controller
             }
         }
 
-        // 3. Immediately persist update in SystemSetting database
         $setting = SystemSetting::where('key', 'landing_content')->first();
-        $updatedData = null;
         if ($setting && $setting->value) {
             $data = is_array($setting->value) ? $setting->value : json_decode($setting->value, true);
+        } else {
+            $data = self::getDefaultContent();
+        }
 
-            // Filter out the deleted image, hero_counseling.jpg, AND hardcoded default images from banner_images
-            // (database might have old hardcoded URLs from before this fix was applied)
-            $hardcodedDefaults = ['/images/banner1.jpg', '/images/banner3.jpg', '/images/hero_counseling.jpg'];
-            $currentBanners = $data['hero']['banner_images'] ?? [];
+        if ($request->input('clean_all_custom_banners') === true) {
+            $data['hero']['banner_images'] = [];
+            $data['hero']['image_url'] = '';
+        } else {
+            // Get current banners list, defaulting if not previously set
+            $currentBanners = $data['hero']['banner_images'] ?? self::getDefaultContent()['hero']['banner_images'];
             $newBanners = [];
             foreach ($currentBanners as $b) {
                 $bUrl = is_array($b) ? ($b['url'] ?? '') : (string)$b;
-                if ($bUrl && $bUrl !== $imageUrl && !in_array($bUrl, $hardcodedDefaults)) {
+                if ($bUrl && $bUrl !== $imageUrl) {
                     if (str_starts_with($bUrl, '/storage/banners/')) {
                         if (File::exists(storage_path('app/public/banners/' . basename($bUrl)))) {
                             $newBanners[] = $bUrl;
@@ -618,64 +525,68 @@ class LandingContentController extends Controller
                     }
                 }
             }
-
-            // Jika kosong setelah hapus, biarkan array kosong (tidak ada fallback hardcode)
-            if (empty($newBanners)) {
-                $newBanners = [];
-            }
-
             $data['hero']['banner_images'] = array_values(array_unique($newBanners));
-
-            // Jika primary image adalah URL yang dihapus atau URL hardcode, update ke banner berikutnya (atau kosong)
-            $currentPrimary = $data['hero']['image_url'] ?? '';
-            if ($currentPrimary === $imageUrl || in_array($currentPrimary, $hardcodedDefaults)) {
-                $data['hero']['image_url'] = $newBanners[0] ?? '';
+            if (($data['hero']['image_url'] ?? '') === $imageUrl || !in_array($data['hero']['image_url'] ?? '', $data['hero']['banner_images'])) {
+                $data['hero']['image_url'] = $data['hero']['banner_images'][0] ?? '';
             }
-
-            // Also clean article 2 if it was pointing to hero_counseling.jpg
-            if (isset($data['articles']['items']) && is_array($data['articles']['items'])) {
-                foreach ($data['articles']['items'] as &$art) {
-                    if (($art['image_url'] ?? '') === '/images/hero_counseling.jpg') {
-                        $art['image_url'] = '/images/banner3.jpg';
-                    }
-                }
-            }
-
-            $setting->value = json_encode($data);
-            $setting->save();
-            $updatedData = $data;
         }
+
+        SystemSetting::updateOrCreate(
+            ['key' => 'landing_content'],
+            ['value' => json_encode($data)]
+        );
 
         AuditLogService::log(
             'delete_banner_image',
             'banner',
             null,
-            ['desc' => 'Admin menghapus gambar banner secara permanen: ' . ($imageUrl ?: 'semua')],
+            ['desc' => 'Admin menghapus banner: ' . ($imageUrl ?: 'semua')],
             Auth::id()
         );
 
         return response()->json([
             'success' => true,
-            'message' => 'Foto banner berhasil dihapus permanen dari server dan database!',
-            'deleted_from_disk' => $deletedFromFileSystem,
-            'data' => $updatedData,
+            'message' => 'Foto banner berhasil dihapus!',
+            'data' => $data,
         ]);
     }
 
     /**
-     * Convert any Base64 image data URLs in content into storage files.
+     * Reset landing content to factory default.
+     */
+    public function reset(): JsonResponse
+    {
+        $default = self::getDefaultContent();
+        SystemSetting::updateOrCreate(
+            ['key' => 'landing_content'],
+            ['value' => json_encode($default)]
+        );
+
+        AuditLogService::log(
+            'reset_landing_content',
+            'landing_content',
+            null,
+            ['desc' => 'Admin mereset konten landing page ke bawaan awal'],
+            Auth::id()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Konten landing page berhasil direset ke pengaturan bawaan.',
+            'data' => $default,
+        ]);
+    }
+
+    /**
+     * Process base64 encoded images in content.
      */
     private function processBase64Images(array &$content): void
     {
-        if (isset($content['hero']['image_url']) && is_string($content['hero']['image_url']) && str_starts_with($content['hero']['image_url'], 'data:image')) {
-            $content['hero']['image_url'] = $this->saveBase64Image($content['hero']['image_url'], 'hero_banner');
-        }
-
         if (isset($content['hero']['banner_images']) && is_array($content['hero']['banner_images'])) {
             foreach ($content['hero']['banner_images'] as $i => $img) {
                 if (is_string($img) && str_starts_with($img, 'data:image')) {
                     $content['hero']['banner_images'][$i] = $this->saveBase64Image($img, 'banner_' . ($i + 1));
-                } elseif (is_array($img) && isset($img['url']) && is_string($img['url']) && str_starts_with($img['url'], 'data:image')) {
+                } elseif (is_array($img) && isset($img['url']) && str_starts_with($img['url'], 'data:image')) {
                     $content['hero']['banner_images'][$i]['url'] = $this->saveBase64Image($img['url'], 'banner_' . ($i + 1));
                 }
             }
@@ -683,51 +594,25 @@ class LandingContentController extends Controller
     }
 
     /**
-     * Save a base64 encoded image string into storage/app/public/banners and return relative URL.
+     * Save base64 image data into storage.
      */
-    private function saveBase64Image(string $base64Data, string $prefix = 'img'): string
+    private function saveBase64Image(string $base64, string $prefix): string
     {
+        if (!preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+            return $base64;
+        }
+        $ext = strtolower($type[1]);
+        if ($ext === 'jpeg') $ext = 'jpg';
+        $data = substr($base64, strpos($base64, ',') + 1);
+        $data = base64_decode($data);
+        if (!$data) return $base64;
+
         $dir = storage_path('app/public/banners');
         if (!File::exists($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
-
-        if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
-            $data = substr($base64Data, strpos($base64Data, ',') + 1);
-            $ext = strtolower($type[1]);
-            if (!in_array($ext, ['jpg', 'jpeg', 'gif', 'png', 'webp', 'svg'])) {
-                $ext = 'jpg';
-            }
-            $decoded = base64_decode($data);
-            if ($decoded !== false) {
-                $filename = $prefix . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                file_put_contents($dir . DIRECTORY_SEPARATOR . $filename, $decoded);
-                return '/storage/banners/' . $filename;
-            }
-        }
-
-        return $base64Data;
-    }
-
-    /**
-     * Reset landing content to default.
-     */
-    public function resetDefault(): JsonResponse
-    {
-        SystemSetting::where('key', 'landing_content')->delete();
-
-        AuditLogService::log(
-            'reset_landing_content',
-            'landing_content',
-            null,
-            ['desc' => 'Konten landing page di-reset ke pengaturan awal oleh admin'],
-            Auth::id()
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Konten landing page berhasil dikembalikan ke default.',
-            'data' => self::getDefaultContent(),
-        ]);
+        $filename = $prefix . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+        File::put($dir . DIRECTORY_SEPARATOR . $filename, $data);
+        return '/storage/banners/' . $filename;
     }
 }

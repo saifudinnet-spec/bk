@@ -75,7 +75,7 @@ export const TutorDashboard = () => {
         }
       }
     } catch (err) {
-      console.error('Failed to load tutor data:', err);
+      // Silently fail — user will see empty state UI
     } finally {
       setIsLoading(false);
     }

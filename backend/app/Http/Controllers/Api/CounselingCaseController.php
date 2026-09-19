@@ -471,6 +471,16 @@ class CounselingCaseController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
+        // Validate that the assigned tutor_id actually belongs to a TUTOR-role user
+        if ($request->filled('tutor_id')) {
+            $assignedTutor = User::find($request->input('tutor_id'));
+            if (!$assignedTutor || !$assignedTutor->isTutor()) {
+                return response()->json([
+                    'message' => 'Penugasan gagal: pengguna yang dipilih bukan konselor.',
+                ], 422);
+            }
+        }
+
         $case = CounselingCase::findOrFail($id);
         $oldStatus = $case->status;
         $newStatus = $request->input('status');

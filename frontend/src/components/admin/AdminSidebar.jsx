@@ -23,6 +23,7 @@ import {
   HeartHandshake,
   MessageSquareHeart,
   HelpCircle,
+  Star,
   Building2
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -52,6 +53,7 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
     { id: 'services', label: 'Layanan Bimbingan', icon: HeartHandshake },
     { id: 'problems', label: 'Topik Masalah', icon: MessageSquareHeart },
     { id: 'faqs', label: 'Tanya Jawab (FAQ)', icon: HelpCircle },
+    { id: 'testimonials', label: 'Testimoni', icon: Star },
     { id: 'screening_cta', label: 'Banner Screening', icon: ShieldCheck },
     { id: 'footer', label: 'Footer & Kontak', icon: Building2 },
   ];

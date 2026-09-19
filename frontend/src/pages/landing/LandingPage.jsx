@@ -274,33 +274,41 @@ export const LandingPage = () => {
     offline_card_desc: 'Pertemuan langsung di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2.',
   };
 
-  // Dynamic Hero Banner Slider — hanya dari data admin, tanpa foto hardcode
+  // Dynamic Hero Banner Slider — rotasi halus setiap 3 detik
   const heroBanners = (() => {
-    const primaryUrl = hero?.image_url || '';
-
-    if (hero?.banner_images && Array.isArray(hero.banner_images) && hero.banner_images.length > 0) {
-      const urls = hero.banner_images
-        .map((img) => (typeof img === 'string' ? img : img?.url))
-        .filter((u) => u && u !== '/images/hero_counseling.jpg' && u !== '/images/banner1.jpg' && u !== '/images/banner3.jpg' && !failedImages.has(u));
-
-      // Jika masih ada URL valid setelah filter hardcode, gunakan
-      if (urls.length > 0) {
-        const otherUrls = urls.filter((u) => u !== primaryUrl);
-        const combined = primaryUrl && !urls.includes(primaryUrl) && !failedImages.has(primaryUrl) ? [primaryUrl, ...otherUrls] : urls;
-        return combined.slice(0, 5).map((url, i) => ({
-          url,
-          alt: `Banner Foto ${i + 1}`,
-        }));
-      }
+    const list = [];
+    if (Array.isArray(hero?.banner_images) && hero.banner_images.length > 0) {
+      hero.banner_images.forEach((img) => {
+        const u = typeof img === 'string' ? img : img?.url;
+        if (u && typeof u === 'string' && u.trim() && !list.includes(u.trim())) {
+          list.push(u.trim());
+        }
+      });
+    } else if (hero?.image_url && typeof hero.image_url === 'string' && hero.image_url.trim()) {
+      list.push(hero.image_url.trim());
     }
 
-    // Jika primaryUrl valid (bukan hardcode), gunakan saja
-    if (primaryUrl && primaryUrl !== '/images/banner1.jpg' && primaryUrl !== '/images/banner3.jpg' && !failedImages.has(primaryUrl)) {
-      return [{ url: primaryUrl, alt: 'Banner Foto 1' }];
+    if (Array.isArray(hero?.slides)) {
+      hero.slides.forEach((img) => {
+        const u = typeof img === 'string' ? img : (img?.url || img?.image);
+        if (u && typeof u === 'string' && u.trim() && !list.includes(u.trim())) {
+          list.push(u.trim());
+        }
+      });
     }
 
-    // Tidak ada foto dari admin — kembalikan array kosong (tidak tampilkan banner)
-    return [];
+    // Default stock banners hanya jika belum pernah dikonfigurasi sama sekali di database
+    if (list.length === 0 && !Array.isArray(content?.hero?.banner_images)) {
+      list.push('/images/banner1.jpg', '/images/banner3.jpg');
+    }
+
+    return list
+      .filter((u) => u && !failedImages.has(u))
+      .slice(0, 10)
+      .map((url, i) => ({
+        url,
+        alt: `Banner Foto ${i + 1}`,
+      }));
   })();
 
   // Reset slide jika index melebihi total banner aktif
@@ -310,14 +318,14 @@ export const LandingPage = () => {
     }
   }, [heroBanners.length, currentSlide]);
 
-  // Auto-play timer for hero banner slider (changes every 4 seconds, pauses on hover)
+  // Auto-play timer for hero banner slider (berputar otomatis setiap 3 detik)
   useEffect(() => {
-    if (isSliderHovered || heroBanners.length <= 1) return;
+    if (heroBanners.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroBanners.length);
-    }, 4000);
+    }, 3000);
     return () => clearInterval(timer);
-  }, [isSliderHovered, heroBanners.length]);
+  }, [heroBanners.length]);
 
   const handlePrevSlide = (e) => {
     e?.stopPropagation();
@@ -530,29 +538,39 @@ export const LandingPage = () => {
     }
   ];
 
-  const testimonials = content?.testimonials || [
+  const testimonialSection = typeof content?.testimonials === 'object' && !Array.isArray(content?.testimonials)
+    ? content.testimonials
+    : {};
+
+  const defaultTestimonials = [
     {
       id: 1,
       name: 'Fadhil R.',
-      faculty: 'Mahasiswa Teknologi Informasi - Semester 7',
+      faculty: 'Mahasiswa Teknik Informatika - Semester 7',
       text: 'Sangat terbantu saat stuck skripsi dan overthinking masa depan. Konselornya ramah dan tidak menghakimi sama sekali. Sekarang jauh lebih lega dan fokus.',
       rating: 5
     },
     {
       id: 2,
       name: 'Nabila S.',
-      faculty: 'Mahasiswi Bimbingan Konseling Islam - Semester 5',
-      text: 'Platformnya nyaman banget, bisa langsung video call tanpa ribet. Ruang yang benar-benar aman buat menumpahkan unek-unek tanpa takut di-judge.',
+      faculty: 'Mahasiswi Psikologi - Semester 5',
+      text: 'Platformnya nyaman banget, bisa langsung video call tanpa ribet. Ruang yang benar-benar aman buat menumpahkan unek-unek tanpa takut di judge.',
       rating: 5
     },
     {
       id: 3,
       name: 'Rian H.',
-      faculty: 'Mahasiswa Ekonomi Syariah - Semester 3',
+      faculty: 'Mahasiswa Manajemen - Semester 3',
       text: 'Adaptasi kuliah rantau sempat bikin stres berat. Setelah 2 sesi konseling, saya dapat tips regulasi emosi yang praktis dan aplikatif.',
       rating: 5
     }
   ];
+
+  const testimonials = Array.isArray(content?.testimonials) && content.testimonials.length > 0
+    ? content.testimonials
+    : (testimonialSection.items && testimonialSection.items.length > 0)
+      ? testimonialSection.items
+      : defaultTestimonials;
 
   // Tampilkan hanya tutor dari API — tidak ada fallback data palsu
   const displayTutors = tutors;
@@ -740,6 +758,28 @@ export const LandingPage = () => {
             </>
           )}
 
+          {/* Indikator Titik Slide Banner */}
+          {heroBanners.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20">
+              {heroBanners.map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentSlide(dotIdx);
+                  }}
+                  aria-label={`Slide ${dotIdx + 1}`}
+                  className={`transition-all duration-300 rounded-full cursor-pointer ${
+                    dotIdx === currentSlide
+                      ? 'w-6 h-2 bg-emerald-400'
+                      : 'w-2 h-2 bg-white/60 hover:bg-white'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Badge resmi mengambang di pojok kanan bawah foto - hanya jika ada banner */}
           {(heroBanners.length > 0 || isLoadingContent) && (
             <div className="absolute bottom-3 right-4 sm:right-8 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-emerald-200/90 shadow-soft-sm z-20">
@@ -755,13 +795,6 @@ export const LandingPage = () => {
 
             {/* Kolom Kiri: Teks Headline & Tombol Aksi */}
             <ScrollReveal direction="up" delay={0.1} className="lg:col-span-7 space-y-4 text-center lg:text-left">
-              {hero.tagline && !hero.tagline.includes('Bebas Penghakiman') && (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-950 text-xs font-bold border border-emerald-300 shadow-2xs">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>{hero.tagline}</span>
-                </div>
-              )}
-
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-darktext tracking-tight leading-snug whitespace-pre-line">
                 {(hero.title || 'Ada Hal yang Sedang Membebani Pikiranmu?')
                   .replace(/\n?Kamu Tidak Harus Menghadapinya Sendirian\.?/i, '')
@@ -1234,58 +1267,63 @@ export const LandingPage = () => {
         </ScrollReveal>
       </section>
 
-      {/* 9. Student Testimonials ("Cerita Mereka yang Telah Bertumbuh") */}
-      <section className="py-14 sm:py-18 px-4 sm:px-8 max-w-6xl mx-auto w-full relative">
-        <ScrollReveal direction="up" delay={0.08}>
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-              Pengalaman Mahasiswa
-            </span>
-            <h2 className="text-xl sm:text-3xl font-black text-darktext">
-              Cerita Mahasiswa yang Telah Bertumbuh
-            </h2>
-            <p className="text-xs sm:text-sm text-mutedtext mt-2 leading-relaxed">
-              Mendengar pengalaman mereka yang menemukan kembali ketenangan dan kejelasan pikiran.
-            </p>
-          </div>
-        </ScrollReveal>
+      {/* 9. Student Testimonials ("Cerita Mereka yang Telah Bertumbuh" - Smooth Rolling Marquee) */}
+      <section className="py-14 sm:py-18 overflow-hidden w-full relative">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8">
+          <ScrollReveal direction="up" delay={0.08}>
+            <div className="text-center max-w-2xl mx-auto mb-10">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                {testimonialSection.tag || 'Pengalaman Mahasiswa'}
+              </span>
+              <h2 className="text-xl sm:text-3xl font-black text-darktext">
+                {testimonialSection.title || 'Cerita Mahasiswa yang Telah Bertumbuh'}
+              </h2>
+              <p className="text-xs sm:text-sm text-mutedtext mt-2 leading-relaxed">
+                {testimonialSection.subtitle || 'Mendengar pengalaman mereka yang menemukan kembali ketenangan dan kejelasan pikiran.'}
+              </p>
+            </div>
+          </ScrollReveal>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {testimonials.map((t, idx) => (
-            <ScrollReveal
-              key={t.id}
-              direction="up"
-              delay={idx * 0.1}
-              className="h-full"
-            >
+        {/* Rolling Track with side fades (Continuous Marquee) */}
+        <div className="relative w-full overflow-hidden py-3">
+          {/* Ambient Fade on Edges */}
+          <div className="absolute left-0 inset-y-0 w-8 sm:w-28 bg-gradient-to-r from-[#F6F8FA] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 inset-y-0 w-8 sm:w-28 bg-gradient-to-l from-[#F6F8FA] to-transparent z-10 pointer-events-none" />
+
+          <div className="animate-marquee flex gap-5 px-4">
+            {[...testimonials, ...testimonials, ...testimonials, ...testimonials].map((t, idx) => (
               <div
-                className="p-6 rounded-3xl bg-white border border-emerald-100/80 shadow-soft-sm flex flex-col justify-between hover:border-emerald-300 transition-colors h-full"
+                key={`${t.id || idx}-${idx}`}
+                className="w-[290px] sm:w-[360px] shrink-0 p-6 rounded-3xl bg-white border border-emerald-100/90 shadow-soft-sm hover:border-emerald-400 hover:shadow-md transition-all duration-300 flex flex-col justify-between select-none"
               >
                 <div className="space-y-3">
                   <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(t.rating || 5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400" />
+                    {[...Array(Number(t.rating) || 5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                     ))}
                   </div>
 
-                  <p className="text-xs sm:text-sm text-darktext leading-relaxed italic">
-                    "{t.text}"
+                  <p className="text-xs sm:text-sm text-darktext leading-relaxed font-medium">
+                    "{t.text || t.quote}"
                   </p>
                 </div>
 
                 <div className="pt-4 mt-4 border-t border-emerald-50 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
-                    {t.name.charAt(0)}
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs shrink-0">
+                    {t.name ? t.name.charAt(0).toUpperCase() : 'M'}
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-darktext">{t.name}</h4>
-                    <span className="text-[11px] text-emerald-800/80 font-medium block">{t.faculty}</span>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-darktext truncate">{t.name}</h4>
+                    <span className="text-[11px] text-emerald-800/90 font-medium block truncate">
+                      {t.faculty || t.role}
+                    </span>
                   </div>
                 </div>
               </div>
-            </ScrollReveal>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
