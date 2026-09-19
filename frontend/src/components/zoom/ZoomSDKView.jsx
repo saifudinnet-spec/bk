@@ -14,7 +14,6 @@ import {
   MicOff,
   Users,
   Info,
-  RefreshCw,
   Clock,
   Maximize2,
   Minimize2
@@ -26,7 +25,6 @@ export const ZoomSDKView = ({
   sessionData,
   session = null,
   onLeaveSession,
-  onSwitchToMock,
   isTutor = false
 }) => {
   const [showEndModal, setShowEndModal] = useState(false);
@@ -158,14 +156,12 @@ export const ZoomSDKView = ({
         setParticipantCount((prev) => Math.max(1, prev - 1));
       } else if (msg.type === 'ZOOM_MEETING_LEAVE') {
         onLeaveSession();
-      } else if (msg.type === 'SWITCH_TO_MOCK') {
-        if (onSwitchToMock) onSwitchToMock();
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [meetingNumber, password, userName, userEmail, sdkKey, signature, directJoinUrl, onLeaveSession, onSwitchToMock]);
+  }, [meetingNumber, password, userName, userEmail, sdkKey, signature, directJoinUrl, onLeaveSession]);
 
   const handleToggleMute = () => {
     const nextMuted = !isAudioMuted;
@@ -285,17 +281,6 @@ export const ZoomSDKView = ({
               <ExternalLink className="w-3.5 h-3.5" />
               <span className="hidden lg:inline">App Zoom</span>
             </a>
-          )}
-
-          {/* Switch to WebRTC Mock if needed */}
-          {onSwitchToMock && (
-            <button
-              onClick={onSwitchToMock}
-              className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 text-xs transition-colors cursor-pointer"
-              title="Beralih ke mode simulasi WebRTC internal"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
-            </button>
           )}
 
           {/* Fullscreen Toggle Button */}

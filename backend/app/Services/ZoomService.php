@@ -19,8 +19,7 @@ class ZoomService
 
     public static function isMockMode(): bool
     {
-        $mock = SystemSetting::get('zoom_mock_mode', env('ZOOM_MOCK_MODE', 'true'));
-        return filter_var($mock, FILTER_VALIDATE_BOOLEAN) || !self::isConfigured();
+        return false;
     }
 
     /**
@@ -58,7 +57,7 @@ class ZoomService
         $endTime = Carbon::parse($session->end_at);
 
         $isTestSession = str_starts_with($session->counselingCase?->case_number ?? '', 'TEST');
-        if (!$forceTest && !$isTestSession && !self::isMockMode()) {
+        if (!$forceTest && !$isTestSession) {
             if ($now->lt($startTime->copy()->subMinutes(15))) {
                 $diffMins = $now->diffInMinutes($startTime);
                 throw new \Exception("Ruang konseling baru dibuka 15 menit sebelum jadwal (mulai dalam {$diffMins} menit lagi).", 400);
@@ -89,23 +88,6 @@ class ZoomService
 
         $passWord = $session->meeting_password ?: ($permanentPassword ?: 'bk1234');
         $isUserTutor = $session->tutor_id === $user->id || $user->isAdmin();
-
-        if (self::isMockMode()) {
-            return [
-                'is_mock' => true,
-                'signature' => 'MOCK_ZOOM_TOKEN_' . base64_encode($user->id . '_' . $session->id . '_' . time()),
-                'meeting_number' => (string)$meetingNumber,
-                'password' => (string)$passWord,
-                'role' => $isUserTutor ? 1 : 0,
-                'user_name' => $user->name,
-                'user_email' => $user->email,
-                'session_title' => 'Konseling Online: ' . ($session->counselingCase ? $session->counselingCase->category : 'Sesi BK'),
-                'tutor_name' => $session->tutor ? $session->tutor->name : 'Tutor BK',
-                'student_name' => $session->user ? $session->user->name : 'Peserta',
-                'direct_join_url' => $session->meeting_url ?: $permanentUrl,
-                'is_tutor' => $isUserTutor,
-            ];
-        }
 
         $sdkKey = SystemSetting::get('zoom_sdk_key', env('ZOOM_SDK_KEY', ''));
         $sdkSecret = SystemSetting::get('zoom_sdk_secret', env('ZOOM_SDK_SECRET', ''));

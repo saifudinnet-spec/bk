@@ -549,10 +549,9 @@
             if (config.directJoinUrl) {
               actionHtml += `<a class="btn-action btn-secondary" href="${config.directJoinUrl}" target="_blank">Buka di App Zoom</a>`;
             }
-            actionHtml += '<button class="btn-action btn-secondary" onclick="window.parent.postMessage({type:\'SWITCH_TO_MOCK\'},\'*\')">Gunakan Mode Simulasi (WebRTC)</button>';
             updateStatus(
               'Koneksi Zoom SDK Timeout',
-              'Melebihi batas waktu koneksi. Anda bisa membuka di aplikasi Zoom langsung atau beralih ke Mode Simulasi.',
+              'Melebihi batas waktu koneksi. Anda bisa memuat ulang atau membuka langsung di aplikasi Zoom.',
               true,
               actionHtml
             );
@@ -671,7 +670,6 @@
           if (config.directJoinUrl) {
             actionHtml += `<a class="btn-action btn-secondary" href="${config.directJoinUrl}" target="_blank">Buka di App Zoom</a>`;
           }
-          actionHtml += '<button class="btn-action btn-secondary" onclick="window.parent.postMessage({type:\'SWITCH_TO_MOCK\'},\'*\')">Gunakan Mode Simulasi (WebRTC)</button>';
 
           updateStatus(
             'Gagal Terhubung ke Zoom SDK',

@@ -162,53 +162,24 @@ export const AdminZoomTab = ({
           </div>
         </div>
 
-        {/* Mode Switcher */}
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-2">Mode Operasi Video Konseling</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label
-              className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
-                settings.zoom_mock_mode
-                  ? 'bg-emerald-50/40 border-emerald-600 shadow-soft-xs ring-2 ring-emerald-600/10'
-                  : 'bg-white/80 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name="zoom_mode"
-                checked={settings.zoom_mock_mode}
-                onChange={() => setSettings({ ...settings, zoom_mock_mode: true })}
-                className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
-              />
-              <div className="text-xs">
-                <span className="font-bold text-slate-900 block">Simulasi / Mock Mode (WebRTC P2P)</span>
-                <span className="text-[11px] text-slate-500 mt-0.5 block leading-relaxed">
-                  Video call berjalan di browser via WebRTC internal. Bebas testing alur konseling tanpa akun Zoom.
+        {/* Mode Operasi: 100% Full Live Zoom */}
+        <div className="p-4 rounded-2xl border border-blue-200/80 bg-gradient-to-r from-blue-50/70 to-indigo-50/40 shadow-soft-xs flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-soft-xs shrink-0">
+              <Video className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900">Mode Operasi Video: 100% Full Live Zoom Meeting SDK</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  AKTIF PENUH
                 </span>
               </div>
-            </label>
-
-            <label
-              className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
-                !settings.zoom_mock_mode
-                  ? 'bg-blue-50/40 border-blue-600 shadow-soft-xs ring-2 ring-blue-600/10'
-                  : 'bg-white/80 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name="zoom_mode"
-                checked={!settings.zoom_mock_mode}
-                onChange={() => setSettings({ ...settings, zoom_mock_mode: false })}
-                className="mt-0.5 text-blue-600 focus:ring-blue-500"
-              />
-              <div className="text-xs">
-                <span className="font-bold text-slate-900 block">Live Zoom Meeting SDK (Resmi di Web)</span>
-                <span className="text-[11px] text-slate-500 mt-0.5 block leading-relaxed">
-                  Video call Zoom resmi langsung tersemat di dalam halaman web Ruang BK dengan kualitas Zoom asli.
-                </span>
-              </div>
-            </label>
+              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                Platform Ruang BK menggunakan integrasi Zoom Meeting SDK resmi secara menyeluruh untuk audio, video, dan keamanan sesi.
+              </p>
+            </div>
           </div>
         </div>
 
