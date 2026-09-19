@@ -162,26 +162,6 @@ export const AdminZoomTab = ({
           </div>
         </div>
 
-        {/* Mode Operasi: 100% Full Live Zoom */}
-        <div className="p-4 rounded-2xl border border-blue-200/80 bg-gradient-to-r from-blue-50/70 to-indigo-50/40 shadow-soft-xs flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-soft-xs shrink-0">
-              <Video className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-900">Mode Operasi Video: 100% Full Live Zoom Meeting SDK</span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                  AKTIF PENUH
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                Platform Ruang BK menggunakan integrasi Zoom Meeting SDK resmi secara menyeluruh untuk audio, video, dan keamanan sesi.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Tautan Zoom Meeting Tetap (Permanent / Standby Link) */}
         <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/70 via-indigo-50/30 to-white p-4 sm:p-5 shadow-soft-xs space-y-4">
