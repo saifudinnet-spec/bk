@@ -290,14 +290,6 @@ export const AdminZoomTab = ({
           </span>
         </div>
 
-        {/* Penjelasan Singkat */}
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200/60 text-[11px] text-indigo-950 leading-relaxed">
-          <Info className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-          <div>
-            <strong>💡 Mengapa Membutuhkan Meeting SDK?</strong> Fitur ini membuat mahasiswa dan konselor tidak perlu keluar dari website Ruang BK. Panggilan video Zoom langsung terintegrasi di dalam halaman konseling. Penggunaan Meeting SDK ini <strong>100% GRATIS</strong> dari Zoom!
-          </div>
-        </div>
-
         {/* Panduan Cara Buat App Meeting SDK */}
         <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3.5 text-xs text-indigo-950">
           <div
