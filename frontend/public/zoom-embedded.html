@@ -10,10 +10,8 @@
   <link type="text/css" rel="stylesheet" href="https://source.zoom.us/3.8.5/css/react-select.css" />
 
   <style>
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
     }
     html, body {
       width: 100%;
@@ -690,6 +688,90 @@
         });
       }
 
+      // External Audio & Video Command Handlers
+      let isAudioMuted = false;
+      let isVideoActive = true;
+
+      async function toggleAudio(targetMuted) {
+        try {
+          const user = (client && typeof client.getCurrentUser === 'function') ? client.getCurrentUser() : null;
+          const userId = user?.userId;
+          const shouldMute = (typeof targetMuted === 'boolean') ? targetMuted : !isAudioMuted;
+
+          if (client && typeof client.mute === 'function') {
+            try {
+              if (shouldMute) {
+                await client.mute(true, userId);
+              } else {
+                if (typeof client.unmute === 'function') {
+                  await client.unmute(userId);
+                } else {
+                  await client.mute(false, userId);
+                }
+              }
+            } catch (callErr) {
+              try {
+                await client.mute({ mute: shouldMute, userId });
+              } catch (e2) {}
+            }
+          }
+
+          // Trigger any native buttons in the Zoom DOM
+          const buttons = document.querySelectorAll('button');
+          for (const btn of buttons) {
+            const label = (btn.getAttribute('aria-label') || btn.getAttribute('title') || btn.textContent || '').toLowerCase();
+            if (shouldMute && (label.includes('mute') || label.includes('bisu') || label.includes('heningkan'))) {
+              btn.click();
+              break;
+            } else if (!shouldMute && (label.includes('unmute') || label.includes('suara'))) {
+              btn.click();
+              break;
+            }
+          }
+
+          isAudioMuted = shouldMute;
+          window.parent.postMessage({ type: 'AUDIO_STATE_CHANGED', isMuted: isAudioMuted }, '*');
+        } catch (err) {
+          console.warn('Audio toggle info:', err);
+        }
+      }
+
+      async function toggleVideo(targetVideo) {
+        try {
+          const user = (client && typeof client.getCurrentUser === 'function') ? client.getCurrentUser() : null;
+          const userId = user?.userId;
+          const shouldShow = (typeof targetVideo === 'boolean') ? targetVideo : !isVideoActive;
+
+          if (client && typeof client.showVideo === 'function') {
+            try {
+              await client.showVideo(shouldShow, userId);
+            } catch (callErr) {
+              try {
+                await client.showVideo({ show: shouldShow, userId });
+              } catch (e2) {}
+            }
+          }
+
+          // Trigger any native video buttons in the Zoom DOM
+          const buttons = document.querySelectorAll('button');
+          for (const btn of buttons) {
+            const label = (btn.getAttribute('aria-label') || btn.getAttribute('title') || btn.textContent || '').toLowerCase();
+            if (!shouldShow && (label.includes('stop video') || label.includes('hentikan video'))) {
+              btn.click();
+              break;
+            } else if (shouldShow && (label.includes('start video') || label.includes('mulai video'))) {
+              btn.click();
+              break;
+            }
+          }
+
+          isVideoActive = shouldShow;
+          window.parent.postMessage({ type: 'VIDEO_STATE_CHANGED', isVideoOn: isVideoActive }, '*');
+        } catch (err) {
+          console.warn('Video toggle info:', err);
+        }
+      }
+
       // Check URL parameters first
       const initialParams = getQueryParams();
       if (initialParams.signature && initialParams.meetingNumber) {
@@ -703,6 +785,16 @@
         });
         window.parent.postMessage({ type: 'ZOOM_EMBED_READY' }, '*');
       }
+
+      // Listen for parent dock commands
+      window.addEventListener('message', (event) => {
+        if (!event.data || typeof event.data !== 'object') return;
+        if (event.data.type === 'TOGGLE_MUTE') {
+          toggleAudio(event.data.isMuted);
+        } else if (event.data.type === 'TOGGLE_VIDEO') {
+          toggleVideo(event.data.isVideoOn);
+        }
+      });
     })();
   </script>
 </body>

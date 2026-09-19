@@ -9,6 +9,10 @@ import {
   Copy,
   Check,
   Video,
+  VideoOff,
+  Mic,
+  MicOff,
+  Users,
   Info,
   RefreshCw,
   Clock,
@@ -33,6 +37,9 @@ export const ZoomSDKView = ({
   const [isConnected, setIsConnected] = useState(false);
   const [remoteUserJoined, setRemoteUserJoined] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isVideoActive, setIsVideoActive] = useState(true);
+  const [participantCount, setParticipantCount] = useState(2);
 
   const iframeRef = useRef(null);
   const containerRef = useRef(null);
@@ -140,8 +147,15 @@ export const ZoomSDKView = ({
         }, '*');
       } else if (msg.type === 'ZOOM_JOIN_SUCCESS') {
         setIsConnected(true);
+      } else if (msg.type === 'AUDIO_STATE_CHANGED') {
+        setIsAudioMuted(Boolean(msg.isMuted));
+      } else if (msg.type === 'VIDEO_STATE_CHANGED') {
+        setIsVideoActive(Boolean(msg.isVideoOn));
       } else if (msg.type === 'ZOOM_USER_ADDED') {
         setRemoteUserJoined(true);
+        setParticipantCount((prev) => Math.max(2, prev + 1));
+      } else if (msg.type === 'ZOOM_USER_REMOVED') {
+        setParticipantCount((prev) => Math.max(1, prev - 1));
       } else if (msg.type === 'ZOOM_MEETING_LEAVE') {
         onLeaveSession();
       } else if (msg.type === 'SWITCH_TO_MOCK') {
@@ -152,6 +166,24 @@ export const ZoomSDKView = ({
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [meetingNumber, password, userName, userEmail, sdkKey, signature, directJoinUrl, onLeaveSession, onSwitchToMock]);
+
+  const handleToggleMute = () => {
+    const nextMuted = !isAudioMuted;
+    setIsAudioMuted(nextMuted);
+    iframeRef.current?.contentWindow?.postMessage({
+      type: 'TOGGLE_MUTE',
+      isMuted: nextMuted
+    }, '*');
+  };
+
+  const handleToggleVideo = () => {
+    const nextVideo = !isVideoActive;
+    setIsVideoActive(nextVideo);
+    iframeRef.current?.contentWindow?.postMessage({
+      type: 'TOGGLE_VIDEO',
+      isVideoOn: nextVideo
+    }, '*');
+  };
 
   const handleCopy = (text, type) => {
     if (!text) return;
@@ -295,6 +327,85 @@ export const ZoomSDKView = ({
           allow="camera; microphone; display-capture; fullscreen; autoplay; clipboard-write; screen-wake-lock"
           className="w-full h-full border-0 block"
         />
+
+        {/* Modern Floating Video Control Dock */}
+        <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 sm:gap-2.5 bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 px-3 sm:px-4 py-2 rounded-full shadow-2xl transition-all pointer-events-auto select-none">
+          {/* Mute/Unmute Mic Button */}
+          <button
+            onClick={handleToggleMute}
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+              isAudioMuted
+                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-900/30'
+                : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60'
+            }`}
+            title={isAudioMuted ? 'Nyalakan Mikrofon' : 'Bisukan Mikrofon'}
+          >
+            {isAudioMuted ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4 text-emerald-400" />}
+            <span>{isAudioMuted ? 'Bisu' : 'Mic Aktif'}</span>
+          </button>
+
+          {/* Start/Stop Camera Button */}
+          <button
+            onClick={handleToggleVideo}
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+              !isVideoActive
+                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-900/30'
+                : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60'
+            }`}
+            title={isVideoActive ? 'Hentikan Kamera Video' : 'Mulai Kamera Video'}
+          >
+            {!isVideoActive ? <VideoOff className="w-4 h-4 text-white" /> : <Video className="w-4 h-4 text-sky-400" />}
+            <span>{!isVideoActive ? 'Kamera Mati' : 'Kamera Aktif'}</span>
+          </button>
+
+          <div className="hidden sm:block w-px h-5 bg-slate-700/60 mx-0.5" />
+
+          {/* Participants Badge */}
+          <div 
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-800/60 border border-slate-700/50 text-[11px] font-medium text-slate-300"
+            title={`${participantCount} orang terhubung di sesi konseling`}
+          >
+            <Users className="w-3.5 h-3.5 text-blue-400" />
+            <span className="font-mono font-semibold">{participantCount}</span>
+            <span className="hidden md:inline">Peserta</span>
+          </div>
+
+          {/* Direct Link to App Zoom */}
+          {directJoinUrl && (
+            <a
+              href={directJoinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-white border border-blue-500/40 text-xs font-medium transition-colors"
+              title="Buka langsung di aplikasi Zoom Desktop / Mobile"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">App Zoom</span>
+            </a>
+          )}
+
+          {/* Fullscreen Button */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 sm:px-3 sm:py-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+            title={isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <span className="hidden lg:inline">{isFullscreen ? 'Keluar' : 'Penuh'}</span>
+          </button>
+
+          <div className="w-px h-5 bg-slate-700/60 mx-0.5" />
+
+          {/* Leave Meeting Button */}
+          <button
+            onClick={() => setShowEndModal(true)}
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-lg shadow-rose-950/40 transition-all cursor-pointer"
+            title="Selesaikan & Tinggalkan Sesi"
+          >
+            <PhoneOff className="w-4 h-4" />
+            <span>Keluar</span>
+          </button>
+        </div>
       </div>
 
       {/* Diagnostic Modal for Tutor */}
