@@ -45,6 +45,7 @@ export const AdminDashboard = () => {
     crisis_flag_enabled: true,
     crisis_alert_email: 'crisis-center@kampus.ac.id',
     reminder_notifications_enabled: true,
+    general_counselee_enabled: true,
 
     // Zoom Server-to-Server OAuth & Permanent Link
     zoom_mock_mode: true,
@@ -96,8 +97,8 @@ export const AdminDashboard = () => {
   const [previewArticle, setPreviewArticle] = useState(null);
   const [articleEditorMode, setArticleEditorMode] = useState('text'); // 'text' | 'html' | 'preview'
 
-  // User Management State (Filter Peran, Tab Konseli/Konselor/Admin, Sub-Filter, Pencarian, Modal)
-  const [userRoleFilter, setUserRoleFilter] = useState('ALL'); // 'ALL' | 'COUNSELEE' | 'TUTOR' | 'ADMIN'
+  // User Management State (Filter Peran Konseli/Konselor/Admin, Sub-Filter, Pencarian, Modal)
+  const [userRoleFilter, setUserRoleFilter] = useState('COUNSELEE'); // 'COUNSELEE' | 'TUTOR' | 'ADMIN'
   const [counseleeSubFilter, setCounseleeSubFilter] = useState('ALL'); // 'ALL' | 'STUDENT' | 'GENERAL'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL'); // 'ALL' | 'active' | 'inactive'
@@ -200,6 +201,22 @@ export const AdminDashboard = () => {
       }
     } catch (err) {
       showError(err.message || 'Gagal mengubah status pengguna.');
+    }
+  };
+
+  const handleToggleGeneralCounselee = async () => {
+    const nextState = !settings.general_counselee_enabled;
+    try {
+      await api.put('/admin/settings', {
+        ...settings,
+        general_counselee_enabled: nextState,
+      });
+      setSettings((prev) => ({ ...prev, general_counselee_enabled: nextState }));
+      showSuccess(
+        `Layanan konseli umum berhasil ${nextState ? 'diaktifkan' : 'dinonaktifkan'}.`
+      );
+    } catch (err) {
+      showError(err.message || 'Gagal mengubah status aktivasi konseli umum.');
     }
   };
 
@@ -330,6 +347,8 @@ export const AdminDashboard = () => {
           isLoadingUsers={isLoadingUsers}
           reloadUsers={reloadUsers}
           handleToggleUserStatus={handleToggleUserStatus}
+          generalCounseleeEnabled={settings.general_counselee_enabled !== false}
+          onToggleGeneralCounselee={handleToggleGeneralCounselee}
         />
       )}
 

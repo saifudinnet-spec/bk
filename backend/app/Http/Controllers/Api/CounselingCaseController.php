@@ -74,6 +74,14 @@ class CounselingCaseController extends Controller
         ]);
 
         $user = $request->user();
+
+        // Check if general counselee consultation is enabled
+        if ($user->isGeneral() && SystemSetting::get('general_counselee_enabled', 'true') !== 'true') {
+            return response()->json([
+                'message' => 'Layanan bimbingan dan konsultasi untuk masyarakat umum saat ini sedang dinonaktifkan oleh Administrator.'
+            ], 403);
+        }
+
         $topicId = $request->input('topic_id');
         $customTopic = $request->input('custom_topic');
         $category = $request->input('category');

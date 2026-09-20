@@ -45,7 +45,7 @@ const MOOD_MAP = {
 };
 
 export const StudentDashboard = () => {
-  const { user } = useAuth();
+  const { user, isGeneral } = useAuth();
   const { showSuccess, showError } = useToast();
   const { startWithCounselor, setSelectedTopic } = useCounselingFlow();
   const navigate = useNavigate();
@@ -63,8 +63,13 @@ export const StudentDashboard = () => {
   const [instantMethodType, setInstantMethodType] = useState(null);
   const [activeTestSession, setActiveTestSession] = useState(null);
   const [isTestFeatureEnabled, setIsTestFeatureEnabled] = useState(true);
+  const [generalCounseleeEnabled, setGeneralCounseleeEnabled] = useState(true);
 
   const handleStartInstantSession = async (method, forceNew = false) => {
+    if (isGeneral && !generalCounseleeEnabled) {
+      showError('Layanan konsultasi untuk masyarakat umum saat ini sedang dinonaktifkan oleh administrator.');
+      return;
+    }
     setIsStartingInstant(true);
     setInstantMethodType(method);
     try {
@@ -90,6 +95,9 @@ export const StudentDashboard = () => {
       setActiveTestSession(res.active_test_session || null);
       if (res.zoom_test_feature_enabled !== undefined) {
         setIsTestFeatureEnabled(Boolean(res.zoom_test_feature_enabled));
+      }
+      if (res.general_counselee_enabled !== undefined) {
+        setGeneralCounseleeEnabled(Boolean(res.general_counselee_enabled));
       }
       if (res.has_checked_in_today !== undefined) {
         setHasCheckedInToday(Boolean(res.has_checked_in_today));
@@ -211,6 +219,28 @@ export const StudentDashboard = () => {
           </div>
         )}
       </section>
+
+      {/* Peringatan jika Layanan Konseli Umum sedang dinonaktifkan oleh Administrator */}
+      {isGeneral && !generalCounseleeEnabled && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-rose-50/60 to-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3.5 shadow-soft-sm">
+          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+            <AlertCircle className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-xs sm:text-sm font-bold text-amber-950">
+                Layanan Bimbingan & Konseling Masyarakat Umum Sedang Dinonaktifkan
+              </h4>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300">
+                Non-aktif Sementara
+              </span>
+            </div>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Pendaftaran dan pengajuan jadwal konsultasi baru untuk konseli masyarakat umum saat ini sedang ditutup oleh Administrator sistem. Anda tetap dapat mengakses profil dan riwayat kasus bimbingan sebelumnya.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 1. Daily Mood Check-in (Otomatis hilang jika sudah check-in hari ini) */}
       <AnimatePresence>
@@ -689,11 +719,17 @@ export const StudentDashboard = () => {
 
           <button
             type="button"
-            onClick={() =>
-              activeCase
-                ? navigate(`/app/cases/${activeCase.id}`)
-                : navigate('/app/counseling/wizard')
-            }
+            onClick={() => {
+              if (activeCase) {
+                navigate(`/app/cases/${activeCase.id}`);
+              } else {
+                if (isGeneral && !generalCounseleeEnabled) {
+                  showError('Layanan konsultasi konseli umum saat ini sedang ditutup sementara oleh administrator.');
+                  return;
+                }
+                navigate('/app/counseling/wizard');
+              }
+            }}
             className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all min-h-[44px]"
           >
             <span>{activeCase ? 'Detail Kasus & Riwayat Sesi' : 'Daftar Konseling Sekarang'}</span>

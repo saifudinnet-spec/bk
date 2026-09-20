@@ -11,9 +11,11 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use App\Models\QuestionOption;
 use App\Models\SystemSetting;
+use App\Models\Tutor;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -90,6 +92,72 @@ class AdminController extends Controller
         $users = $query->latest()->paginate($perPage);
 
         return response()->json($users);
+    }
+
+    /**
+     * Create new user (TUTOR or ADMIN)
+     */
+    public function createUser(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $request->validate([
+            'role' => 'required|in:TUTOR,ADMIN',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'phone' => 'nullable|string|max:30',
+            'password' => 'required|string|min:6',
+            // Tutor specific fields
+            'nip' => 'nullable|string|max:50',
+            'specialization' => 'nullable|string|max:255',
+            'bio' => 'nullable|string|max:2000',
+            'avatar' => 'nullable|string|max:255',
+        ]);
+
+        if ($request->role === 'TUTOR' && empty($request->specialization)) {
+            return response()->json([
+                'message' => 'Bidang spesialisasi wajib diisi untuk akun konselor.',
+                'errors' => ['specialization' => ['Bidang spesialisasi wajib diisi.']]
+            ], 422);
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'user_type' => strtolower($request->role),
+            'avatar' => $request->avatar ?: ($request->role === 'TUTOR' ? '/images/counselor_ahmad.jpg' : null),
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+
+        if ($request->role === 'TUTOR') {
+            Tutor::create([
+                'user_id' => $user->id,
+                'nip' => $request->nip ?: null,
+                'specialization' => $request->specialization,
+                'bio' => $request->bio ?: 'Konselor bimbingan dan konseling kampus.',
+                'photo' => $user->avatar,
+                'is_available' => true,
+            ]);
+        }
+
+        AuditLogService::log('create_user', 'User', (string)$user->id, [
+            'created_by' => $request->user()->name,
+            'role' => $user->role,
+            'name' => $user->name,
+            'email' => $user->email,
+        ], $request->user()->id);
+
+        $user->load(['studentProfile', 'generalProfile', 'tutorProfile']);
+
+        $roleLabel = $user->role === 'TUTOR' ? 'Konselor / Tutor' : 'Administrator';
+        return response()->json([
+            'message' => "Akun {$roleLabel} {$user->name} berhasil ditambahkan.",
+            'user' => $user,
+        ], 201);
     }
 
     /**
@@ -176,6 +244,7 @@ class AdminController extends Controller
             'crisis_flag_enabled' => SystemSetting::get('crisis_flag_enabled', 'true') === 'true',
             'crisis_alert_email' => SystemSetting::get('crisis_alert_email', 'crisis-center@kampus.ac.id'),
             'reminder_notifications_enabled' => SystemSetting::get('reminder_notifications_enabled', 'true') === 'true',
+            'general_counselee_enabled' => SystemSetting::get('general_counselee_enabled', 'true') === 'true',
 
             // Zoom Server-to-Server OAuth
             'zoom_mock_mode' => SystemSetting::get('zoom_mock_mode', env('ZOOM_MOCK_MODE', 'true')) === 'true',
@@ -227,6 +296,7 @@ class AdminController extends Controller
             'crisis_flag_enabled' => 'nullable|boolean',
             'crisis_alert_email' => 'nullable|string|email|max:255',
             'reminder_notifications_enabled' => 'nullable|boolean',
+            'general_counselee_enabled' => 'nullable|boolean',
 
             // Zoom Settings
             'zoom_mock_mode' => 'nullable|boolean',
@@ -265,6 +335,7 @@ class AdminController extends Controller
         if ($request->has('crisis_flag_enabled')) SystemSetting::set('crisis_flag_enabled', $request->boolean('crisis_flag_enabled') ? 'true' : 'false');
         if ($request->has('crisis_alert_email')) SystemSetting::set('crisis_alert_email', trim($request->input('crisis_alert_email') ?? ''));
         if ($request->has('reminder_notifications_enabled')) SystemSetting::set('reminder_notifications_enabled', $request->boolean('reminder_notifications_enabled') ? 'true' : 'false');
+        if ($request->has('general_counselee_enabled')) SystemSetting::set('general_counselee_enabled', $request->boolean('general_counselee_enabled') ? 'true' : 'false');
 
         // Zoom Server-to-Server OAuth
         if ($request->has('zoom_mock_mode')) SystemSetting::set('zoom_mock_mode', $request->boolean('zoom_mock_mode') ? 'true' : 'false');

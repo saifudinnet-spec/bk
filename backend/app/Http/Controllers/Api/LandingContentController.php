@@ -316,6 +316,7 @@ class LandingContentController extends Controller
             'operating_hours' => SystemSetting::get('operating_hours', 'Senin - Jumat, 08:00 - 16:00 WIB'),
             'announcement_bar_enabled' => SystemSetting::get('announcement_bar_enabled', 'false') === 'true',
             'announcement_text' => SystemSetting::get('announcement_text', 'Layanan Konseling Tatap Muka & Online tetap beroperasi penuh.'),
+            'general_counselee_enabled' => SystemSetting::get('general_counselee_enabled', 'true') === 'true',
         ];
 
         return response()->json([

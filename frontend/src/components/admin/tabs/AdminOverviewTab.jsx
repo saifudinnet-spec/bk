@@ -41,7 +41,7 @@ export const AdminOverviewTab = ({
               type="button"
               onClick={() => {
                 setActiveTab('users');
-                if (setUserRoleFilter) setUserRoleFilter('ALL');
+                if (setUserRoleFilter) setUserRoleFilter('COUNSELEE');
               }}
               className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all flex items-center justify-between gap-3 min-w-[170px]"
             >

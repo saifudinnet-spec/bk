@@ -36,8 +36,19 @@ const steps = [
 
 export const CounselingWizard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isGeneral } = useAuth();
   const { showSuccess, showError } = useToast();
+  const [generalCounseleeEnabled, setGeneralCounseleeEnabled] = useState(true);
+
+  useEffect(() => {
+    if (user?.role === 'GENERAL') {
+      api.get('/student/dashboard').then((res) => {
+        if (res.general_counselee_enabled !== undefined) {
+          setGeneralCounseleeEnabled(Boolean(res.general_counselee_enabled));
+        }
+      }).catch(() => {});
+    }
+  }, [user]);
   const {
     selectedTopic,
     selectedCounselor,
@@ -170,6 +181,11 @@ export const CounselingWizard = () => {
   };
 
   const handleFinalSubmit = async () => {
+    if (isGeneral && !generalCounseleeEnabled) {
+      showError('Layanan konsultasi bimbingan untuk masyarakat umum saat ini sedang dinonaktifkan oleh administrator.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const finalPayload = assessmentData || {
@@ -417,6 +433,20 @@ export const CounselingWizard = () => {
       </div>
 
       <div className="space-y-3">
+        {/* Peringatan jika Layanan Konseli Umum Non-aktif */}
+        {isGeneral && !generalCounseleeEnabled && (
+          <div className="p-4 sm:p-5 rounded-3xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3.5 shadow-soft-sm">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="text-xs sm:text-sm font-bold text-amber-950">
+                Layanan Bimbingan & Konseling Masyarakat Umum Sedang Dinonaktifkan
+              </h4>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Administrator saat ini sedang menonaktifkan pendaftaran konsultasi untuk masyarakat umum. Anda tidak dapat menyelesaikan atau mengirimkan pengajuan sesi bimbingan konseling ini.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* STEP 1: ASESMEN AWAL (Screening Terhubung vs Nara Conversational) */}
         {currentStep === 1 && useConnectedScreening && (assessmentData || contextAssessmentData) ? (

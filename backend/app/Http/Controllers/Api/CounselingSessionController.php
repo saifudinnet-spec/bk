@@ -82,6 +82,13 @@ class CounselingSessionController extends Controller
         $user = $request->user();
         $case = CounselingCase::findOrFail($request->input('counseling_case_id'));
 
+        // Check if general counselee consultation is enabled
+        if (($user->isGeneral() || ($case->user && $case->user->isGeneral())) && SystemSetting::get('general_counselee_enabled', 'true') !== 'true') {
+            return response()->json([
+                'message' => 'Layanan bimbingan dan konsultasi untuk masyarakat umum saat ini sedang dinonaktifkan oleh Administrator.'
+            ], 403);
+        }
+
         // Check ownership
         if (!$user->isAdmin() && $case->user_id !== $user->id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
@@ -186,6 +193,13 @@ class CounselingSessionController extends Controller
         $user = $request->user();
         $method = strtoupper($request->input('method', 'CHAT'));
         $forceNew = $request->boolean('force_new');
+
+        // Check if general counselee consultation is enabled
+        if ($user->isGeneral() && SystemSetting::get('general_counselee_enabled', 'true') !== 'true') {
+            return response()->json([
+                'message' => 'Layanan bimbingan dan konsultasi untuk masyarakat umum saat ini sedang dinonaktifkan oleh Administrator.'
+            ], 403);
+        }
 
         if (SystemSetting::get('zoom_test_feature_enabled', 'true') !== 'true') {
             return response()->json([

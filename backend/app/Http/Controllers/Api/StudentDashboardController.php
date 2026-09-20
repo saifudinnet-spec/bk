@@ -123,6 +123,7 @@ class StudentDashboardController extends Controller
             'action_plans' => $actionPlans,
             'active_test_session' => $activeTestSession,
             'zoom_test_feature_enabled' => $isTestFeatureEnabled,
+            'general_counselee_enabled' => SystemSetting::get('general_counselee_enabled', 'true') === 'true',
         ]);
     }
 }
