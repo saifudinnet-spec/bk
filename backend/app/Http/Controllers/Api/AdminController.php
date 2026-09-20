@@ -168,7 +168,7 @@ class AdminController extends Controller
             'announcement_text' => SystemSetting::get('announcement_text', 'Layanan Konseling Tatap Muka & Online tetap beroperasi penuh.'),
 
             // BK Online Application Settings
-            'default_session_duration' => (int) SystemSetting::get('default_session_duration', '60'),
+            'default_session_duration' => (int) SystemSetting::get('default_session_duration', '40'),
             'max_active_sessions_per_student' => (int) SystemSetting::get('max_active_sessions_per_student', '2'),
             'cancellation_buffer_hours' => (int) SystemSetting::get('cancellation_buffer_hours', '6'),
             'auto_approve_counseling' => SystemSetting::get('auto_approve_counseling', 'false') === 'true',
@@ -179,6 +179,7 @@ class AdminController extends Controller
 
             // Zoom Server-to-Server OAuth
             'zoom_mock_mode' => SystemSetting::get('zoom_mock_mode', env('ZOOM_MOCK_MODE', 'true')) === 'true',
+            'zoom_test_feature_enabled' => SystemSetting::get('zoom_test_feature_enabled', 'true') === 'true',
             'zoom_account_id' => SystemSetting::get('zoom_account_id', env('ZOOM_ACCOUNT_ID', '')),
             'zoom_client_id' => SystemSetting::get('zoom_client_id', env('ZOOM_CLIENT_ID', '')),
             'zoom_client_secret_masked' => $maskedSecret,
@@ -218,7 +219,7 @@ class AdminController extends Controller
             'announcement_text' => 'nullable|string|max:500',
 
             // BK Online Application Settings
-            'default_session_duration' => 'nullable|integer|in:30,45,60,90',
+            'default_session_duration' => 'nullable|integer|in:30,40,60',
             'max_active_sessions_per_student' => 'nullable|integer|min:1|max:10',
             'cancellation_buffer_hours' => 'nullable|integer|min:0|max:48',
             'auto_approve_counseling' => 'nullable|boolean',
@@ -229,6 +230,7 @@ class AdminController extends Controller
 
             // Zoom Settings
             'zoom_mock_mode' => 'nullable|boolean',
+            'zoom_test_feature_enabled' => 'nullable|boolean',
             'zoom_account_id' => 'nullable|string|max:255',
             'zoom_client_id' => 'nullable|string|max:255',
             'zoom_client_secret' => 'nullable|string|max:255',
@@ -266,6 +268,7 @@ class AdminController extends Controller
 
         // Zoom Server-to-Server OAuth
         if ($request->has('zoom_mock_mode')) SystemSetting::set('zoom_mock_mode', $request->boolean('zoom_mock_mode') ? 'true' : 'false');
+        if ($request->has('zoom_test_feature_enabled')) SystemSetting::set('zoom_test_feature_enabled', $request->boolean('zoom_test_feature_enabled') ? 'true' : 'false');
         if ($request->has('zoom_account_id')) SystemSetting::set('zoom_account_id', trim($request->input('zoom_account_id') ?? ''));
         if ($request->has('zoom_client_id')) SystemSetting::set('zoom_client_id', trim($request->input('zoom_client_id') ?? ''));
         if ($request->filled('zoom_client_secret')) SystemSetting::set('zoom_client_secret', trim($request->input('zoom_client_secret')));

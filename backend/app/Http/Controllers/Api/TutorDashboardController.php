@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CounselingCase;
 use App\Models\CounselingSession;
+use App\Models\SystemSetting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -100,14 +101,19 @@ class TutorDashboardController extends Controller
             }
         }
 
-        $activeTestSession = CounselingSession::with(['counselingCase', 'user:id,name,avatar'])
-            ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
-            ->where('end_at', '>=', $now)
-            ->whereHas('counselingCase', function ($q) {
-                $q->where('case_number', 'LIKE', 'TEST-%');
-            })
-            ->latest('id')
-            ->first();
+        $isTestFeatureEnabled = SystemSetting::get('zoom_test_feature_enabled', 'true') === 'true';
+        $activeTestSession = null;
+
+        if ($isTestFeatureEnabled) {
+            $activeTestSession = CounselingSession::with(['counselingCase', 'user:id,name,avatar'])
+                ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+                ->where('end_at', '>=', $now)
+                ->whereHas('counselingCase', function ($q) {
+                    $q->where('case_number', 'LIKE', 'TEST-%');
+                })
+                ->latest('id')
+                ->first();
+        }
 
         return response()->json([
             'counselor' => [
@@ -125,6 +131,7 @@ class TutorDashboardController extends Controller
             'waiting_cases' => $waitingCases,
             'upcoming_sessions' => $upcomingSessions,
             'active_test_session' => $activeTestSession,
+            'zoom_test_feature_enabled' => $isTestFeatureEnabled,
         ]);
     }
 

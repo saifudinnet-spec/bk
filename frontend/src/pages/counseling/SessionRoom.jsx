@@ -57,8 +57,43 @@ export const SessionRoom = () => {
     }
   };
 
+  // Global safeguard: Terminate any active media streams whenever leaving or unmounting the session room
+  useEffect(() => {
+    const stopAllActiveStreams = () => {
+      if (typeof window !== 'undefined' && window.__bkActiveMediaStreams) {
+        window.__bkActiveMediaStreams.forEach((stream) => {
+          try {
+            if (stream && stream.getTracks) {
+              stream.getTracks().forEach((track) => track.stop());
+            }
+          } catch (e) {}
+        });
+        window.__bkActiveMediaStreams.clear();
+      }
+    };
+
+    window.addEventListener('beforeunload', stopAllActiveStreams);
+    window.addEventListener('pagehide', stopAllActiveStreams);
+
+    return () => {
+      window.removeEventListener('beforeunload', stopAllActiveStreams);
+      window.removeEventListener('pagehide', stopAllActiveStreams);
+      stopAllActiveStreams();
+    };
+  }, []);
+
   const handleLeaveSession = () => {
     setIsInMeeting(false);
+    if (typeof window !== 'undefined' && window.__bkActiveMediaStreams) {
+      window.__bkActiveMediaStreams.forEach((stream) => {
+        try {
+          if (stream && stream.getTracks) {
+            stream.getTracks().forEach((track) => track.stop());
+          }
+        } catch (e) {}
+      });
+      window.__bkActiveMediaStreams.clear();
+    }
     if (isTutor) {
       // Tutor redirected to write session summary & notes
       navigate(`/counseling/session/${id}/summary`);

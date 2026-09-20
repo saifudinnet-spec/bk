@@ -8,6 +8,7 @@ use App\Models\CounselingCase;
 use App\Models\CounselingSession;
 use App\Models\MoodCheckin;
 use App\Models\QuestionnaireResponse;
+use App\Models\SystemSetting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -96,15 +97,20 @@ class StudentDashboardController extends Controller
         ->take(10)
         ->get();
 
-        // 7. Active instant test session (if any testing session running in last 2 hours)
-        $activeTestSession = CounselingSession::with(['counselingCase', 'tutor:id,name,avatar'])
-            ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
-            ->where('end_at', '>=', $now)
-            ->whereHas('counselingCase', function ($q) {
-                $q->where('case_number', 'LIKE', 'TEST-%');
-            })
-            ->latest('id')
-            ->first();
+        // 7. Active instant test session (if feature enabled by admin and testing session running in last 2 hours)
+        $isTestFeatureEnabled = SystemSetting::get('zoom_test_feature_enabled', 'true') === 'true';
+        $activeTestSession = null;
+
+        if ($isTestFeatureEnabled) {
+            $activeTestSession = CounselingSession::with(['counselingCase', 'tutor:id,name,avatar'])
+                ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+                ->where('end_at', '>=', $now)
+                ->whereHas('counselingCase', function ($q) {
+                    $q->where('case_number', 'LIKE', 'TEST-%');
+                })
+                ->latest('id')
+                ->first();
+        }
 
         return response()->json([
             'upcoming_session' => $upcomingSession,
@@ -116,6 +122,7 @@ class StudentDashboardController extends Controller
             'has_checked_in_today' => $hasCheckedInToday,
             'action_plans' => $actionPlans,
             'active_test_session' => $activeTestSession,
+            'zoom_test_feature_enabled' => $isTestFeatureEnabled,
         ]);
     }
 }

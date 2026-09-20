@@ -52,6 +52,18 @@ export const ZoomSDKView = ({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  // Cleanup iframe on unmount so browser camera and audio handles inside the embedded Zoom SDK are completely released
+  useEffect(() => {
+    return () => {
+      if (iframeRef.current) {
+        try {
+          iframeRef.current.contentWindow?.postMessage({ type: 'TOGGLE_VIDEO', isVideoOn: false }, '*');
+          iframeRef.current.src = 'about:blank';
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   // Broadcast resize to embedded Zoom iframe whenever fullscreen state changes
   useEffect(() => {
     const notifyResize = () => {

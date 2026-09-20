@@ -20,7 +20,6 @@ import {
   ChevronRight,
   ChevronDown,
   Compass,
-  HeartHandshake,
   MessageSquareHeart,
   HelpCircle,
   Star,
@@ -34,6 +33,7 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCmsSubMenuCollapsed, setIsCmsSubMenuCollapsed] = useState(false);
 
   // Determine active tab from URL search param or route path
   const currentTab = (() => {
@@ -50,7 +50,6 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
   const cmsSubMenuItems = [
     { id: 'hero', label: 'Hero & Banner', icon: Sparkles },
     { id: 'navbar', label: 'Top Bar & Navigasi', icon: Compass },
-    { id: 'services', label: 'Layanan Bimbingan', icon: HeartHandshake },
     { id: 'problems', label: 'Topik Masalah', icon: MessageSquareHeart },
     { id: 'faqs', label: 'Tanya Jawab (FAQ)', icon: HelpCircle },
     { id: 'testimonials', label: 'Testimoni', icon: Star },
@@ -60,6 +59,17 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
 
   const handleNavClick = (tabId) => {
     setIsMobileOpen(false);
+
+    if (tabId === 'cms') {
+      if (currentTab === 'cms') {
+        // Klik ulang menu Editor Landing Page saat sudah terbuka -> toggle tutup/buka submenu
+        setIsCmsSubMenuCollapsed((prev) => !prev);
+        return;
+      } else {
+        setIsCmsSubMenuCollapsed(false);
+      }
+    }
+
     const targetParams = { tab: tabId };
     if (tabId === 'cms') {
       targetParams.sub = searchParams.get('sub') || 'hero';
@@ -76,6 +86,7 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
   const handleCmsSubClick = (subId, e) => {
     e.stopPropagation();
     setIsMobileOpen(false);
+    setIsCmsSubMenuCollapsed(false);
     if (location.pathname !== '/admin/dashboard') {
       navigate(`/admin/dashboard?tab=cms&sub=${subId}`);
     } else {
@@ -139,11 +150,11 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
         },
         {
           id: 'zoom_settings',
-          label: 'Integrasi Zoom Meeting',
+          label: 'Zoom Meeting',
           icon: Video,
           iconColor: 'text-blue-600 bg-blue-50 border-blue-200/70',
-          badge: zoomConfigured ? '🟢 Siap' : '⚙️ OAuth',
-          description: 'Server-to-Server OAuth API',
+          badge: null,
+          description: 'Pengaturan video meeting & API',
         },
         {
           id: 'voice',
@@ -270,7 +281,11 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
                       </div>
 
                       {isCms && isActive ? (
-                        <ChevronDown className="w-3.5 h-3.5 text-white/80 shrink-0 ml-1.5" />
+                        isCmsSubMenuCollapsed ? (
+                          <ChevronRight className="w-3.5 h-3.5 text-white/80 shrink-0 ml-1.5" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-white/80 shrink-0 ml-1.5" />
+                        )
                       ) : item.badge ? (
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 transition-all ${
@@ -285,7 +300,7 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
                     </button>
 
                     {/* Submenu directly under Editor Landing Page */}
-                    {isCms && isActive && (
+                    {isCms && isActive && !isCmsSubMenuCollapsed && (
                       <div className="mt-1 ml-3.5 pl-2.5 border-l-2 border-emerald-700/30 space-y-0.5 py-0.5 animate-in fade-in duration-200">
                         {cmsSubMenuItems.map((sub) => {
                           const SubIcon = sub.icon;

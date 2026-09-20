@@ -9,6 +9,7 @@ use App\Models\CounselingNote;
 use App\Models\CounselingSession;
 use App\Models\CounselingTopic;
 use App\Models\Notification;
+use App\Models\SystemSetting;
 use App\Models\TutorAvailability;
 use App\Models\User;
 use App\Services\AuditLogService;
@@ -185,6 +186,12 @@ class CounselingSessionController extends Controller
         $user = $request->user();
         $method = strtoupper($request->input('method', 'CHAT'));
         $forceNew = $request->boolean('force_new');
+
+        if (SystemSetting::get('zoom_test_feature_enabled', 'true') !== 'true') {
+            return response()->json([
+                'message' => 'Layanan uji coba instan sedang dinonaktifkan oleh administrator.',
+            ], 403);
+        }
 
         // 1. If force_new, complete any previous active instant test sessions
         if ($forceNew) {

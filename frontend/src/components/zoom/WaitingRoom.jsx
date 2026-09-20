@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Video,
@@ -8,6 +9,7 @@ import {
   User,
   Info,
   ArrowRight,
+  ArrowLeft,
   Stethoscope,
   Sparkles,
   Volume2,
@@ -27,6 +29,9 @@ import {
 import CounseleeDiagnosticModal from '../counseling/CounseleeDiagnosticModal';
 
 export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
+  const navigate = useNavigate();
+  const isMountedRef = useRef(true);
+
   const [timeLeft, setTimeLeft] = useState('');
   const [canJoin, setCanJoin] = useState(false);
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
@@ -105,6 +110,25 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
         audio: true,
       });
 
+      // Critical race condition guard: If user navigated away or unmounted while prompt was pending,
+      // terminate the acquired hardware tracks immediately!
+      if (!isMountedRef.current) {
+        if (stream) {
+          stream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch (e) {}
+          });
+        }
+        return;
+      }
+
+      // Track stream globally for cross-route cleanup safeguard
+      if (typeof window !== 'undefined') {
+        window.__bkActiveMediaStreams = window.__bkActiveMediaStreams || new Set();
+        window.__bkActiveMediaStreams.add(stream);
+      }
+
       mediaStreamRef.current = stream;
       setMediaStream(stream);
       setDevicePermission('granted');
@@ -119,7 +143,7 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
       // Live microphone meter
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
+        if (AudioCtx && isMountedRef.current) {
           const audioCtx = new AudioCtx();
           audioContextRef.current = audioCtx;
           const analyser = audioCtx.createAnalyser();
@@ -130,6 +154,7 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
 
           const dataArray = new Uint8Array(analyser.frequencyBinCount);
           const updateVolume = () => {
+            if (!isMountedRef.current) return;
             analyser.getByteFrequencyData(dataArray);
             let sum = 0;
             for (let i = 0; i < dataArray.length; i++) {
@@ -145,6 +170,7 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
         // Audio meter optional
       }
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.warn('getUserMedia error:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setDevicePermission('denied');
@@ -170,17 +196,49 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
     if (mediaStreamRef.current) {
       try {
         mediaStreamRef.current.getTracks().forEach((track) => {
-          track.stop();
+          try {
+            track.stop();
+          } catch (e) {}
         });
       } catch (e) {
         console.warn('Error stopping media track:', e);
       }
+      if (typeof window !== 'undefined' && window.__bkActiveMediaStreams) {
+        window.__bkActiveMediaStreams.delete(mediaStreamRef.current);
+      }
       mediaStreamRef.current = null;
     }
-    if (previewVideoRef.current) {
+    if (mediaStream) {
+      try {
+        mediaStream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (e) {}
+        });
+      } catch (e) {}
+      if (typeof window !== 'undefined' && window.__bkActiveMediaStreams) {
+        window.__bkActiveMediaStreams.delete(mediaStream);
+      }
+    }
+    if (previewVideoRef.current && previewVideoRef.current.srcObject) {
+      try {
+        const currentSrc = previewVideoRef.current.srcObject;
+        if (currentSrc && currentSrc.getTracks) {
+          currentSrc.getTracks().forEach((t) => {
+            try {
+              t.stop();
+            } catch (e) {}
+          });
+        }
+      } catch (e) {}
       previewVideoRef.current.srcObject = null;
     }
     setMediaStream(null);
+  };
+
+  const handleCancel = () => {
+    stopMediaStream();
+    navigate(isTutor ? '/tutor/dashboard' : '/app');
   };
 
   const handleJoin = () => {
@@ -226,11 +284,22 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
     }
   };
 
-  // Auto-request camera and mic permissions on mount
+  // Auto-request camera and mic permissions on mount with unmount cleanup
   useEffect(() => {
+    isMountedRef.current = true;
     requestPermissions();
 
+    const handleWindowUnload = () => {
+      stopMediaStream();
+    };
+
+    window.addEventListener('beforeunload', handleWindowUnload);
+    window.addEventListener('pagehide', handleWindowUnload);
+
     return () => {
+      isMountedRef.current = false;
+      window.removeEventListener('beforeunload', handleWindowUnload);
+      window.removeEventListener('pagehide', handleWindowUnload);
       stopMediaStream();
     };
   }, []);
@@ -308,6 +377,15 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
             <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-teal-50 text-teal-800 border border-teal-200">
               {timeLeft}
             </span>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="ml-1 px-2.5 py-1 rounded-lg bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+              title="Batal dan kembali ke dashboard"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              <span>Batal</span>
+            </button>
           </div>
         </div>
 

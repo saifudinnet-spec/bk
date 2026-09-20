@@ -45,6 +45,7 @@ export const TutorDashboard = () => {
   const [isStartingInstant, setIsStartingInstant] = useState(false);
   const [instantMethodType, setInstantMethodType] = useState(null);
   const [activeTestSession, setActiveTestSession] = useState(null);
+  const [isTestFeatureEnabled, setIsTestFeatureEnabled] = useState(true);
 
   const handleStartInstantSession = async (method, forceNew = false) => {
     setIsStartingInstant(true);
@@ -70,6 +71,9 @@ export const TutorDashboard = () => {
         setWaitingCases(res.waiting_cases || []);
         setSessions(res.upcoming_sessions || []);
         setActiveTestSession(res.active_test_session || null);
+        if (res.zoom_test_feature_enabled !== undefined) {
+          setIsTestFeatureEnabled(Boolean(res.zoom_test_feature_enabled));
+        }
         if (res.counselor) {
           setCounselorInfo(res.counselor);
         }
@@ -155,104 +159,106 @@ export const TutorDashboard = () => {
         <div className="absolute -left-12 -bottom-12 w-64 h-64 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
       </section>
 
-      {/* 1.5 Quick Instant Testing Bar for Tutor */}
-      <section className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 text-white shadow-soft-md border border-emerald-500/30 relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 w-52 h-52 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-10 -bottom-10 w-52 h-52 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
+      {/* 1.5 Quick Instant Testing Bar for Tutor (Hanya tampil jika diaktifkan admin) */}
+      {isTestFeatureEnabled && (
+        <section className="p-5 md:p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 text-white shadow-soft-md border border-emerald-500/30 relative overflow-hidden">
+          <div className="absolute -right-10 -top-10 w-52 h-52 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-10 -bottom-10 w-52 h-52 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Notifikasi Sesi Uji Coba yang Sedang Berjalan (Multi-Device Sync Banner) */}
-        {activeTestSession && (
-          <div className="relative z-10 mb-4 p-3.5 sm:p-4 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping shrink-0" />
-              <div className="space-y-0.5 min-w-0">
-                <p className="text-xs sm:text-sm font-black text-emerald-200 flex items-center gap-1.5 flex-wrap">
-                  <span>🟢 Sesi Uji {activeTestSession.method === 'ZOOM' ? 'Zoom' : 'Chat'} Sedang Aktif</span>
-                  <span className="font-mono text-[11px] bg-emerald-900/80 px-2 py-0.5 rounded-md border border-emerald-400/30 text-emerald-300">
-                    ID #{activeTestSession.id}
-                  </span>
-                </p>
-                <p className="text-[11px] text-slate-300 truncate">
-                  {activeTestSession.user?.name ? `Mahasiswa: ${activeTestSession.user.name}.` : 'Ruang pengujian terbuka.'} Klik tombol untuk langsung terhubung ke ruang konseling yang sama dari laptop ini.
-                </p>
+          {/* Notifikasi Sesi Uji Coba yang Sedang Berjalan (Multi-Device Sync Banner) */}
+          {activeTestSession && (
+            <div className="relative z-10 mb-4 p-3.5 sm:p-4 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <div className="space-y-0.5 min-w-0">
+                  <p className="text-xs sm:text-sm font-black text-emerald-200 flex items-center gap-1.5 flex-wrap">
+                    <span>🟢 Sesi Uji {activeTestSession.method === 'ZOOM' ? 'Zoom' : 'Chat'} Sedang Aktif</span>
+                    <span className="font-mono text-[11px] bg-emerald-900/80 px-2 py-0.5 rounded-md border border-emerald-400/30 text-emerald-300">
+                      ID #{activeTestSession.id}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-slate-300 truncate">
+                    {activeTestSession.user?.name ? `Mahasiswa: ${activeTestSession.user.name}.` : 'Ruang pengujian terbuka.'} Klik tombol untuk langsung terhubung ke ruang konseling yang sama dari laptop ini.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/counseling/session/${activeTestSession.id}`)}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <span>Masuk ke Sesi #{activeTestSession.id}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartInstantSession(activeTestSession.method || 'CHAT', true)}
+                  className="px-2.5 py-2 bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-bold rounded-xl transition-all"
+                  title="Tutup sesi lama dan mulai sesi simulasi baru"
+                >
+                  + Baru
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
+          )}
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="space-y-1.5 max-w-xl">
+              <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                Uji Coba Ruang Chat atau Video Zoom sebagai Konselor
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Mulai sesi simulasi langsung tanpa menunggu jadwal temu mahasiswa. Anda dapat memeriksa fungsionalitas ruang interaktif secara langsung antar-laptop.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+              {/* Tombol Chat Sekarang */}
+              <motion.button
+                whileTap={{ scale: 0.96 }}
                 type="button"
-                onClick={() => navigate(`/counseling/session/${activeTestSession.id}`)}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                disabled={isStartingInstant}
+                onClick={() => handleStartInstantSession('CHAT')}
+                className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
               >
-                <span>Masuk ke Sesi #{activeTestSession.id}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button
+                {isStartingInstant && instantMethodType === 'CHAT' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Menyiapkan Chat...</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="w-4 h-4 text-emerald-100" />
+                    <span>💬 {activeTestSession?.method === 'CHAT' ? `Gabung Chat #${activeTestSession.id}` : 'Uji Chat Sekarang'}</span>
+                  </>
+                )}
+              </motion.button>
+
+              {/* Tombol Zoom Sekarang */}
+              <motion.button
+                whileTap={{ scale: 0.96 }}
                 type="button"
-                onClick={() => handleStartInstantSession(activeTestSession.method || 'CHAT', true)}
-                className="px-2.5 py-2 bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-bold rounded-xl transition-all"
-                title="Tutup sesi lama dan mulai sesi simulasi baru"
+                disabled={isStartingInstant}
+                onClick={() => handleStartInstantSession('ZOOM')}
+                className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
               >
-                + Baru
-              </button>
+                {isStartingInstant && instantMethodType === 'ZOOM' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Menyiapkan Zoom...</span>
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-4 h-4 text-teal-100" />
+                    <span>📹 {activeTestSession?.method === 'ZOOM' ? `Gabung Zoom #${activeTestSession.id}` : 'Uji Zoom Sekarang'}</span>
+                  </>
+                )}
+              </motion.button>
             </div>
           </div>
-        )}
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="space-y-1.5 max-w-xl">
-            <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-              Uji Coba Ruang Chat atau Video Zoom sebagai Konselor
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Mulai sesi simulasi langsung tanpa menunggu jadwal temu mahasiswa. Anda dapat memeriksa fungsionalitas ruang interaktif secara langsung antar-laptop.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
-            {/* Tombol Chat Sekarang */}
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              type="button"
-              disabled={isStartingInstant}
-              onClick={() => handleStartInstantSession('CHAT')}
-              className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
-            >
-              {isStartingInstant && instantMethodType === 'CHAT' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Menyiapkan Chat...</span>
-                </>
-              ) : (
-                <>
-                  <MessageSquare className="w-4 h-4 text-emerald-100" />
-                  <span>💬 {activeTestSession?.method === 'CHAT' ? `Gabung Chat #${activeTestSession.id}` : 'Uji Chat Sekarang'}</span>
-                </>
-              )}
-            </motion.button>
-
-            {/* Tombol Zoom Sekarang */}
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              type="button"
-              disabled={isStartingInstant}
-              onClick={() => handleStartInstantSession('ZOOM')}
-              className="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 min-h-[46px]"
-            >
-              {isStartingInstant && instantMethodType === 'ZOOM' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Menyiapkan Zoom...</span>
-                </>
-              ) : (
-                <>
-                  <Video className="w-4 h-4 text-teal-100" />
-                  <span>📹 {activeTestSession?.method === 'ZOOM' ? `Gabung Zoom #${activeTestSession.id}` : 'Uji Zoom Sekarang'}</span>
-                </>
-              )}
-            </motion.button>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 2. Vibrant Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

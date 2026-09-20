@@ -19,7 +19,7 @@ import {
 import api from '../../../services/api';
 
 export const AdminZoomTab = ({
-  settings,
+  settings = {},
   setSettings,
   onSave,
   isSavingSettings,
@@ -119,7 +119,7 @@ export const AdminZoomTab = ({
   };
 
   const isSdkReady = Boolean(
-    settings.zoom_sdk_key && (settings.zoom_has_sdk_secret || settings.zoom_sdk_secret)
+    settings?.zoom_sdk_key && (settings?.zoom_has_sdk_secret || settings?.zoom_sdk_secret)
   );
 
   return (
@@ -132,7 +132,7 @@ export const AdminZoomTab = ({
               <Video className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-900">Integrasi Video Konseling Zoom</h3>
+              <h3 className="text-sm font-black text-slate-900">Zoom Meeting</h3>
               <p className="text-xs text-slate-500">Konfigurasi Zoom Meeting SDK & Server-to-Server OAuth.</p>
             </div>
           </div>
@@ -147,21 +147,63 @@ export const AdminZoomTab = ({
             </span>
 
             <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-              settings.zoom_mock_mode
+              settings?.zoom_mock_mode
                 ? 'bg-amber-50 text-amber-800 border-amber-200'
-                : settings.zoom_is_configured
+                : settings?.zoom_is_configured
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}>
-              {settings.zoom_mock_mode
+              {settings?.zoom_mock_mode
                 ? '🟡 Mock Mode (Lokal)'
-                : settings.zoom_is_configured
+                : settings?.zoom_is_configured
                 ? '🟢 S2S API Aktif'
                 : '⚪ S2S Belum Diisi'}
             </span>
           </div>
         </div>
 
+        {/* Fitur On/Off Layanan Uji Coba Chat dan Zoom */}
+        <div className={`rounded-2xl border p-4 sm:p-5 transition-all shadow-soft-xs ${
+          settings.zoom_test_feature_enabled !== false
+            ? 'border-emerald-300 bg-gradient-to-br from-emerald-50/80 via-teal-50/40 to-white'
+            : 'border-slate-200 bg-slate-50/80'
+        }`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                Layanan uji coba chat dan zoom
+              </h4>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border transition-all ${
+                settings.zoom_test_feature_enabled !== false
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                  : 'bg-slate-200 text-slate-600 border-slate-300'
+              }`}>
+                {settings.zoom_test_feature_enabled !== false ? 'Aktif' : 'Tidak Aktif'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSettings((prev) => ({
+                  ...prev,
+                  zoom_test_feature_enabled: prev.zoom_test_feature_enabled === false ? true : false,
+                }))}
+                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                  settings.zoom_test_feature_enabled !== false ? 'bg-emerald-600' : 'bg-slate-300'
+                }`}
+                role="switch"
+                aria-checked={settings.zoom_test_feature_enabled !== false}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
+                    settings.zoom_test_feature_enabled !== false ? 'translate-x-8' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Tautan Zoom Meeting Tetap (Permanent / Standby Link) */}
         <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/70 via-indigo-50/30 to-white p-4 sm:p-5 shadow-soft-xs space-y-4">

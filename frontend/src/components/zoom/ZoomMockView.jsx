@@ -48,6 +48,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, onSw
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const streamRef = useRef(null);
+  const isMountedRef = useRef(true);
   const peerConnectionRef = useRef(null);
   const broadcastChannelRef = useRef(null);
   const myPeerId = useRef('peer_' + Math.random().toString(36).slice(2, 9) + '_' + (isTutor ? 'tutor' : 'student'));
@@ -249,6 +250,23 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, onSw
           video: { facingMode: 'user' },
           audio: false,
         });
+      }
+
+      // Check if unmounted while getUserMedia prompt was pending
+      if (!isMountedRef.current) {
+        if (stream) {
+          stream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch (e) {}
+          });
+        }
+        return false;
+      }
+
+      if (typeof window !== 'undefined') {
+        window.__bkActiveMediaStreams = window.__bkActiveMediaStreams || new Set();
+        window.__bkActiveMediaStreams.add(stream);
       }
 
       streamRef.current = stream;
@@ -526,6 +544,7 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, onSw
     }, 1500);
 
     return () => {
+      isMountedRef.current = false;
       if (signalingPollingRef.current) {
         clearInterval(signalingPollingRef.current);
       }
@@ -536,7 +555,28 @@ export const ZoomMockView = ({ sessionData, session = null, onLeaveSession, onSw
         peerConnectionRef.current.close();
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (e) {}
+        });
+        if (typeof window !== 'undefined' && window.__bkActiveMediaStreams) {
+          window.__bkActiveMediaStreams.delete(streamRef.current);
+        }
+        streamRef.current = null;
+      }
+      if (localVideoRef.current && localVideoRef.current.srcObject) {
+        try {
+          const s = localVideoRef.current.srcObject;
+          if (s && s.getTracks) {
+            s.getTracks().forEach((t) => {
+              try {
+                t.stop();
+              } catch (e) {}
+            });
+          }
+        } catch (e) {}
+        localVideoRef.current.srcObject = null;
       }
       if (animFrameIdRef.current) {
         cancelAnimationFrame(animFrameIdRef.current);

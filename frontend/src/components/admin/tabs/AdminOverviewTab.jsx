@@ -59,7 +59,7 @@ export const AdminOverviewTab = ({
             >
               <span className="flex items-center gap-2">
                 <Video className="w-3.5 h-3.5 text-sky-400" />
-                <span>Integrasi Zoom</span>
+                <span>Zoom Meeting</span>
               </span>
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${settings?.zoom_is_configured ? 'bg-emerald-500/30 text-emerald-300' : 'bg-amber-500/30 text-amber-300'}`}>
                 {settings?.zoom_is_configured ? 'Siap' : 'Setup'}

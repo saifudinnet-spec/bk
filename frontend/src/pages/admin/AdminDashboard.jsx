@@ -37,7 +37,7 @@ export const AdminDashboard = () => {
     announcement_text: 'Layanan Konseling Tatap Muka & Online tetap beroperasi penuh.',
 
     // BK Online Application Settings
-    default_session_duration: 60,
+    default_session_duration: 40,
     max_active_sessions_per_student: 2,
     cancellation_buffer_hours: 6,
     auto_approve_counseling: false,
@@ -48,6 +48,7 @@ export const AdminDashboard = () => {
 
     // Zoom Server-to-Server OAuth & Permanent Link
     zoom_mock_mode: true,
+    zoom_test_feature_enabled: true,
     zoom_account_id: '',
     zoom_client_id: '',
     zoom_client_secret: '',
@@ -137,7 +138,7 @@ export const AdminDashboard = () => {
         setSettings((prev) => ({
           ...prev,
           ...settingsRes,
-          default_session_duration: Number(settingsRes.default_session_duration || 60),
+          default_session_duration: Number(settingsRes.default_session_duration || 40),
           max_active_sessions_per_student: Number(settingsRes.max_active_sessions_per_student || 2),
           cancellation_buffer_hours: Number(settingsRes.cancellation_buffer_hours || 6),
           auto_approve_counseling: Boolean(settingsRes.auto_approve_counseling),
@@ -145,6 +146,7 @@ export const AdminDashboard = () => {
           reminder_notifications_enabled: Boolean(settingsRes.reminder_notifications_enabled),
           announcement_bar_enabled: Boolean(settingsRes.announcement_bar_enabled),
           zoom_mock_mode: settingsRes.zoom_mock_mode === true || settingsRes.zoom_mock_mode === 'true',
+          zoom_test_feature_enabled: settingsRes.zoom_test_feature_enabled !== undefined ? Boolean(settingsRes.zoom_test_feature_enabled) : true,
           zoom_is_configured: Boolean(settingsRes.zoom_is_configured),
           zoom_sdk_is_configured: Boolean(settingsRes.zoom_sdk_is_configured),
         }));

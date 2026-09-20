@@ -302,12 +302,11 @@ export const AdminSettingsTab = ({
               <label className="block text-xs font-bold text-darktext mb-2">
                 Durasi Standar per Sesi Konseling
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { value: 30, label: '30 Menit', desc: 'Konseling Singkat' },
-                  { value: 45, label: '45 Menit', desc: 'Sesi Reguler' },
-                  { value: 60, label: '60 Menit', desc: 'Mendalam (Standar)' },
-                  { value: 90, label: '90 Menit', desc: 'Kasus Kompleks' },
+                  { value: 40, label: '40 Menit', desc: 'Standar' },
+                  { value: 60, label: '60 Menit', desc: 'Mendalam' },
                 ].map((item) => (
                   <button
                     key={item.value}
@@ -655,7 +654,7 @@ export const AdminSettingsTab = ({
                   <div className="flex items-center gap-2.5">
                     <Video className="w-4 h-4 text-blue-600" />
                     <div>
-                      <span className="text-xs font-bold text-darktext group-hover:text-blue-800 block">Integrasi Zoom Server-to-Server OAuth</span>
+                      <span className="text-xs font-bold text-darktext group-hover:text-blue-800 block">Zoom Meeting</span>
                       <span className="text-[11px] text-mutedtext block">Kredensial API & Uji Koneksi Langsung</span>
                     </div>
                   </div>

@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
         SystemSetting::set('tutor_assignment_mode', 'student_select');
         SystemSetting::set('crisis_flag_enabled', 'true');
         SystemSetting::set('zoom_mock_mode', 'true');
+        SystemSetting::set('zoom_test_feature_enabled', 'true');
 
         $commonPassword = Hash::make('password');
 

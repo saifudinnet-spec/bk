@@ -3,7 +3,6 @@ import {
   Sparkles,
   Star,
   Compass,
-  HeartHandshake,
   MessageSquareHeart,
   HelpCircle,
   ShieldCheck,
@@ -41,17 +40,9 @@ export const AdminCmsTab = ({
 }) => {
   const [isSavingCms, setIsSavingCms] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
-  const [openFaqIndices, setOpenFaqIndices] = useState({ 0: true });
-  const [openProblemIndices, setOpenProblemIndices] = useState({ 0: true });
+  const [openFaqIndices, setOpenFaqIndices] = useState({});
+  const [openProblemIndices, setOpenProblemIndices] = useState({});
   const [openTestimonialIndices, setOpenTestimonialIndices] = useState({ 0: true });
-  const [openServiceIndices, setOpenServiceIndices] = useState({ 0: true });
-
-  const toggleService = (idx) => {
-    setOpenServiceIndices((prev) => ({
-      ...prev,
-      [idx]: !prev[idx],
-    }));
-  };
 
   const toggleTestimonial = (idx) => {
     setOpenTestimonialIndices((prev) => ({
@@ -276,52 +267,6 @@ export const AdminCmsTab = ({
       showError('Gagal membersihkan foto.');
     }
   };
-
-  // Services handlers
-  const handleServiceChange = (index, field, value) => {
-    setLandingContent((prev) => {
-      const items = [...(prev?.services?.items || [])];
-      items[index][field] = value;
-      return {
-        ...prev,
-        services: {
-          ...prev?.services,
-          items,
-        },
-      };
-    });
-  };
-
-  const handleAddService = () => {
-    setLandingContent((prev) => ({
-      ...prev,
-      services: {
-        ...prev?.services,
-        items: [
-          ...(prev?.services?.items || []),
-          {
-            id: Date.now(),
-            title: 'Layanan Bimbingan Baru',
-            desc: 'Deskripsi lengkap mengenai layanan konseling ini...',
-            tag: 'Layanan',
-            icon: 'Sparkles',
-          },
-        ],
-      },
-    }));
-  };
-
-  const handleRemoveService = (index) => {
-    setLandingContent((prev) => ({
-      ...prev,
-      services: {
-        ...prev?.services,
-        items: prev?.services?.items?.filter((_, i) => i !== index),
-      },
-    }));
-  };
-
-  // WordPress-style Article Actions
 
   const handleScreeningCtaChange = (field, value) => {
     setLandingContent((prev) => ({
@@ -570,7 +515,7 @@ export const AdminCmsTab = ({
         testimonials: {
           ...base,
           items,
-        }
+        },
       };
     });
   };
@@ -1131,183 +1076,7 @@ if (!landingContent) return null;
           </div>
           )}
 
-          {/* Section 2: Services / Layanan Bimbingan (Accordion / Collapsible) */}
-          {(cmsSubTab === 'services' || cmsSubTab === 'all') && (
-            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-                <div>
-                  <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
-                    <HeartHandshake className="w-4 h-4 text-emerald-600" />
-                    <span>Daftar Seluruh Layanan Bimbingan ({landingContent?.services?.items?.length || 0})</span>
-                  </h4>
-                  <p className="text-[11px] text-mutedtext mt-0.5">
-                    Kelola nama layanan, deskripsi, kategori/tag, dan ikon yang ditampilkan pada website.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleAddService}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 flex items-center gap-1.5 transition-colors shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Tambah Layanan</span>
-                  </button>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                {(!landingContent?.services?.items || landingContent.services.items.length === 0) && (
-                  <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    <p className="text-xs text-mutedtext">Belum ada layanan bimbingan.</p>
-                    <button
-                      type="button"
-                      onClick={handleAddService}
-                      className="mt-2 text-xs font-bold text-emerald-600 hover:text-emerald-700"
-                    >
-                      + Tambah Layanan Pertama
-                    </button>
-                  </div>
-                )}
-
-                {landingContent?.services?.items?.map((srv, idx) => {
-                  const isOpen = Boolean(openServiceIndices[idx]);
-                  return (
-                    <div
-                      key={srv.id || idx}
-                      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
-                        isOpen
-                          ? 'border-emerald-400 bg-emerald-50/20 shadow-sm'
-                          : 'border-gray-200 bg-gray-50/70 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {/* Accordion Header */}
-                      <div
-                        onClick={() => toggleService(idx)}
-                        className="w-full p-4 flex items-center justify-between gap-3 cursor-pointer select-none"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${
-                              isOpen ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'
-                            }`}
-                          >
-                            {idx + 1}
-                          </span>
-                          <span className="text-xs font-bold text-darktext truncate">
-                            {srv.title || <span className="italic text-mutedtext">Nama layanan belum diisi...</span>}
-                          </span>
-                          {srv.tag && (
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
-                              {srv.tag}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => toggleService(idx)}
-                            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-colors ${
-                              isOpen
-                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                                : 'bg-white border border-softborder text-darktext hover:bg-gray-100'
-                            }`}
-                          >
-                            {isOpen ? (
-                              <>
-                                <span>Tutup</span>
-                                <ChevronUp className="w-3.5 h-3.5" />
-                              </>
-                            ) : (
-                              <>
-                                <span>Buka / Edit</span>
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            type="button"
-                            title="Hapus Layanan"
-                            onClick={() => handleRemoveService(idx)}
-                            className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Accordion Body */}
-                      {isOpen && (
-                        <div className="p-4 pt-2 border-t border-emerald-100/70 bg-white space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] font-bold text-darktext mb-1">Nama Layanan:</label>
-                              <input
-                                type="text"
-                                placeholder="misal: Konseling Individu Online"
-                                value={srv.title || ''}
-                                onChange={(e) => handleServiceChange(idx, 'title', e.target.value)}
-                                className="w-full h-10 px-3.5 rounded-xl border border-softborder bg-gray-50/50 text-xs font-semibold text-darktext focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] font-bold text-darktext mb-1">Kategori / Tag:</label>
-                              <input
-                                type="text"
-                                placeholder="misal: Online / Offline"
-                                value={srv.tag || ''}
-                                onChange={(e) => handleServiceChange(idx, 'tag', e.target.value)}
-                                className="w-full h-10 px-3.5 rounded-xl border border-softborder bg-gray-50/50 text-xs font-semibold text-darktext focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] font-bold text-darktext mb-1">Ikon Layanan:</label>
-                              <select
-                                value={srv.icon || 'Sparkles'}
-                                onChange={(e) => handleServiceChange(idx, 'icon', e.target.value)}
-                                className="w-full h-10 px-3.5 rounded-xl border border-softborder bg-gray-50/50 text-xs font-semibold text-darktext focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                              >
-                                <option value="Video">📹 Icon: Video Zoom</option>
-                                <option value="Building2">🏛️ Icon: Gedung / Offline</option>
-                                <option value="Sparkles">✨ Icon: Sparkles</option>
-                                <option value="Compass">🧭 Icon: Compass</option>
-                                <option value="GraduationCap">🎓 Icon: Topi Wisuda</option>
-                                <option value="Brain">🧠 Icon: Brain</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-darktext mb-1">Deskripsi Layanan:</label>
-                            <textarea
-                              rows={2}
-                              placeholder="Deskripsi penjelasan layanan..."
-                              value={srv.desc || ''}
-                              onChange={(e) => handleServiceChange(idx, 'desc', e.target.value)}
-                              className="w-full p-3 rounded-xl border border-softborder bg-gray-50/50 text-xs text-darktext focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all leading-relaxed"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between text-[11px] text-mutedtext pt-1 border-t border-gray-100">
-                            <span>Perubahan kartu layanan akan aktif setelah menekan Simpan.</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleService(idx)}
-                              className="font-bold text-emerald-700 hover:underline"
-                            >
-                              Selesai Edit (Ciutkan)
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Section 3: Problem Topics ("Sedang Menghadapi Masalah Apa?") (Accordion / Collapsible) */}
           {(cmsSubTab === 'problems' || cmsSubTab === 'all') && (
