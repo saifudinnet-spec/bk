@@ -333,7 +333,7 @@ export const GuidedAssessment = ({
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-5 md:p-6 relative overflow-hidden w-full min-h-[430px] sm:min-h-[450px] flex flex-col justify-between">
             {/* Top Step & Progress Bar (Visible in Questions step 1-5) */}
             {step >= 1 && step <= 5 && (
-              <div className="space-y-1.5 pb-2">
+              <div className="space-y-2 pb-4 sm:pb-5 mb-2 sm:mb-3">
                 <div className="flex items-center justify-between text-xs sm:text-[13px]">
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-slate-900">Pertanyaan {step} dari 5</span>
