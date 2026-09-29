@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, User, ArrowRight, GraduationCap, HeartHandshake, Info } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -149,7 +149,7 @@ export const Login = () => {
               <div className="text-xs">
                 <span className="font-bold text-emerald-950 block">Mahasiswa</span>
                 <span className="text-[11px] text-emerald-800 leading-snug">
-                  Login menggunakan akun <strong>Portal Akademik</strong> (NIM & kata sandi portal).
+                  Login menggunakan akun <strong>Portal Akademik</strong>.
                 </span>
               </div>
             </div>
@@ -168,11 +168,17 @@ export const Login = () => {
           </div>
         </div>
 
-        {/* Kembali ke Beranda */}
+        {/* Bantuan Login */}
         <div className="mt-6 text-center">
-          <Link to="/" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline">
-            ← Kembali ke Beranda
-          </Link>
+          <p className="text-xs text-mutedtext">
+            Tidak bisa login? Hubungi{' '}
+            <a
+              href="mailto:ruangbk@uinssc.ac.id"
+              className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+            >
+              ruangbk@uinssc.ac.id
+            </a>
+          </p>
         </div>
       </div>
     </PageTransition>
