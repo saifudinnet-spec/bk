@@ -37,7 +37,7 @@ export const ZoomSDKView = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoActive, setIsVideoActive] = useState(true);
-  const [participantCount, setParticipantCount] = useState(2);
+  const [participantCount, setParticipantCount] = useState(1); // Mulai dari 1 (diri sendiri), naik saat user lain join
 
   const iframeRef = useRef(null);
   const containerRef = useRef(null);
@@ -163,7 +163,7 @@ export const ZoomSDKView = ({
         setIsVideoActive(Boolean(msg.isVideoOn));
       } else if (msg.type === 'ZOOM_USER_ADDED') {
         setRemoteUserJoined(true);
-        setParticipantCount((prev) => Math.max(2, prev + 1));
+        setParticipantCount((prev) => prev + 1);
       } else if (msg.type === 'ZOOM_USER_REMOVED') {
         setParticipantCount((prev) => Math.max(1, prev - 1));
       } else if (msg.type === 'ZOOM_MEETING_LEAVE') {
@@ -330,7 +330,7 @@ export const ZoomSDKView = ({
           {/* Mute/Unmute Mic Button */}
           <button
             onClick={handleToggleMute}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+            className={`flex items-center justify-center p-2 sm:p-2.5 rounded-full transition-all cursor-pointer shadow-sm ${
               isAudioMuted
                 ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-900/30'
                 : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60'
@@ -338,13 +338,12 @@ export const ZoomSDKView = ({
             title={isAudioMuted ? 'Nyalakan Mikrofon' : 'Bisukan Mikrofon'}
           >
             {isAudioMuted ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4 text-emerald-400" />}
-            <span>{isAudioMuted ? 'Bisu' : 'Mic Aktif'}</span>
           </button>
 
           {/* Start/Stop Camera Button */}
           <button
             onClick={handleToggleVideo}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+            className={`flex items-center justify-center p-2 sm:p-2.5 rounded-full transition-all cursor-pointer shadow-sm ${
               !isVideoActive
                 ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-900/30'
                 : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60'
@@ -352,7 +351,6 @@ export const ZoomSDKView = ({
             title={isVideoActive ? 'Hentikan Kamera Video' : 'Mulai Kamera Video'}
           >
             {!isVideoActive ? <VideoOff className="w-4 h-4 text-white" /> : <Video className="w-4 h-4 text-sky-400" />}
-            <span>{!isVideoActive ? 'Kamera Mati' : 'Kamera Aktif'}</span>
           </button>
 
           <div className="hidden sm:block w-px h-5 bg-slate-700/60 mx-0.5" />

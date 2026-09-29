@@ -103,7 +103,7 @@ export const CounselorsByTopicPage = () => {
       navigate('/app/counseling/wizard');
     } else {
       // Direct to login with redirect flag
-      navigate('/login?redirect=/app/counseling/wizard');
+      navigate('/login?redirect=/app/counseling/wizard', { state: { fromBooking: true } });
     }
   };
 

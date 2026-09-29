@@ -28,7 +28,11 @@ frontend/.env
 frontend/.env.local
 frontend/.env.*.local
 frontend/*.local
+frontend/.env.production    # ← berisi URL domain asli, jangan di-commit
+!frontend/.env.development  # ← aman di-commit (menggunakan /api relatif)
 !frontend/.env.example
+!frontend/.env.production.example  # ← template untuk server production
+
 
 # Logs
 logs

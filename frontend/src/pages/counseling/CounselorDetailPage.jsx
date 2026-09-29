@@ -97,7 +97,7 @@ export const CounselorDetailPage = () => {
     if (isAuthenticated) {
       navigate('/app/counseling/wizard');
     } else {
-      navigate('/login?redirect=/app/counseling/wizard');
+      navigate('/login?redirect=/app/counseling/wizard', { state: { fromBooking: true } });
     }
   };
 

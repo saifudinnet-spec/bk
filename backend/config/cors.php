@@ -19,7 +19,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // Di development (localhost): biarkan env('FRONTEND_URL') kosong → '*'
+    // Di production: isi FRONTEND_URL=https://domain-anda.com di .env server
+    'allowed_origins' => [env('FRONTEND_URL', '*')],
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +31,8 @@ return [
 
     'max_age' => 0,
 
+    // Perlu true jika menggunakan Sanctum session/cookie (bukan token)
     'supports_credentials' => false,
 
 ];
+

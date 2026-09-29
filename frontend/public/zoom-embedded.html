@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ruang BK - Zoom Meeting Web</title>
 
+  <!-- Percepat loading CDN Zoom: resolusi DNS lebih awal -->
+  <link rel="preconnect" href="https://source.zoom.us" crossorigin />
+  <link rel="dns-prefetch" href="https://source.zoom.us" />
+
   <!-- Zoom Meeting SDK Component View CSS -->
   <link type="text/css" rel="stylesheet" href="https://source.zoom.us/3.8.5/css/bootstrap.css" />
   <link type="text/css" rel="stylesheet" href="https://source.zoom.us/3.8.5/css/react-select.css" />
@@ -360,6 +364,41 @@
       const meetingSDKElement = document.getElementById('meetingSDKElement');
       const videoTip = document.getElementById('video-tip');
 
+      // =====================================================================
+      // DETEKSI INSECURE CONTEXT (HTTP via IP Lokal)
+      // Browser modern MEMBLOKIR kamera & mikrofon di HTTP biasa (non-localhost).
+      // Solusi: Aplikasi harus diakses via HTTPS (misalnya https://192.168.x.x:5173)
+      // =====================================================================
+      const isSecureContext = window.isSecureContext === true;
+      const isLocalhost = (
+        location.hostname === 'localhost' ||
+        location.hostname === '127.0.0.1' ||
+        location.hostname === '[::1]'
+      );
+
+      if (!isSecureContext && !isLocalhost) {
+        // Bangun URL HTTPS dari URL saat ini
+        const httpsUrl = location.href.replace(/^http:\/\//i, 'https://');
+        spinner.style.display = 'none';
+        statusTitle.style.color = '#f87171';
+        statusTitle.textContent = '🔒 Kamera & Mikrofon Diblokir Browser';
+        statusDesc.innerHTML =
+          'Browser memblokir akses kamera & mikrofon karena halaman ini dibuka via ' +
+          '<strong>HTTP</strong> (bukan HTTPS) di jaringan lokal.<br><br>' +
+          'Silakan buka aplikasi menggunakan alamat <strong>HTTPS</strong> berikut:';
+        actionButtons.innerHTML =
+          `<a class="btn-action" href="${httpsUrl}" style="word-break:break-all;max-width:360px;white-space:normal;text-align:center;">` +
+          `🔐 Buka HTTPS: ${httpsUrl}</a>` +
+          `<p style="margin-top:12px;font-size:11px;color:#64748b;max-width:380px;line-height:1.6;">` +
+          `Saat halaman HTTPS pertama kali dibuka, browser akan menampilkan peringatan ` +
+          `<em>"Koneksi tidak aman"</em> karena sertifikat self-signed. ` +
+          `Klik <strong>Lanjutkan ke situs</strong> atau <strong>Advanced → Proceed</strong> untuk melanjutkan.` +
+          `</p>`;
+        actionButtons.style.display = 'block';
+        window.parent.postMessage({ type: 'ZOOM_INSECURE_CONTEXT_ERROR', httpsUrl }, '*');
+        return; // Hentikan eksekusi selanjutnya
+      }
+
       function updateStatus(title, desc, isError = false, actions = null) {
         statusTitle.textContent = title;
         statusDesc.textContent = desc;
@@ -659,6 +698,34 @@
           window.parent.postMessage({ type: 'ZOOM_JOIN_SUCCESS', payload: joinResult }, '*');
 
           enforceToolbarAndLayout();
+
+          // ── FIX AUDIO: Zoom SDK tidak otomatis join audio. ──
+          // Harus dipanggil eksplisit agar mikrofon aktif & suara terdengar lawan bicara.
+          setTimeout(() => {
+            try {
+              if (client && typeof client.startAudio === 'function') {
+                client.startAudio({ mute: false }).then(() => {
+                  console.log('[BK] Audio started successfully');
+                  window.parent.postMessage({ type: 'AUDIO_STATE_CHANGED', isMuted: false }, '*');
+                }).catch((audioErr) => {
+                  console.warn('[BK] startAudio error (normal jika sudah aktif):', audioErr);
+                  // Coba klik tombol audio di UI Zoom sebagai fallback
+                  const buttons = document.querySelectorAll('button');
+                  for (const btn of buttons) {
+                    const label = (btn.getAttribute('aria-label') || btn.getAttribute('title') || btn.textContent || '').toLowerCase();
+                    if (label.includes('join audio') || label.includes('gabung audio') || label.includes('computer audio')) {
+                      btn.click();
+                      console.log('[BK] Clicked join audio button as fallback');
+                      break;
+                    }
+                  }
+                });
+              }
+            } catch (audioStartErr) {
+              console.warn('[BK] Audio init error:', audioStartErr);
+            }
+          }, 1500); // Delay 1.5 detik agar Zoom SDK fully ready
+
           // Helper to trigger start video and show gentle tip
           handleVideoAutoActivation();
         }).catch((err) => {

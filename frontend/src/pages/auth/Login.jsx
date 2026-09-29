@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, User, ArrowRight, KeyRound, GraduationCap } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -9,6 +9,7 @@ import PageTransition from '../../components/common/PageTransition';
 
 export const Login = () => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const initialTab = searchParams.get('tab') === 'staff' ? 'staff' : 'student';
   const [loginRole, setLoginRole] = useState(initialTab);
   const [identifier, setIdentifier] = useState('');
@@ -18,6 +19,10 @@ export const Login = () => {
   const { showSuccess, showError } = useToast();
   const { hasActiveBooking, selectedTopic, selectedCounselor } = useCounselingFlow();
   const navigate = useNavigate();
+
+  // Banner hanya muncul jika user diarahkan langsung dari halaman booking
+  const showBookingBanner = hasActiveBooking && location.state?.fromBooking === true;
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,7 +75,7 @@ export const Login = () => {
   return (
     <PageTransition>
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-softborder shadow-soft-lg">
-        {hasActiveBooking && (
+        {showBookingBanner && (
           <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-center space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-white px-2.5 py-0.5 rounded-full border border-emerald-200">
               Satu Langkah Lagi

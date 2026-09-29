@@ -105,8 +105,9 @@ Kontak: ${counseleeUser.phone || '-'}
       navigator.clipboard?.writeText(textToCopy);
     }
     setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2500);
+    // Status "Disalin ke Draf!" tetap permanen — tidak reset kembali ke awal
   };
+
 
   return (
     <div className="rounded-3xl bg-white border border-slate-200/90 shadow-soft-sm overflow-hidden transition-all">
@@ -261,13 +262,18 @@ Kontak: ${counseleeUser.phone || '-'}
 
                     <button
                       type="button"
-                      onClick={handleCopyNote}
-                      className="px-3 py-1.5 bg-white text-emerald-800 hover:bg-emerald-100/70 border border-emerald-200/80 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-soft-xs transition-all active:scale-95"
+                      onClick={!isCopied ? handleCopyNote : undefined}
+                      disabled={isCopied}
+                      className={`px-3 py-1.5 border rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-soft-xs transition-all active:scale-95 ${
+                        isCopied
+                          ? 'bg-emerald-600 text-white border-emerald-600 cursor-default opacity-90'
+                          : 'bg-white text-emerald-800 hover:bg-emerald-100/70 border-emerald-200/80 cursor-pointer'
+                      }`}
                     >
                       {isCopied ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 font-bold">Disalin ke Draf!</span>
+                          <Check className="w-3.5 h-3.5 text-white" />
+                          <span className="font-bold">Disalin ke Draf &mdash; Siap Diedit</span>
                         </>
                       ) : (
                         <>

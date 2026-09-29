@@ -226,12 +226,16 @@ export const LandingPage = () => {
       }
     };
 
-    // 2. Fetch active tutors
+    // 2. Fetch active tutors (public endpoint — no auth required)
     const fetchTutors = async () => {
       try {
-        const res = await api.get('/tutors');
-        if (res.data && res.data.length > 0) {
-          setTutors(res.data);
+        const res = await api.get('/tutors/public');
+        // Backend wraps array in { data: [...] }
+        const list = Array.isArray(res.data?.data) ? res.data.data
+                   : Array.isArray(res.data) ? res.data
+                   : [];
+        if (list.length > 0) {
+          setTutors(list);
         }
       } catch (err) {
         console.error('Failed to load tutors:', err);

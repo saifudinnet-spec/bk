@@ -12,8 +12,7 @@ import {
   LayoutDashboard,
   ShieldAlert,
   Settings,
-  LogOut,
-  Sparkles
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import NotificationBell from './NotificationBell';
@@ -35,7 +34,6 @@ export const DesktopSidebar = () => {
     { label: 'Jadwal Konseling', path: '/tutor/schedule', icon: Calendar },
     { label: 'Daftar Kasus', path: '/tutor/cases', icon: FolderHeart },
     { label: 'Profil Tutor', path: '/tutor/profile', icon: User },
-    { label: 'Pratinjau Klien', path: '/app', icon: Sparkles },
   ];
 
   const adminLinks = [
@@ -43,7 +41,6 @@ export const DesktopSidebar = () => {
     { label: 'Kelola Pengguna', path: '/admin/users', icon: Users },
     { label: 'Audit Logs', path: '/admin/audit-logs', icon: ShieldAlert },
     { label: 'Pengaturan Sistem', path: '/admin/settings', icon: Settings },
-    { label: 'Pratinjau Klien', path: '/app', icon: Sparkles },
   ];
 
   let links = studentLinks;
