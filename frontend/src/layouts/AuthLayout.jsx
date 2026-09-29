@@ -1,9 +1,10 @@
 import React from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { ShieldCheck, ArrowLeft } from 'lucide-react';
 
 export const AuthLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#F6F8FA] flex flex-col justify-between p-4 sm:p-6 select-none">
@@ -18,6 +19,16 @@ export const AuthLayout = () => {
             <span className="text-[11px] text-mutedtext mt-0.5 block">Bimbingan Konseling</span>
           </div>
         </Link>
+
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1 text-[11px] font-semibold text-mutedtext hover:text-emerald-700 border border-gray-200 hover:border-emerald-300 bg-white rounded-xl px-2.5 py-1.5 transition-all shadow-soft-xs"
+          title="Kembali ke Beranda"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          <span>Beranda</span>
+        </button>
       </div>
 
       {/* Form Container */}

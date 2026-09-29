@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, ArrowRight, ArrowLeft, GraduationCap, HeartHandshake, Info } from 'lucide-react';
+import { Lock, User, ArrowRight, GraduationCap, HeartHandshake, Info } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useCounselingFlow } from '../../store/CounselingFlowContext';
@@ -79,22 +79,11 @@ export const Login = () => {
           </div>
         )}
 
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-black text-darktext tracking-tight">Masuk ke Ruang BK</h2>
-            <p className="text-xs text-mutedtext mt-1">
-              Gunakan akun Portal Akademik atau Email terdaftar Anda
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 text-[11px] font-semibold text-mutedtext hover:text-emerald-700 border border-softborder hover:border-emerald-300 rounded-xl px-2.5 py-1.5 transition-all shrink-0 ml-3 mt-0.5"
-            title="Kembali ke Beranda"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            <span>Beranda</span>
-          </button>
+        <div className="mb-6">
+          <h2 className="text-xl font-black text-darktext tracking-tight">Masuk ke Ruang BK</h2>
+          <p className="text-xs text-mutedtext mt-1">
+            Gunakan akun Portal Akademik atau Email terdaftar Anda
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
