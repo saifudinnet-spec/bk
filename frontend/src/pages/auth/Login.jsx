@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, ArrowRight, KeyRound, GraduationCap } from 'lucide-react';
+import { Lock, User, ArrowRight, GraduationCap } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useCounselingFlow } from '../../store/CounselingFlowContext';
@@ -66,11 +66,6 @@ export const Login = () => {
     }
   };
 
-  const handleQuickLogin = (id, pass, roleType = 'staff') => {
-    setLoginRole(roleType);
-    setIdentifier(id);
-    setPassword(pass);
-  };
 
   return (
     <PageTransition>
@@ -191,58 +186,6 @@ export const Login = () => {
           </motion.button>
         </form>
 
-        {/* Demo Fast Logins */}
-        <div className="mt-8 pt-6 border-t border-softborder">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-mutedtext mb-3">
-            <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Akun Demo Cepat (Siap Uji Coba Langsung):</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {/* Akun Real Portal UINSSC */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('2382130062', 'Abi342004', 'student')}
-              className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/80 text-left transition-colors min-h-[48px]"
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-bold text-emerald-950">Portal Mhs (Real API UINSSC)</p>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900">API Live</span>
-              </div>
-              <p className="text-[10px] text-emerald-800 font-mono">2382130062 (MARIJKY ABI M.)</p>
-            </button>
-
-            {/* Akun Demo Mahasiswa Lokal */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('student@example.test', 'password', 'student')}
-              className="p-2.5 rounded-xl border border-teal-100 bg-teal-50/50 hover:bg-teal-100/60 text-left transition-colors min-h-[48px]"
-            >
-              <p className="text-[11px] font-bold text-teal-900">Mahasiswa (Demo Lokal)</p>
-              <p className="text-[10px] text-teal-700 font-mono">student@example.test</p>
-            </button>
-
-            {/* Tutor BK */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('tutor@example.test', 'password', 'staff')}
-              className="p-2.5 rounded-xl border border-gray-200 bg-gray-50/80 hover:bg-gray-100 text-left transition-colors min-h-[48px]"
-            >
-              <p className="text-[11px] font-bold text-darktext">Konselor / Tutor BK</p>
-              <p className="text-[10px] text-mutedtext font-mono">tutor@example.test</p>
-            </button>
-
-            {/* Admin Sistem */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@example.test', 'password', 'staff')}
-              className="p-2.5 rounded-xl border border-purple-100 bg-purple-50/50 hover:bg-purple-100/60 text-left transition-colors min-h-[48px]"
-            >
-              <p className="text-[11px] font-bold text-purple-900">Admin Sistem</p>
-              <p className="text-[10px] text-purple-700 font-mono">admin@example.test</p>
-            </button>
-          </div>
-        </div>
 
         {/* Signup CTA */}
         <div className="mt-6 text-center">
