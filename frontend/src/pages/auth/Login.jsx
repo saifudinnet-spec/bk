@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, ArrowRight, GraduationCap, HeartHandshake, Info } from 'lucide-react';
+import { Lock, User, ArrowRight, ArrowLeft, GraduationCap, HeartHandshake, Info } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useCounselingFlow } from '../../store/CounselingFlowContext';
@@ -79,11 +79,22 @@ export const Login = () => {
           </div>
         )}
 
-        <div className="mb-6">
-          <h2 className="text-xl font-black text-darktext tracking-tight">Masuk ke Ruang BK</h2>
-          <p className="text-xs text-mutedtext mt-1">
-            Gunakan akun Portal Akademik atau Email terdaftar Anda
-          </p>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black text-darktext tracking-tight">Masuk ke Ruang BK</h2>
+            <p className="text-xs text-mutedtext mt-1">
+              Gunakan akun Portal Akademik atau Email terdaftar Anda
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 text-[11px] font-semibold text-mutedtext hover:text-emerald-700 border border-softborder hover:border-emerald-300 rounded-xl px-2.5 py-1.5 transition-all shrink-0 ml-3 mt-0.5"
+            title="Kembali ke Beranda"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            <span>Beranda</span>
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -135,34 +146,25 @@ export const Login = () => {
         </form>
 
         {/* Keterangan Login 2 Role */}
-        <div className="mt-6 pt-5 border-t border-softborder/80">
-          <p className="text-[11px] font-semibold text-mutedtext mb-2.5 flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <div className="mt-4 pt-4 border-t border-softborder/80">
+          <p className="text-[10px] font-semibold text-mutedtext mb-1.5 flex items-center gap-1">
+            <Info className="w-3 h-3 text-emerald-600 shrink-0" />
             <span>Petunjuk Akses Masuk:</span>
           </p>
 
-          <div className="space-y-2">
-            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100/80">
-              <div className="w-6 h-6 rounded-lg bg-emerald-100/80 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-                <GraduationCap className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-xs">
-                <span className="font-bold text-emerald-950 block">Mahasiswa</span>
-                <span className="text-[11px] text-emerald-800 leading-snug">
-                  Login menggunakan akun <strong>Portal Akademik</strong>.
-                </span>
+          <div className="flex gap-2">
+            <div className="flex items-center gap-1.5 flex-1 px-2 py-1.5 rounded-lg bg-emerald-50/60 border border-emerald-100/80">
+              <GraduationCap className="w-3 h-3 text-emerald-700 shrink-0" />
+              <div className="text-[10px] leading-snug text-emerald-900">
+                <span className="font-bold">Mahasiswa</span>
+                <span className="text-emerald-700"> — Portal Akademik</span>
               </div>
             </div>
-
-            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-teal-50/50 border border-teal-100/80">
-              <div className="w-6 h-6 rounded-lg bg-teal-100/80 text-teal-700 flex items-center justify-center shrink-0 mt-0.5">
-                <HeartHandshake className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-xs">
-                <span className="font-bold text-teal-950 block">Konselor</span>
-                <span className="text-[11px] text-teal-800 leading-snug">
-                  Login menggunakan <strong>Email & kata sandi Ruang BK</strong>.
-                </span>
+            <div className="flex items-center gap-1.5 flex-1 px-2 py-1.5 rounded-lg bg-teal-50/50 border border-teal-100/80">
+              <HeartHandshake className="w-3 h-3 text-teal-700 shrink-0" />
+              <div className="text-[10px] leading-snug text-teal-900">
+                <span className="font-bold">Konselor</span>
+                <span className="text-teal-700"> — Email Ruang BK</span>
               </div>
             </div>
           </div>
