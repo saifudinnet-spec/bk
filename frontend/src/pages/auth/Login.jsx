@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, ArrowRight, GraduationCap } from 'lucide-react';
+import { Lock, User, ArrowRight, GraduationCap, HeartHandshake, Info } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useCounselingFlow } from '../../store/CounselingFlowContext';
@@ -10,8 +10,6 @@ import PageTransition from '../../components/common/PageTransition';
 export const Login = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const initialTab = searchParams.get('tab') === 'staff' ? 'staff' : 'student';
-  const [loginRole, setLoginRole] = useState(initialTab);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,28 +21,25 @@ export const Login = () => {
   // Banner hanya muncul jika user diarahkan langsung dari halaman booking
   const showBookingBanner = hasActiveBooking && location.state?.fromBooking === true;
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!identifier.trim() || !password) {
-      showError(
-        loginRole === 'student'
-          ? 'Silakan masukkan NIM dan kata sandi Portal Kampus Anda.'
-          : 'Silakan masukkan Email / No. HP dan kata sandi Anda.'
-      );
+    const cleanId = identifier.trim();
+    if (!cleanId || !password) {
+      showError('Silakan masukkan NIM atau Email dan kata sandi Anda.');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Auto-detect format NIM (8-14 digit angka) untuk integrasi portal
+      const isNumericNim = /^[0-9]{8,14}$/.test(cleanId);
       const user = await login(
-        identifier.trim(),
+        cleanId,
         password,
-        loginRole === 'student' ? 'student' : null
+        isNumericNim ? 'student' : null
       );
       showSuccess(`Selamat datang kembali, ${user.name}!`);
 
-      const searchParams = new URLSearchParams(window.location.search);
       const redirectUrl = searchParams.get('redirect');
 
       // Role-based redirect
@@ -60,12 +55,11 @@ export const Login = () => {
         navigate('/app');
       }
     } catch (err) {
-      showError(err.message || 'Login gagal. Periksa kembali kredensial Anda.');
+      showError(err.message || 'Login gagal. Periksa kembali NIM/Email dan kata sandi Anda.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   return (
     <PageTransition>
@@ -85,47 +79,17 @@ export const Login = () => {
           </div>
         )}
 
-        {/* Tab Role Switcher */}
-        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-gray-100/80 border border-gray-200/60 mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setLoginRole('student');
-              setIdentifier('');
-              setPassword('');
-            }}
-            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              loginRole === 'student'
-                ? 'bg-white text-emerald-900 shadow-soft-xs border border-emerald-150'
-                : 'text-mutedtext hover:text-darktext'
-            }`}
-          >
-            <GraduationCap className={`w-4 h-4 ${loginRole === 'student' ? 'text-emerald-700' : 'text-mutedtext'}`} />
-            <span>Mahasiswa</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setLoginRole('staff');
-              setIdentifier('');
-              setPassword('');
-            }}
-            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              loginRole === 'staff'
-                ? 'bg-white text-darktext shadow-soft-xs border border-gray-200'
-                : 'text-mutedtext hover:text-darktext'
-            }`}
-          >
-            <User className={`w-4 h-4 ${loginRole === 'staff' ? 'text-emerald-700' : 'text-mutedtext'}`} />
-            <span>Konselor / Umum / Staf</span>
-          </button>
+        <div className="mb-6">
+          <h2 className="text-xl font-black text-darktext tracking-tight">Masuk ke Ruang BK</h2>
+          <p className="text-xs text-mutedtext mt-1">
+            Gunakan akun Portal Akademik atau Email terdaftar Anda
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-darktext mb-1.5">
-              {loginRole === 'student' ? 'NIM (Nomor Induk Mahasiswa)' : 'Email / No. HP'}
+              NIM atau Email
             </label>
             <div className="relative">
               <input
@@ -133,24 +97,16 @@ export const Login = () => {
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={
-                  loginRole === 'student'
-                    ? 'Contoh: 2382130062'
-                    : 'Contoh: nama@email.com atau 0812...'
-                }
+                placeholder="Masukkan NIM Mahasiswa atau Email"
                 className="w-full h-12 px-4 pl-10 rounded-2xl border border-softborder bg-gray-50 focus:bg-white text-xs sm:text-sm text-darktext focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono"
               />
-              {loginRole === 'student' ? (
-                <GraduationCap className="w-4 h-4 text-mutedtext absolute left-3.5 top-1/2 -translate-y-1/2" />
-              ) : (
-                <User className="w-4 h-4 text-mutedtext absolute left-3.5 top-1/2 -translate-y-1/2" />
-              )}
+              <User className="w-4 h-4 text-mutedtext absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-darktext mb-1.5">
-              {loginRole === 'student' ? 'Kata Sandi Portal Kampus' : 'Kata Sandi'}
+              Kata Sandi
             </label>
             <div className="relative">
               <input
@@ -158,11 +114,7 @@ export const Login = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={
-                  loginRole === 'student'
-                    ? 'Masukkan kata sandi akun Portal Akademik'
-                    : 'Masukkan kata sandi akun'
-                }
+                placeholder="Masukkan kata sandi akun Anda"
                 className="w-full h-12 px-4 pl-10 rounded-2xl border border-softborder bg-gray-50 focus:bg-white text-xs sm:text-sm text-darktext focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
               />
               <Lock className="w-4 h-4 text-mutedtext absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -176,25 +128,51 @@ export const Login = () => {
             className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-2"
           >
             <span>
-              {isSubmitting
-                ? 'Menghubungkan ke Portal...'
-                : loginRole === 'student'
-                ? 'Masuk dengan Akun Portal'
-                : 'Masuk Sekarang'}
+              {isSubmitting ? 'Memproses Masuk...' : 'Masuk Sekarang'}
             </span>
             <ArrowRight className="w-4 h-4" />
           </motion.button>
         </form>
 
-
-        {/* Signup CTA */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-mutedtext">
-            Belum memiliki akun umum?{' '}
-            <Link to="/" className="font-bold text-emerald-700 hover:underline">
-              Lihat Informasi & Layanan
-            </Link>
+        {/* Keterangan Login 2 Role */}
+        <div className="mt-6 pt-5 border-t border-softborder/80">
+          <p className="text-[11px] font-semibold text-mutedtext mb-2.5 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>Petunjuk Akses Masuk:</span>
           </p>
+
+          <div className="space-y-2">
+            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100/80">
+              <div className="w-6 h-6 rounded-lg bg-emerald-100/80 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                <GraduationCap className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-xs">
+                <span className="font-bold text-emerald-950 block">Mahasiswa</span>
+                <span className="text-[11px] text-emerald-800 leading-snug">
+                  Login menggunakan akun <strong>Portal Akademik</strong> (NIM & kata sandi portal).
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-teal-50/50 border border-teal-100/80">
+              <div className="w-6 h-6 rounded-lg bg-teal-100/80 text-teal-700 flex items-center justify-center shrink-0 mt-0.5">
+                <HeartHandshake className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-xs">
+                <span className="font-bold text-teal-950 block">Konselor</span>
+                <span className="text-[11px] text-teal-800 leading-snug">
+                  Login menggunakan <strong>Email & kata sandi Ruang BK</strong>.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Kembali ke Beranda */}
+        <div className="mt-6 text-center">
+          <Link to="/" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline">
+            ← Kembali ke Beranda
+          </Link>
         </div>
       </div>
     </PageTransition>
