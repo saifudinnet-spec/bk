@@ -224,6 +224,14 @@ class AdminController extends Controller
                 : '••••••••';
         }
 
+        $mailPassword = SystemSetting::get('mail_password', env('MAIL_PASSWORD', ''));
+        $maskedMailPassword = '';
+        if (!empty($mailPassword)) {
+            $maskedMailPassword = strlen($mailPassword) > 8
+                ? substr($mailPassword, 0, 4) . '••••••••' . substr($mailPassword, -4)
+                : '••••••••';
+        }
+
         return response()->json([
             // Web CMS Settings
             'site_title' => SystemSetting::get('site_title', 'Ruang BK - Layanan Bimbingan & Konseling Kampus'),
@@ -247,6 +255,15 @@ class AdminController extends Controller
             'crisis_alert_email' => SystemSetting::get('crisis_alert_email', 'crisis-center@kampus.ac.id'),
             'reminder_notifications_enabled' => SystemSetting::get('reminder_notifications_enabled', 'true') === 'true',
             'general_counselee_enabled' => SystemSetting::get('general_counselee_enabled', 'true') === 'true',
+
+            // Email & Gmail SMTP Notification Settings
+            'email_reminders_enabled' => SystemSetting::get('email_reminders_enabled', 'true') === 'true',
+            'mail_from_name' => SystemSetting::get('mail_from_name', env('MAIL_FROM_NAME', 'Ruang BK Online')),
+            'mail_from_address' => SystemSetting::get('mail_from_address', env('MAIL_FROM_ADDRESS', '')),
+            'mail_username' => SystemSetting::get('mail_username', env('MAIL_USERNAME', '')),
+            'mail_password_masked' => $maskedMailPassword,
+            'mail_has_password' => !empty($mailPassword),
+            'mail_is_configured' => \App\Services\MailConfigService::isConfigured(),
 
             // Zoom Server-to-Server OAuth
             'zoom_mock_mode' => SystemSetting::get('zoom_mock_mode', env('ZOOM_MOCK_MODE', 'true')) === 'true',
@@ -300,6 +317,13 @@ class AdminController extends Controller
             'reminder_notifications_enabled' => 'nullable|boolean',
             'general_counselee_enabled' => 'nullable|boolean',
 
+            // Email & Gmail SMTP Notification Settings
+            'email_reminders_enabled' => 'nullable|boolean',
+            'mail_from_name' => 'nullable|string|max:255',
+            'mail_from_address' => 'nullable|string|email|max:255',
+            'mail_username' => 'nullable|string|max:255',
+            'mail_password' => 'nullable|string|max:255',
+
             // Zoom Settings
             'zoom_mock_mode' => 'nullable|boolean',
             'zoom_test_feature_enabled' => 'nullable|boolean',
@@ -339,6 +363,18 @@ class AdminController extends Controller
         if ($request->has('reminder_notifications_enabled')) SystemSetting::set('reminder_notifications_enabled', $request->boolean('reminder_notifications_enabled') ? 'true' : 'false');
         if ($request->has('general_counselee_enabled')) SystemSetting::set('general_counselee_enabled', $request->boolean('general_counselee_enabled') ? 'true' : 'false');
 
+        // Email & Gmail SMTP Notification Settings
+        if ($request->has('email_reminders_enabled')) SystemSetting::set('email_reminders_enabled', $request->boolean('email_reminders_enabled') ? 'true' : 'false');
+        if ($request->has('mail_from_name')) SystemSetting::set('mail_from_name', trim($request->input('mail_from_name') ?? 'Ruang BK Online'));
+        if ($request->has('mail_from_address')) SystemSetting::set('mail_from_address', trim($request->input('mail_from_address') ?? ''));
+        if ($request->has('mail_username')) SystemSetting::set('mail_username', trim($request->input('mail_username') ?? ''));
+        if ($request->filled('mail_password')) {
+            $inputPass = trim($request->input('mail_password'));
+            if (!str_contains($inputPass, '••')) {
+                SystemSetting::set('mail_password', $inputPass);
+            }
+        }
+
         // Zoom Server-to-Server OAuth
         if ($request->has('zoom_mock_mode')) SystemSetting::set('zoom_mock_mode', $request->boolean('zoom_mock_mode') ? 'true' : 'false');
         if ($request->has('zoom_test_feature_enabled')) SystemSetting::set('zoom_test_feature_enabled', $request->boolean('zoom_test_feature_enabled') ? 'true' : 'false');
@@ -354,13 +390,58 @@ class AdminController extends Controller
         if ($request->has('zoom_sdk_key')) SystemSetting::set('zoom_sdk_key', trim($request->input('zoom_sdk_key') ?? ''));
         if ($request->filled('zoom_sdk_secret')) SystemSetting::set('zoom_sdk_secret', trim($request->input('zoom_sdk_secret')));
 
-        AuditLogService::log('update_settings', 'SystemSetting', null, $request->except(['zoom_client_secret', 'zoom_sdk_secret']), $request->user()->id);
+        AuditLogService::log('update_settings', 'SystemSetting', null, $request->except(['zoom_client_secret', 'zoom_sdk_secret', 'mail_password']), $request->user()->id);
 
         return response()->json([
             'message' => 'Pengaturan sistem berhasil diperbarui.',
+            'mail_is_configured' => \App\Services\MailConfigService::isConfigured(),
             'zoom_is_configured' => \App\Services\ZoomApiService::isConfigured(),
             'zoom_sdk_is_configured' => \App\Services\ZoomService::isConfigured(),
         ]);
+    }
+
+    /**
+     * Test Gmail SMTP connection and send a test email
+     */
+    public function testEmailConnection(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $request->validate([
+            'target_email' => 'nullable|email',
+        ]);
+
+        \App\Services\MailConfigService::applySettings();
+
+        $recipientEmail = $request->input('target_email') ?: $request->user()->email;
+        if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Alamat email penerima uji coba tidak valid.',
+            ], 422);
+        }
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($recipientEmail)
+                ->send(new \App\Mail\TestSmtpConnectionMail($request->user()->name ?: 'Admin'));
+
+            AuditLogService::log('test_smtp_email', 'SystemSetting', 'mail', [
+                'target_email' => $recipientEmail,
+                'status' => 'success',
+            ], $request->user()->id);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Email uji coba berhasil dikirim ke {$recipientEmail}! Kredensial Gmail SMTP valid.",
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Gagal uji coba SMTP Gmail: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim email via Gmail SMTP: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

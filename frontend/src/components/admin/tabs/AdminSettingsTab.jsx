@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Globe,
   SlidersHorizontal,
@@ -16,7 +16,11 @@ import {
   Loader2,
   ArrowRight,
   Video,
-  Mic
+  Mic,
+  Send,
+  Key,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 
 export const AdminSettingsTab = ({
@@ -25,8 +29,27 @@ export const AdminSettingsTab = ({
   setSettings,
   onSave,
   isSavingSettings,
-  setActiveTab
+  setActiveTab,
+  onTestEmail
 }) => {
+  const [testEmailTarget, setTestEmailTarget] = useState('');
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState(null);
+
+  const handleRunEmailTest = async () => {
+    if (!onTestEmail) return;
+    setIsTestingEmail(true);
+    setTestEmailResult(null);
+    try {
+      const res = await onTestEmail(testEmailTarget.trim() || undefined);
+      setTestEmailResult(res);
+    } catch (err) {
+      setTestEmailResult({ success: false, message: err.message || 'Gagal mengirim email tes.' });
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
+
   return (
     <>
       {/* 5. Web CMS & SEO Settings Tab */}
@@ -474,6 +497,172 @@ export const AdminSettingsTab = ({
                 className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 shrink-0 ml-4 cursor-pointer"
               />
             </div>
+          </div>
+
+          {/* Card 3: Konfigurasi Email Pengingat & SMTP Gmail (1 Jam Sebelum Konseling) */}
+          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-darktext flex items-center gap-2">
+                    <span>Notifikasi Email Pengingat Sesi Konseling (1 Jam)</span>
+                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      settings.mail_is_configured
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
+                    }`}>
+                      {settings.mail_is_configured ? '🟢 Gmail SMTP Siap' : '🟡 Belum Lengkap'}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-mutedtext">Kirimkan email otomatis ke konseli & konselor 1 jam sebelum jadwal konsultasi dimulai via akun Gmail.</p>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none self-start sm:self-center">
+                <input
+                  type="checkbox"
+                  checked={settings.email_reminders_enabled}
+                  onChange={(e) => setSettings({ ...settings, email_reminders_enabled: e.target.checked })}
+                  className="w-5 h-5 rounded text-teal-600 focus:ring-teal-500"
+                />
+                <span className="text-xs font-bold text-darktext">
+                  {settings.email_reminders_enabled ? 'Aktif' : 'Nonaktif'}
+                </span>
+              </label>
+            </div>
+
+            {/* Email Field Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Gmail Username */}
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Alamat Gmail Pengirim (Akun Google Ruang BK)</span>
+                </label>
+                <input
+                  type="email"
+                  value={settings.mail_username || ''}
+                  onChange={(e) => setSettings({ ...settings, mail_username: e.target.value })}
+                  placeholder="ruangbk.official@gmail.com"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+                <span className="text-[11px] text-mutedtext mt-1 block">Akun Gmail resmi yang digunakan sistem untuk mengirimkan email pengingat.</span>
+              </div>
+
+              {/* Gmail App Password */}
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Sandi Aplikasi Gmail (Google App Password 16-Digit)</span>
+                </label>
+                <input
+                  type="password"
+                  value={settings.mail_password || ''}
+                  onChange={(e) => setSettings({ ...settings, mail_password: e.target.value })}
+                  placeholder={settings.mail_password_masked || 'Contoh: abcd efgh ijkl mnop'}
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+                <span className="text-[11px] text-mutedtext mt-1 block">
+                  {settings.mail_has_password
+                    ? '🔒 Sandi tersimpan. Kosongkan jika tidak ingin mengubah.'
+                    : 'Gunakan 16 karakter App Password dari menu Keamanan Akun Google.'}
+                </span>
+              </div>
+
+              {/* Sender Name */}
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1">
+                  Nama Tampilan Pengirim (Sender Name)
+                </label>
+                <input
+                  type="text"
+                  value={settings.mail_from_name || ''}
+                  onChange={(e) => setSettings({ ...settings, mail_from_name: e.target.value })}
+                  placeholder="Ruang BK Online"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+                <span className="text-[11px] text-mutedtext mt-1 block">Nama instansi yang tampil di kolom 'Dari / From' pada kotak masuk penerima.</span>
+              </div>
+
+              {/* Reply-To Address */}
+              <div>
+                <label className="block text-xs font-bold text-darktext mb-1">
+                  Alamat Email Balasan (Reply-To / From Address)
+                </label>
+                <input
+                  type="email"
+                  value={settings.mail_from_address || ''}
+                  onChange={(e) => setSettings({ ...settings, mail_from_address: e.target.value })}
+                  placeholder="notifikasi@domain-anda.com (opsional)"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+                <span className="text-[11px] text-mutedtext mt-1 block">Tujuan penerusan email jika konseli/konselor membalas email pengingat.</span>
+              </div>
+            </div>
+
+            {/* Google App Password Guide Card */}
+            <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/80 space-y-2 text-xs">
+              <h5 className="font-bold text-teal-900 flex items-center gap-1.5">
+                <Info className="w-4 h-4 text-teal-700 shrink-0" />
+                <span>Panduan Membuat Sandi Aplikasi (Google App Password 16-Digit):</span>
+              </h5>
+              <ol className="list-decimal pl-5 space-y-1 text-[11px] text-teal-950 leading-relaxed">
+                <li>Buka akun Gmail pengirim di <strong>myaccount.google.com</strong> &rarr; pilih menu <strong>Keamanan (*Security*)</strong>.</li>
+                <li>Pastikan <strong>Verifikasi 2 Langkah (*2-Step Verification*)</strong> pada akun Gmail tersebut sudah berstatus <strong>Aktif</strong>.</li>
+                <li>Cari menu <strong>Sandi Aplikasi (*App Passwords*)</strong>, lalu buat sandi baru dengan nama aplikasi: <code>Ruang BK</code>.</li>
+                <li>Salin 16 karakter sandi yang muncul (tanpa spasi) ke kolom <em>Sandi Aplikasi Gmail</em> di atas.</li>
+              </ol>
+            </div>
+
+            {/* Test Email Section */}
+            <div className="pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex-1 max-w-sm">
+                <input
+                  type="email"
+                  value={testEmailTarget}
+                  onChange={(e) => setTestEmailTarget(e.target.value)}
+                  placeholder="Kirim tes ke email ini (kosongkan untuk email admin)"
+                  className="w-full h-10 px-3 rounded-xl border border-softborder bg-gray-50 text-xs text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={isTestingEmail || !settings.mail_username}
+                onClick={handleRunEmailTest}
+                className="px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {isTestingEmail ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-700" />
+                    <span>Mengirim Email Uji Coba...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5 text-teal-700" />
+                    <span>Uji Kirim Email (Test Gmail)</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {testEmailResult && (
+              <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                testEmailResult.success
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}>
+                {testEmailResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{testEmailResult.message}</span>
+              </div>
+            )}
           </div>
 
           {/* Submit CTA */}

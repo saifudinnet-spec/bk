@@ -49,6 +49,16 @@ export const AdminDashboard = () => {
     reminder_notifications_enabled: true,
     general_counselee_enabled: true,
 
+    // Email & Gmail SMTP Reminder Settings
+    email_reminders_enabled: true,
+    mail_from_name: 'Ruang BK Online',
+    mail_from_address: '',
+    mail_username: '',
+    mail_password: '',
+    mail_password_masked: '',
+    mail_has_password: false,
+    mail_is_configured: false,
+
     // Zoom Server-to-Server OAuth & Permanent Link
     zoom_mock_mode: true,
     zoom_test_feature_enabled: true,
@@ -147,6 +157,13 @@ export const AdminDashboard = () => {
           auto_approve_counseling: Boolean(settingsRes.auto_approve_counseling),
           crisis_flag_enabled: Boolean(settingsRes.crisis_flag_enabled),
           reminder_notifications_enabled: Boolean(settingsRes.reminder_notifications_enabled),
+          email_reminders_enabled: settingsRes.email_reminders_enabled !== undefined ? Boolean(settingsRes.email_reminders_enabled) : true,
+          mail_from_name: settingsRes.mail_from_name || 'Ruang BK Online',
+          mail_from_address: settingsRes.mail_from_address || '',
+          mail_username: settingsRes.mail_username || '',
+          mail_password_masked: settingsRes.mail_password_masked || '',
+          mail_has_password: Boolean(settingsRes.mail_has_password),
+          mail_is_configured: Boolean(settingsRes.mail_is_configured),
           announcement_bar_enabled: Boolean(settingsRes.announcement_bar_enabled),
           zoom_mock_mode: settingsRes.zoom_mock_mode === true || settingsRes.zoom_mock_mode === 'true',
           zoom_test_feature_enabled: settingsRes.zoom_test_feature_enabled !== undefined ? Boolean(settingsRes.zoom_test_feature_enabled) : true,
@@ -248,6 +265,20 @@ export const AdminDashboard = () => {
       showError(err.message || 'Gagal menyimpan pengaturan.');
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleTestEmailConnection = async (targetEmail) => {
+    try {
+      const res = await api.post('/admin/settings/test-email', {
+        target_email: targetEmail || undefined,
+      });
+      showSuccess(res.message || 'Email uji coba berhasil dikirim!');
+      return { success: true, message: res.message };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Gagal mengirim email uji coba.';
+      showError(msg);
+      return { success: false, message: msg };
     }
   };
 
@@ -415,6 +446,7 @@ export const AdminDashboard = () => {
           onSave={handleSaveSettings}
           isSavingSettings={isSavingSettings}
           setActiveTab={setActiveTab}
+          onTestEmail={handleTestEmailConnection}
         />
       )}
 

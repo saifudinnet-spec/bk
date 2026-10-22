@@ -23,11 +23,13 @@ class CounselingSession extends Model
         'meeting_password',
         'meeting_url',
         'zoom_meeting_id',
+        'reminder_sent_at',
     ];
 
     protected $casts = [
         'start_at' => 'datetime',
         'end_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
     ];
 
     public function counselingCase()
