@@ -197,23 +197,6 @@ export const CounselorsByTopicPage = () => {
 
       {/* 3. Main Body Container */}
       <main className={`flex-1 max-w-7xl w-full mx-auto ${isInsideApp ? 'p-0 space-y-6' : 'px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8'}`}>
-        {/* Banner Topic Header */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#024a35] via-[#047857] to-[#0f766e] text-white p-5 sm:p-6 md:py-6 md:px-8 shadow-soft-md border border-emerald-600/30">
-          <div className="relative z-10 space-y-2.5">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
-              Konselor Ruang BK
-            </h1>
-
-            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-medium lg:whitespace-nowrap">
-              Pilih konselor yang sesuai untuk mendampingi Anda. Setiap konselor di bawah ini memiliki kompetensi teruji dan fokus pendampingan aktif pada topik ini.
-            </p>
-          </div>
-
-          {/* Decorative Elements */}
-          <div className="absolute -right-16 -bottom-16 w-52 h-52 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -top-16 w-52 h-52 bg-teal-400/15 rounded-full blur-3xl pointer-events-none" />
-        </div>
-
         {/* Topic Switcher Pills (Horizontal Scroll) */}
         <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-soft-xs space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-slate-600">
