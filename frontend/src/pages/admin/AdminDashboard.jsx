@@ -121,6 +121,7 @@ export const AdminDashboard = () => {
     const tabParam = searchParams.get('tab');
     if (tabParam) {
       if (tabParam === 'settings') return 'counseling_settings';
+      if (tabParam === 'crisis_settings') return 'overview';
       return tabParam;
     }
     if (location.pathname.includes('/admin/users')) return 'users';
@@ -433,11 +434,10 @@ export const AdminDashboard = () => {
         <AdminAuditTab auditLogs={auditLogs} />
       )}
 
-      {/* 5, 6, 8, 9. Settings Tabs (Web, Counseling, Crisis, General) */}
+      {/* 5, 6, 8. Settings Tabs (Web, Counseling, General) */}
       {(activeTab === 'web_settings' ||
         activeTab === 'counseling_settings' ||
         activeTab === 'settings' ||
-        activeTab === 'crisis_settings' ||
         activeTab === 'general_settings') && (
         <AdminSettingsTab
           activeTab={activeTab}

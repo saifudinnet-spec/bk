@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Globe,
   SlidersHorizontal,
-  ShieldAlert,
   Settings,
   Mail,
   Phone,
@@ -688,94 +687,7 @@ export const AdminSettingsTab = ({
         </form>
       )}
 
-      {/* 8. Crisis & Screening Settings Tab */}
-      {activeTab === 'crisis_settings' && (
-        <form onSubmit={onSave} className="space-y-6 max-w-4xl mx-auto">
-          <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-5">
-            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-darktext">Deteksi Krisis & Skrining Kebutuhan Mental</h3>
-                <p className="text-xs text-mutedtext">Konfigurasi perlindungan darurat untuk mendeteksi indikasi risiko tinggi pada mahasiswa.</p>
-              </div>
-            </div>
 
-            {/* Crisis Flagging Switch */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-rose-50/60 border border-rose-100">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-darktext">Deteksi Crisis Flag Otomatis</h4>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
-                    Prioritas Darurat
-                  </span>
-                </div>
-                <p className="text-[11px] text-mutedtext mt-1 leading-relaxed">
-                  Tandai secara otomatis screening mahasiswa yang terdeteksi memiliki ide menyakiti diri sendiri, keputusasaan akut, atau skor depresi berat. Kasus ini langsung diprioritaskan di daftar konseling.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.crisis_flag_enabled}
-                onChange={(e) => setSettings({ ...settings, crisis_flag_enabled: e.target.checked })}
-                className="w-5 h-5 rounded text-rose-600 focus:ring-rose-500 shrink-0 ml-4"
-              />
-            </div>
-
-            {/* Emergency Notification Email */}
-            <div>
-              <label className="block text-xs font-bold text-darktext mb-1 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-slate-400" />
-                <span>Email Notifikasi Darurat Tim Krisis Kampus</span>
-              </label>
-              <input
-                type="email"
-                value={settings.crisis_alert_email || ''}
-                onChange={(e) => setSettings({ ...settings, crisis_alert_email: e.target.value })}
-                placeholder="crisis-center@syekhnurjati.ac.id"
-                className="w-full h-11 px-3.5 rounded-2xl border border-softborder bg-gray-50 text-xs font-semibold text-darktext focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-              />
-              <span className="text-[11px] text-mutedtext mt-1 block">
-                Saat ada screening terdeteksi krisis, sistem akan mengirimkan peringatan khusus ke email koordinator konselor atau satgas kesehatan mental.
-              </span>
-            </div>
-
-            {/* SOP Protocol Box */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs text-slate-700">
-              <h5 className="font-bold text-slate-900 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Prosedur Standar (SOP) Penanganan Krisis</span>
-              </h5>
-              <ul className="list-disc pl-5 space-y-1 text-[11px] text-slate-600">
-                <li>Mahasiswa dengan tanda krisis akan didahulukan dalam penentuan jadwal tanpa antrean reguler.</li>
-                <li>Data screening dienkripsi dan hanya dapat diakses oleh konselor yang memiliki izin asesmen klinis.</li>
-                <li>Asisten virtual Nara tidak akan memberikan diagnosis mandiri dan akan mengarahkan mahasiswa ke hotline darurat.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={isSavingSettings}
-              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center gap-2 transition-all min-h-[46px]"
-            >
-              {isSavingSettings ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Menyimpan Pengaturan Krisis...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Simpan Pengaturan Krisis</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* 9. General System Settings & Health Tab */}
       {activeTab === 'general_settings' && (

@@ -7,7 +7,6 @@ import {
   GraduationCap,
   Globe,
   FolderHeart,
-  ShieldAlert,
   ShieldCheck
 } from 'lucide-react';
 import StatCard from '../../cards/StatCard';
@@ -122,13 +121,16 @@ export const AdminOverviewTab = ({
           badge="Berjalan"
         />
         <StatCard
-          icon={ShieldAlert}
-          label="Deteksi Krisis"
-          value={stats.crisis_flag_count || 0}
-          subtext="Prioritas penanganan konselor"
-          color="rose"
-          badge={stats.crisis_flag_count > 0 ? 'Perhatian' : 'Aman'}
-          onClick={() => setActiveTab('crisis_settings')}
+          icon={Users}
+          label="Konselor & Guru BK"
+          value={stats.total_tutors || 0}
+          subtext="Tenaga ahli terverifikasi"
+          color="amber"
+          badge="Konselor"
+          onClick={() => {
+            setActiveTab('users');
+            if (setUserRoleFilter) setUserRoleFilter('TUTOR');
+          }}
         />
       </div>
 
