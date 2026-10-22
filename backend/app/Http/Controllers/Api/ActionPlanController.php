@@ -27,8 +27,13 @@ class ActionPlanController extends Controller
         if ($user->isStudent() || $user->isGeneral()) {
             $query->where('user_id', $user->id);
         } elseif ($user->isTutor()) {
-            // Tutor can only view tasks they assigned or are responsible for
-            $query->where('tutor_id', $user->id);
+            // Tutor can view tasks they assigned OR tasks belonging to cases where they are the assigned tutor
+            $query->where(function ($q) use ($user) {
+                $q->where('tutor_id', $user->id)
+                  ->orWhereHas('counselingCase', function ($cq) use ($user) {
+                      $cq->where('tutor_id', $user->id);
+                  });
+            });
             if ($request->has('case_id')) {
                 $query->where('counseling_case_id', $request->query('case_id'));
             } elseif ($request->has('user_id')) {
@@ -172,6 +177,13 @@ class ActionPlanController extends Controller
 
         $item->update($dataToUpdate);
 
+        AuditLogService::log('update_action_plan', 'CounselingActionPlan', (string)$item->id, [
+            'case_id' => $item->counseling_case_id,
+            'status' => $item->status,
+            'has_student_notes' => !empty($item->student_notes),
+            'updated_by' => $user->role,
+        ], $user->id);
+
         return response()->json([
             'message' => 'Rencana aksi berhasil diperbarui.',
             'data' => $item->fresh(['tutor:id,name', 'counselingCase:id,case_number,category']),
@@ -192,7 +204,14 @@ class ActionPlanController extends Controller
             ], 403);
         }
 
+        $caseId = $item->counseling_case_id;
+        $title = $item->title;
         $item->delete();
+
+        AuditLogService::log('delete_action_plan', 'CounselingActionPlan', (string)$id, [
+            'case_id' => $caseId,
+            'title' => $title,
+        ], $user->id);
 
         return response()->json([
             'message' => 'Rencana aksi berhasil dihapus.',

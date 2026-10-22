@@ -27,8 +27,11 @@ export const ActionPlansPage = () => {
         api.get('/cases').catch(() => ({ data: [] })),
       ]);
 
-      const plansData = plansRes.data?.data || plansRes.data || [];
-      const summaryData = plansRes.data?.summary || {
+      const plansData = Array.isArray(plansRes.data)
+        ? plansRes.data
+        : (plansRes.data?.data || (Array.isArray(plansRes) ? plansRes : []));
+
+      const summaryData = plansRes.summary || plansRes.data?.summary || {
         total: plansData.length,
         completed: plansData.filter((i) => i.status === 'COMPLETED').length,
         in_progress: plansData.filter((i) => i.status === 'IN_PROGRESS').length,

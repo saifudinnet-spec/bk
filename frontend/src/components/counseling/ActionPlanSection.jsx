@@ -217,7 +217,7 @@ export const ActionPlanSection = ({
                           <strong className="block text-[10px] uppercase text-amber-800 tracking-wide font-bold">
                             Catatan Mahasiswa:
                           </strong>
-                          <p className="leading-relaxed">{item.student_notes}</p>
+                          <p className="leading-relaxed whitespace-pre-wrap">{item.student_notes}</p>
                         </div>
                       </div>
                     )}
@@ -270,7 +270,7 @@ export const ActionPlanSection = ({
                         </button>
                       )}
 
-                      {(isTutor || canAdd) && (
+                      {isTutor && (
                         <button
                           type="button"
                           onClick={() => handleDelete(item.id)}
