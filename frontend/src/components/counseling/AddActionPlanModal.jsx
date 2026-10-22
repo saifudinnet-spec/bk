@@ -14,16 +14,40 @@ const ACTION_CATEGORIES = [
   'Tindak Lanjut Lainnya',
 ];
 
-export const AddActionPlanModal = ({ isOpen, onClose, caseId, sessionId = null, onAdded }) => {
+export const AddActionPlanModal = ({
+  isOpen,
+  onClose,
+  caseId,
+  availableCases = [],
+  sessionId = null,
+  onAdded,
+}) => {
   const { showSuccess, showError } = useToast();
+  const [selectedCaseId, setSelectedCaseId] = useState(caseId || availableCases[0]?.id || '');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Self-Care & Relaksasi');
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Keep selectedCaseId synced with props
+  React.useEffect(() => {
+    if (caseId) {
+      setSelectedCaseId(caseId);
+    } else if (availableCases.length > 0 && !selectedCaseId) {
+      setSelectedCaseId(availableCases[0].id);
+    }
+  }, [caseId, availableCases]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const effectiveCaseId = caseId || selectedCaseId || availableCases[0]?.id;
+
+    if (!effectiveCaseId) {
+      showError('Harap pilih kasus bimbingan konseling yang terkait.');
+      return;
+    }
+
     if (!title.trim()) {
       showError('Harap isi judul rencana aksi / tugas mandiri.');
       return;
@@ -32,7 +56,7 @@ export const AddActionPlanModal = ({ isOpen, onClose, caseId, sessionId = null, 
     setIsSubmitting(true);
     try {
       const res = await api.post('/action-plans', {
-        counseling_case_id: caseId,
+        counseling_case_id: effectiveCaseId,
         session_id: sessionId || null,
         title: title.trim(),
         description: description.trim() || null,
@@ -56,6 +80,26 @@ export const AddActionPlanModal = ({ isOpen, onClose, caseId, sessionId = null, 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Tambah Lembar Tindak Lanjut (Action Plan)" maxWidth="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Case Selector (if multiple cases available and not opened from specific case) */}
+        {!caseId && availableCases.length > 1 && (
+          <div>
+            <label className="block text-xs font-bold text-darktext mb-1">
+              Pilih Kasus Konseling Terkait *
+            </label>
+            <select
+              value={selectedCaseId}
+              onChange={(e) => setSelectedCaseId(e.target.value)}
+              className="w-full h-11 px-3 rounded-2xl border border-softborder bg-gray-50 focus:bg-white text-xs text-darktext focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            >
+              {availableCases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  #{c.case_number} - {c.category || 'Bimbingan Konseling'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="block text-xs font-bold text-darktext mb-1">
             Judul Tugas / Rencana Aksi *

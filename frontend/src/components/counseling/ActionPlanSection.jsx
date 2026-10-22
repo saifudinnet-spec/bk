@@ -1,13 +1,84 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, Clock, Plus, Tag, Calendar, Edit3, Trash2, ChevronDown, ChevronUp, Sparkles, MessageSquare } from 'lucide-react';
+import {
+  CheckCircle2,
+  Circle,
+  Clock,
+  Plus,
+  Tag,
+  Calendar,
+  Edit3,
+  Trash2,
+  Sparkles,
+  MessageSquare,
+  AlertTriangle
+} from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
 import AddActionPlanModal from './AddActionPlanModal';
 
+const getDueDateMeta = (dueDateStr, isCompleted) => {
+  if (!dueDateStr) return null;
+  const parts = String(dueDateStr).split('T')[0].split('-');
+  if (parts.length < 3) return null;
+
+  const targetDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.round((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const formatted = targetDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+  if (isCompleted) {
+    return {
+      statusClass: 'bg-slate-100 text-slate-600 border-slate-200',
+      label: `Selesai (${formatted})`,
+      isOverdue: false,
+      isToday: false,
+    };
+  }
+
+  if (diffDays < 0) {
+    const daysAgo = Math.abs(diffDays);
+    return {
+      statusClass: 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
+      label: `🔴 Terlewat ${daysAgo} hari (${formatted})`,
+      isOverdue: true,
+      isToday: false,
+    };
+  }
+
+  if (diffDays === 0) {
+    return {
+      statusClass: 'bg-amber-100 text-amber-900 border-amber-300 font-bold animate-pulse',
+      label: `🟡 Hari Ini (${formatted})`,
+      isOverdue: false,
+      isToday: true,
+    };
+  }
+
+  if (diffDays === 1) {
+    return {
+      statusClass: 'bg-sky-50 text-sky-800 border-sky-200 font-semibold',
+      label: `Target: Besok (${formatted})`,
+      isOverdue: false,
+      isToday: false,
+    };
+  }
+
+  return {
+    statusClass: 'bg-slate-100 text-slate-700 border-slate-200',
+    label: `Target: ${formatted}`,
+    isOverdue: false,
+    isToday: false,
+  };
+};
+
 export const ActionPlanSection = ({
   actionPlans = [],
   caseId,
+  availableCases = [],
   sessionId = null,
   canAdd = true,
   isTutor = false,
@@ -25,8 +96,8 @@ export const ActionPlanSection = ({
     setItems(actionPlans);
   }, [actionPlans]);
 
-  const handleToggleStatus = async (item) => {
-    const nextStatus = item.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+  const handleStatusChange = async (item, nextStatus) => {
+    if (item.status === nextStatus) return;
     setUpdatingId(item.id);
 
     try {
@@ -34,15 +105,34 @@ export const ActionPlanSection = ({
         status: nextStatus,
       });
 
-      const updated = items.map((it) => (it.id === item.id ? res.data : it));
+      const updatedItem = res.data || res;
+      const updated = items.map((it) =>
+        it.id === item.id ? { ...it, ...updatedItem, status: nextStatus } : it
+      );
       setItems(updated);
-      showSuccess(nextStatus === 'COMPLETED' ? 'Hebat! Tugas tindak lanjut berhasil diselesaikan.' : 'Status tugas diubah.');
+
+      const statusLabels = {
+        PENDING: 'Status diubah ke: Belum Dimulai.',
+        IN_PROGRESS: 'Semangat! Tugas kini Sedang Berjalan.',
+        COMPLETED: 'Hebat! Tugas tindak lanjut berhasil diselesaikan.',
+      };
+      showSuccess(statusLabels[nextStatus] || 'Status tugas berhasil diperbarui.');
       if (onUpdated) onUpdated(updated);
     } catch (err) {
       showError(err.message || 'Gagal memperbarui status tugas.');
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  const handleToggleStatus = (item) => {
+    // 3-step cycle: PENDING -> IN_PROGRESS -> COMPLETED -> PENDING
+    let nextStatus = 'COMPLETED';
+    if (item.status === 'PENDING') nextStatus = 'IN_PROGRESS';
+    else if (item.status === 'IN_PROGRESS') nextStatus = 'COMPLETED';
+    else if (item.status === 'COMPLETED') nextStatus = 'PENDING';
+
+    handleStatusChange(item, nextStatus);
   };
 
   const handleSaveNotes = async (item) => {
@@ -52,7 +142,8 @@ export const ActionPlanSection = ({
         student_notes: noteInput.trim() || null,
       });
 
-      const updated = items.map((it) => (it.id === item.id ? res.data : it));
+      const updatedItem = res.data || res;
+      const updated = items.map((it) => (it.id === item.id ? { ...it, ...updatedItem } : it));
       setItems(updated);
       setEditingNoteId(null);
       setNoteInput('');
@@ -85,6 +176,7 @@ export const ActionPlanSection = ({
   };
 
   const completedCount = items.filter((it) => it.status === 'COMPLETED').length;
+  const inProgressCount = items.filter((it) => it.status === 'IN_PROGRESS').length;
   const progressPercent = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
 
   return (
@@ -119,7 +211,7 @@ export const ActionPlanSection = ({
           <div className="flex items-center justify-between text-xs font-semibold">
             <span className="text-slate-700">Kemajuan Tindak Lanjut:</span>
             <span className="text-emerald-800 font-bold">
-              {completedCount} dari {items.length} selesai ({progressPercent}%)
+              {completedCount} selesai &middot; {inProgressCount} berjalan ({progressPercent}%)
             </span>
           </div>
           <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -154,44 +246,92 @@ export const ActionPlanSection = ({
         <div className="space-y-2.5">
           {items.map((item) => {
             const isCompleted = item.status === 'COMPLETED';
+            const isInProgress = item.status === 'IN_PROGRESS';
             const isEditingNote = editingNoteId === item.id;
+            const dueDateMeta = getDueDateMeta(item.due_date, isCompleted);
 
             return (
               <div
                 key={item.id}
                 className={`p-4 rounded-2xl border transition-all ${
                   isCompleted
-                    ? 'bg-emerald-50/40 border-emerald-200/60'
-                    : 'bg-white border-softborder shadow-soft-xs hover:border-gray-300'
+                    ? 'bg-emerald-50/40 border-emerald-200/70'
+                    : dueDateMeta?.isOverdue
+                      ? 'bg-rose-50/20 border-rose-300 shadow-soft-xs hover:border-rose-400'
+                      : isInProgress
+                        ? 'bg-teal-50/20 border-teal-300 shadow-soft-xs hover:border-teal-400'
+                        : 'bg-white border-softborder shadow-soft-xs hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {/* Status Toggle Checkbox */}
+                  {/* Status Toggle 3-Step Button */}
                   <button
                     type="button"
                     disabled={updatingId === item.id}
                     onClick={() => handleToggleStatus(item)}
-                    className="mt-0.5 text-emerald-600 hover:scale-110 transition-transform focus:outline-none shrink-0"
-                    title={isCompleted ? 'Tandai belum selesai' : 'Tandai selesai'}
+                    className="mt-0.5 hover:scale-110 transition-transform focus:outline-none shrink-0"
+                    title={
+                      isCompleted
+                        ? 'Klik untuk kembalikan ke Belum Dimulai'
+                        : isInProgress
+                          ? 'Klik untuk selesaikan tugas ini'
+                          : 'Klik untuk mulai jalankan tugas'
+                    }
                   >
                     {isCompleted ? (
                       <CheckCircle2 className="w-5 h-5 fill-emerald-600 text-white" />
+                    ) : isInProgress ? (
+                      <div className="w-5 h-5 rounded-full border-2 border-teal-600 bg-teal-50 flex items-center justify-center">
+                        <div className="w-2.5 h-2.5 rounded-full bg-teal-600 animate-pulse" />
+                      </div>
                     ) : (
-                      <Circle className="w-5 h-5 text-gray-300 hover:text-emerald-500" />
+                      <Circle className="w-5 h-5 text-gray-300 hover:text-teal-500" />
                     )}
                   </button>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-100 text-slate-700 border border-gray-200">
+                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                         {item.category || 'Self-Care'}
                       </span>
-                      {item.due_date && (
-                        <span className="text-[10px] font-medium text-mutedtext flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-emerald-600" />
-                          <span>Target: {new Date(item.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+
+                      {/* Status Selector Dropdown */}
+                      <select
+                        value={item.status}
+                        disabled={updatingId === item.id}
+                        onChange={(e) => handleStatusChange(item, e.target.value)}
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border cursor-pointer focus:outline-none transition-all ${
+                          isCompleted
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : isInProgress
+                              ? 'bg-teal-100 text-teal-800 border-teal-300'
+                              : 'bg-amber-100 text-amber-800 border-amber-300'
+                        }`}
+                        title="Ubah status rencana aksi secara langsung"
+                      >
+                        <option value="PENDING">⏳ Belum Dimulai</option>
+                        <option value="IN_PROGRESS">⚡ Sedang Berjalan</option>
+                        <option value="COMPLETED">✅ Selesai</option>
+                      </select>
+
+                      {/* Due Date Indicator Badge */}
+                      {dueDateMeta && (
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${dueDateMeta.statusClass}`}>
+                          {dueDateMeta.isOverdue ? (
+                            <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                          ) : (
+                            <Calendar className="w-3 h-3 text-emerald-600 shrink-0" />
+                          )}
+                          <span>{dueDateMeta.label}</span>
                         </span>
                       )}
+
+                      {item.counseling_case?.case_number && (
+                        <span className="text-[10px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200">
+                          #{item.counseling_case.case_number}
+                        </span>
+                      )}
+
                       {item.tutor && (
                         <span className="text-[10px] text-mutedtext">
                           Oleh: {item.tutor.name}
@@ -290,11 +430,12 @@ export const ActionPlanSection = ({
       )}
 
       {/* Add Modal */}
-      {caseId && (
+      {(caseId || availableCases.length > 0) && (
         <AddActionPlanModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           caseId={caseId}
+          availableCases={availableCases}
           sessionId={sessionId}
           onAdded={handleItemAdded}
         />

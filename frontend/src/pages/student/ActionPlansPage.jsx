@@ -18,6 +18,8 @@ export const ActionPlansPage = () => {
   const [summary, setSummary] = useState({ total: 0, completed: 0, in_progress: 0, pending: 0 });
   const [cases, setCases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedCaseId, setSelectedCaseId] = useState('ALL');
   const navigate = useNavigate();
 
   const fetchActionPlans = async () => {
@@ -57,6 +59,13 @@ export const ActionPlansPage = () => {
   }, []);
 
   const latestRealCase = cases.find((c) => !c.case_number?.startsWith('TEST-')) || cases[0] || null;
+
+  // Filter plans based on selected status and case
+  const filteredPlans = actionPlans.filter((item) => {
+    const matchStatus = selectedStatus === 'ALL' || item.status === selectedStatus;
+    const matchCase = selectedCaseId === 'ALL' || String(item.counseling_case_id) === String(selectedCaseId);
+    return matchStatus && matchCase;
+  });
 
   return (
     <PageTransition className="w-full max-w-7xl mx-auto space-y-5 py-1">
@@ -100,48 +109,142 @@ export const ActionPlansPage = () => {
         )}
       </section>
 
-      {/* 2. Stat Summary Cards */}
+      {/* 2. Interactive Stat Summary Cards (Click to Filter) */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-soft-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Target</p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">{summary.total || 0}</p>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus('ALL')}
+          className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer ${
+            selectedStatus === 'ALL'
+              ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-soft-sm'
+              : 'border-slate-200/90 shadow-soft-2xs hover:border-slate-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Target</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">{summary.total || 0}</p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
+              📋
+            </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
-            📋
-          </div>
-        </div>
+          <span className="text-[10px] text-slate-400 mt-1 block">Tampilkan semua</span>
+        </button>
 
-        <div className="p-4 rounded-2xl bg-white border border-emerald-200/90 shadow-soft-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Telah Selesai</p>
-            <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">{summary.completed || 0}</p>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus(selectedStatus === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+          className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer ${
+            selectedStatus === 'COMPLETED'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-soft-sm'
+              : 'border-emerald-200/90 shadow-soft-2xs hover:border-emerald-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Telah Selesai</p>
+              <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">{summary.completed || 0}</p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-        </div>
+          <span className="text-[10px] text-emerald-600 mt-1 block">
+            {selectedStatus === 'COMPLETED' ? 'Sedang difilter' : 'Filter tugas selesai'}
+          </span>
+        </button>
 
-        <div className="p-4 rounded-2xl bg-white border border-teal-200/90 shadow-soft-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Berjalan</p>
-            <p className="text-xl sm:text-2xl font-black text-teal-700 mt-0.5">{summary.in_progress || 0}</p>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus(selectedStatus === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS')}
+          className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer ${
+            selectedStatus === 'IN_PROGRESS'
+              ? 'border-teal-500 ring-2 ring-teal-500/20 shadow-soft-sm'
+              : 'border-teal-200/90 shadow-soft-2xs hover:border-teal-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Berjalan</p>
+              <p className="text-xl sm:text-2xl font-black text-teal-700 mt-0.5">{summary.in_progress || 0}</p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
+              <Sparkles className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
-            <Sparkles className="w-5 h-5" />
-          </div>
-        </div>
+          <span className="text-[10px] text-teal-600 mt-1 block">
+            {selectedStatus === 'IN_PROGRESS' ? 'Sedang difilter' : 'Filter tugas berjalan'}
+          </span>
+        </button>
 
-        <div className="p-4 rounded-2xl bg-white border border-amber-200/90 shadow-soft-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Menunggu</p>
-            <p className="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">{summary.pending || 0}</p>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus(selectedStatus === 'PENDING' ? 'ALL' : 'PENDING')}
+          className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer ${
+            selectedStatus === 'PENDING'
+              ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-soft-sm'
+              : 'border-amber-200/90 shadow-soft-2xs hover:border-amber-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Menunggu</p>
+              <p className="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">{summary.pending || 0}</p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-            <Clock className="w-5 h-5" />
-          </div>
-        </div>
+          <span className="text-[10px] text-amber-600 mt-1 block">
+            {selectedStatus === 'PENDING' ? 'Sedang difilter' : 'Filter tugas menunggu'}
+          </span>
+        </button>
       </section>
+
+      {/* Case Filter Tabs (if student has multiple counseling cases) */}
+      {cases.length > 1 && (
+        <section className="flex items-center gap-2 overflow-x-auto py-1">
+          <span className="text-xs font-bold text-slate-500 shrink-0">Filter Kasus:</span>
+          <button
+            type="button"
+            onClick={() => setSelectedCaseId('ALL')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedCaseId === 'ALL'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            Semua Kasus ({actionPlans.length})
+          </button>
+          {cases.map((c) => {
+            const count = actionPlans.filter((p) => p.counseling_case_id === c.id).length;
+            const isSelected = selectedCaseId === String(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setSelectedCaseId(isSelected ? 'ALL' : String(c.id))}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>#{c.case_number}</span>
+                <span className="text-[10px] opacity-80">({c.category})</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    isSelected ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </section>
+      )}
 
       {/* 3. Main Action Plan Section Content */}
       {isLoading ? (
@@ -157,10 +260,32 @@ export const ActionPlansPage = () => {
         </div>
       ) : (
         <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-soft-sm space-y-4">
+          {/* Active Filter Notice & Reset */}
+          {(selectedStatus !== 'ALL' || selectedCaseId !== 'ALL') && (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-xs text-indigo-900">
+              <span className="font-medium">
+                Menampilkan <strong>{filteredPlans.length}</strong> rencana aksi
+                {selectedStatus !== 'ALL' && ` status "${selectedStatus}"`}
+                {selectedCaseId !== 'ALL' && ` pada kasus terpilih`}.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStatus('ALL');
+                  setSelectedCaseId('ALL');
+                }}
+                className="text-xs font-bold text-indigo-700 hover:underline cursor-pointer"
+              >
+                Reset Filter
+              </button>
+            </div>
+          )}
+
           <ActionPlanSection
-            actionPlans={actionPlans}
-            caseId={latestRealCase?.id}
-            canAdd={Boolean(latestRealCase)}
+            actionPlans={filteredPlans}
+            caseId={selectedCaseId !== 'ALL' ? Number(selectedCaseId) : latestRealCase?.id}
+            availableCases={cases}
+            canAdd={cases.length > 0}
             isTutor={false}
             onUpdated={fetchActionPlans}
           />
