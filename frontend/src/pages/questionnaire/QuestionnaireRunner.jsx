@@ -1,35 +1,98 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Sparkles, AlertCircle, HelpCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Sparkles,
+  AlertCircle,
+  HelpCircle,
+  CheckCircle2,
+  RotateCcw,
+  MessageSquareHeart,
+  ShieldCheck,
+  Calendar,
+  HeartHandshake,
+  TrendingUp,
+  AlertTriangle,
+  Info
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
+import { useCounselingFlow } from '../../store/CounselingFlowContext';
 import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
 
 const DRAFT_KEY_PREFIX = 'bk_screening_draft_';
 
 export const QuestionnaireRunner = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { showSuccess, showError, showInfo } = useToast();
+  const { startWithScreening } = useCounselingFlow();
+
+  // Screen / Data states
+  const [isLoading, setIsLoading] = useState(true);
+  const [latestResponse, setLatestResponse] = useState(null);
+  const [fullResponseDetail, setFullResponseDetail] = useState(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+
+  // Runner states
+  const [isRetaking, setIsRetaking] = useState(searchParams.get('retake') === 'true');
   const [questionnaire, setQuestionnaire] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { showSuccess, showError, showInfo } = useToast();
-  const navigate = useNavigate();
   const hasRestoredDraftRef = React.useRef(false);
 
-  // Load questionnaire & restore draft
+  // Sync state if URL search param changes
   useEffect(() => {
-    const fetchQuestionnaire = async () => {
+    if (searchParams.get('retake') === 'true') {
+      setIsRetaking(true);
+    }
+  }, [searchParams]);
+
+  // Initial Data Fetching: Check for existing screening history & active questionnaire
+  useEffect(() => {
+    const initData = async () => {
+      setIsLoading(true);
       try {
-        const response = await api.get('/questionnaires/active');
-        if (response.data) {
-          setQuestionnaire(response.data);
+        // 1. Fetch user screening history
+        const historyRes = await api.get('/questionnaires/history');
+        const historyList = historyRes.data?.data || historyRes.data || [];
+        
+        let existingLatest = null;
+        if (Array.isArray(historyList) && historyList.length > 0) {
+          existingLatest = historyList[0];
+          setLatestResponse(existingLatest);
+
+          // Fetch full detail in background to get questions & answers if available
+          api.get(`/questionnaires/responses/${existingLatest.id}`)
+            .then((res) => {
+              const detail = res.data?.data || res.data;
+              setFullResponseDetail(detail);
+            })
+            .catch(() => {});
+        }
+
+        // If user already has screening and did not explicitly request ?retake=true, show summary
+        const forceRetake = searchParams.get('retake') === 'true';
+        if (existingLatest && !forceRetake) {
+          setIsRetaking(false);
+        } else {
+          setIsRetaking(true);
+        }
+
+        // 2. Fetch active questionnaire for runner
+        const activeRes = await api.get('/questionnaires/active');
+        const activeData = activeRes.data?.data || activeRes.data;
+        if (activeData) {
+          setQuestionnaire(activeData);
 
           // Restore draft if present
-          const draftStr = localStorage.getItem(`${DRAFT_KEY_PREFIX}${response.data.id}`);
+          const draftStr = localStorage.getItem(`${DRAFT_KEY_PREFIX}${activeData.id}`);
           if (draftStr && !hasRestoredDraftRef.current) {
             hasRestoredDraftRef.current = true;
             try {
@@ -43,13 +106,14 @@ export const QuestionnaireRunner = () => {
           }
         }
       } catch (err) {
-        showError(err.message || 'Gagal memuat kuesioner screening.');
+        showError(err.message || 'Gagal memuat data screening kebutuhan.');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchQuestionnaire();
-  }, [showError, showInfo]);
+
+    initData();
+  }, [searchParams, showError, showInfo]);
 
   // Autosave draft to localStorage
   const saveDraft = useCallback((currentAnswers, index) => {
@@ -116,6 +180,8 @@ export const QuestionnaireRunner = () => {
 
   // Keyboard navigation support: Numbers 1-5 for options, ArrowLeft / ArrowRight / Enter for navigation
   useEffect(() => {
+    if (!isRetaking) return;
+
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
         return;
@@ -144,7 +210,7 @@ export const QuestionnaireRunner = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentQuestion, currentIndex, isCurrentAnswered, isLastQuestion, handleNext, handlePrev]);
+  }, [isRetaking, currentQuestion, currentIndex, isCurrentAnswered, isLastQuestion, handleNext, handlePrev]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -168,12 +234,39 @@ export const QuestionnaireRunner = () => {
       } catch {}
 
       showSuccess('Screening berhasil diserahkan.');
-      navigate(`/app/screening/result/${response.response_id}`);
+
+      // Refresh latest response data and switch to summary view
+      const detailRes = await api.get(`/questionnaires/responses/${response.response_id}`);
+      const newDetail = detailRes.data?.data || detailRes.data;
+      setLatestResponse(newDetail);
+      setFullResponseDetail(newDetail);
+      setIsRetaking(false);
+      setSearchParams({});
     } catch (err) {
       showError(err.message || 'Gagal mengirimkan jawaban screening.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleStartRetake = () => {
+    setIsRetaking(true);
+    setSearchParams({ retake: 'true' });
+    setCurrentIndex(0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelRetake = () => {
+    setIsRetaking(false);
+    setSearchParams({});
+  };
+
+  const handleContinueToCounseling = () => {
+    const targetData = fullResponseDetail || latestResponse;
+    if (targetData) {
+      startWithScreening(targetData);
+    }
+    navigate('/konselor');
   };
 
   const getCategoryBadgeClass = (category) => {
@@ -198,10 +291,171 @@ export const QuestionnaireRunner = () => {
     return options.length <= 5 && options.every((opt) => opt.label && opt.label.length <= 20);
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      return (
+        new Date(dateStr).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }) + ' WIB'
+      );
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getLevelConfig = (level) => {
+    if (level === 'Tinggi') {
+      return {
+        badge: 'bg-rose-50 text-rose-800 border-rose-200',
+        dot: 'bg-rose-500',
+        bar: 'bg-gradient-to-r from-rose-500 to-amber-500',
+        label: 'Prioritas Pendampingan',
+        description: 'Terdapat kendala signifikan yang sangat dianjurkan untuk dikonsultasikan bersama konselor.',
+      };
+    }
+    if (level === 'Sedang') {
+      return {
+        badge: 'bg-teal-50 text-teal-800 border-teal-200',
+        dot: 'bg-teal-500',
+        bar: 'bg-gradient-to-r from-teal-500 to-cyan-500',
+        label: 'Perlu Perhatian',
+        description: 'Terdapat tantangan yang dapat diantisipasi lebih awal dengan berdiskusi terarah.',
+      };
+    }
+    return {
+      badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+      dot: 'bg-emerald-500',
+      bar: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+      label: 'Kondisi Stabil / Baik',
+      description: 'Kondisi Anda berada dalam batas adaptif yang prima. Pertahankan kebiasaan positif ini.',
+    };
+  };
+
   if (isLoading) {
     return <DashboardSkeleton />;
   }
 
+  // =========================================================================
+  // VIEW A: RANGKUMAN SCREENING (Jika user sudah pernah menyelesaikan screening)
+  // =========================================================================
+  if (!isRetaking && latestResponse) {
+    const summaryData = fullResponseDetail || latestResponse;
+    const categoryScores = summaryData.category_scores || [];
+    return (
+      <PageTransition className="w-full max-w-7xl mx-auto space-y-4 py-1">
+        {/* 1. Header Card Hasil Screening (Kompak & Full Kesamping) */}
+        <section className="py-3 px-4 sm:py-3.5 sm:px-6 rounded-3xl bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-white border border-emerald-200/90 shadow-soft-xs relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="absolute -right-12 -top-12 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20 border-2 border-white">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-0.5 min-w-0">
+              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight truncate">
+                Rangkuman Screening Kebutuhan Anda
+              </h1>
+              <p className="text-[11px] sm:text-xs text-slate-600 flex items-center gap-2 flex-wrap">
+                <span className="truncate max-w-md">Kuesioner: <strong className="text-slate-800">{(summaryData.questionnaire?.title || 'Screening Kebutuhan Mahasiswa').replace(/\s*\(Komprehensif\)/gi, '')}</strong></span>
+                <span className="text-slate-300 hidden sm:inline">•</span>
+                <span className="flex items-center gap-1 text-slate-500 shrink-0">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {formatDate(summaryData.submitted_at)}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Tombol Perbarui Screening */}
+          <div className="relative z-10 shrink-0 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={handleStartRetake}
+              className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-soft-2xs transition-all flex items-center gap-2 group cursor-pointer"
+              title="Isi ulang kuesioner jika kondisi atau situasi semester ini telah berubah"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500 group-hover:rotate-180 transition-transform duration-500" />
+              <span>Perbarui / Isi Ulang</span>
+            </button>
+          </div>
+        </section>
+
+        {/* 2. Grid Kartu Rincian Kategori */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
+              <span>Pemetaan Kebutuhan per Kategori</span>
+            </h3>
+            <span className="text-xs text-slate-500">
+              {categoryScores.length} Kategori Terpetakan
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {categoryScores.map((cat, idx) => {
+              const config = getLevelConfig(cat.level);
+              const percentage = cat.percentage !== undefined ? cat.percentage : Math.min(100, Math.round(((cat.score || 0) / (cat.max_score || 20)) * 100));
+
+              return (
+                <div
+                  key={idx}
+                  className="p-5 rounded-3xl bg-white border border-slate-200/90 shadow-soft-2xs hover:shadow-soft-sm transition-all space-y-3 flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-black text-slate-900">
+                        {cat.category}
+                      </h4>
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${config.badge}`}>
+                        Kebutuhan: {cat.level}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      {config.description}
+                    </p>
+                  </div>
+
+                  {/* Progress Bar Score */}
+                  <div className="space-y-1 pt-1 border-t border-slate-100">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span>Indikator Beban</span>
+                      <span className="font-bold text-slate-700">{percentage}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${config.bar} rounded-full transition-all duration-500`}
+                        style={{ width: `${Math.max(8, percentage)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 3. Catatan Privasi & Etika */}
+        <section className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/70 flex items-start gap-3 text-teal-950 text-xs">
+          <ShieldCheck className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-teal-900 leading-relaxed">
+            <strong>Kerahasiaan Terjamin:</strong> Hasil screening mandiri ini bukan merupakan diagnosis medis formal, melainkan instrumen asesmen awal bimbingan konseling untuk membantu konselor memahami konteks diri Anda secara aman, rahasia, dan profesional.
+          </p>
+        </section>
+      </PageTransition>
+    );
+  }
+
+  // =========================================================================
+  // VIEW B: QUESTIONNAIRE RUNNER (Untuk pengisian baru atau mode retake)
+  // =========================================================================
   if (!questionnaire || questions.length === 0) {
     return (
       <div className="p-8 text-center bg-white rounded-3xl border border-softborder">
@@ -211,7 +465,26 @@ export const QuestionnaireRunner = () => {
   }
 
   return (
-    <PageTransition className="max-w-5xl w-full mx-auto py-2">
+    <PageTransition className="max-w-5xl w-full mx-auto py-2 space-y-4">
+      {/* Banner Kembali jika sedang dalam mode retake padahal sudah punya hasil lama */}
+      {latestResponse && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-soft-2xs">
+          <div className="flex items-center gap-2.5">
+            <Info className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              Anda sedang dalam mode <strong>pengisian ulang screening</strong>. Data lama Anda tetap tersimpan hingga kuesioner baru ini dikirimkan.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleCancelRetake}
+            className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 rounded-xl font-bold text-xs hover:bg-amber-100 transition-colors self-end sm:self-center shrink-0 cursor-pointer"
+          >
+            ← Kembali ke Rangkuman Tersimpan
+          </button>
+        </div>
+      )}
+
       {/* Proportionate Executive Card (Zero-Scroll & Balanced Height) */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-soft-md overflow-hidden flex flex-col min-h-[460px] sm:min-h-[500px] justify-between">
         
@@ -221,8 +494,8 @@ export const QuestionnaireRunner = () => {
             <span className="text-xs sm:text-sm font-black text-emerald-950 bg-emerald-100/90 px-3.5 py-1 rounded-2xl border border-emerald-200/90 tracking-tight shadow-2xs">
               Soal {currentIndex + 1} / {questions.length}
             </span>
-            <span className={`text-xs font-bold px-3 py-1 rounded-2xl border ${getCategoryBadgeClass(currentQuestion.category)}`}>
-              {currentQuestion.category}
+            <span className={`text-xs font-bold px-3 py-1 rounded-2xl border ${getCategoryBadgeClass(currentQuestion?.category)}`}>
+              {currentQuestion?.category}
             </span>
           </div>
 
@@ -249,9 +522,9 @@ export const QuestionnaireRunner = () => {
           {/* Question Text */}
           <div className="space-y-1.5">
             <h2 className="text-lg sm:text-2xl font-black text-slate-900 leading-snug tracking-tight">
-              {currentQuestion.question_text}
+              {currentQuestion?.question_text}
             </h2>
-            {currentQuestion.is_required && !currentAnswer?.option_id && (
+            {currentQuestion?.is_required && !currentAnswer?.option_id && (
               <span className="text-xs text-amber-600 font-semibold flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
                 Pilihlah salah satu opsi respon di bawah ini
@@ -262,14 +535,14 @@ export const QuestionnaireRunner = () => {
           {/* Options: Likert (5 Generous Column Tiles) vs Textarea vs General Grid */}
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentQuestion.id}
+              key={currentQuestion?.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="w-full"
             >
-              {currentQuestion.question_type === 'textarea' ? (
+              {currentQuestion?.question_type === 'textarea' ? (
                 <div className="space-y-2">
                   <textarea
                     rows={4}
@@ -282,10 +555,10 @@ export const QuestionnaireRunner = () => {
                     Jawaban terbuka ini membantu konselor memahami konteks diri Anda secara lebih mendalam dan personal.
                   </p>
                 </div>
-              ) : isLikertGroup(currentQuestion.options) ? (
+              ) : isLikertGroup(currentQuestion?.options) ? (
                 /* Responsive Rating Tiles: Vertical stack on mobile, 5 columns on desktop */
                 <div className="flex flex-col sm:grid sm:grid-cols-5 gap-2 sm:gap-3.5">
-                  {currentQuestion.options?.map((opt, idx) => {
+                  {currentQuestion?.options?.map((opt, idx) => {
                     const isSelected = currentAnswer?.option_id === opt.id;
                     return (
                       <motion.button
@@ -319,10 +592,12 @@ export const QuestionnaireRunner = () => {
 
                         {/* Mobile Radio/Check Pill */}
                         <div className="sm:hidden flex items-center">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-slate-50'
-                          }`}>
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-slate-50'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                           </div>
                         </div>
                       </motion.button>
@@ -332,7 +607,7 @@ export const QuestionnaireRunner = () => {
               ) : (
                 /* Responsive 2-Column Options Grid for custom questions */
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {currentQuestion.options?.map((opt, idx) => {
+                  {currentQuestion?.options?.map((opt, idx) => {
                     const isSelected = currentAnswer?.option_id === opt.id;
                     return (
                       <motion.button
@@ -340,7 +615,7 @@ export const QuestionnaireRunner = () => {
                         type="button"
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleSelectOption(currentQuestion.id, opt.id, opt.score)}
-                        className={`p-4 rounded-2xl border text-left flex items-center justify-between transition-all min-h-[56px] ${
+                        className={`p-4 rounded-2xl border text-left flex items-center justify-between transition-all min-h-[56px] cursor-pointer ${
                           isSelected
                             ? 'border-emerald-500 bg-emerald-50/80 text-emerald-950 font-bold ring-2 ring-emerald-500/20 shadow-soft-xs'
                             : 'border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700'

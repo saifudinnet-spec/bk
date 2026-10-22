@@ -23,7 +23,9 @@ import {
   MessageSquareHeart,
   HelpCircle,
   Star,
-  Building2
+  Building2,
+  CalendarDays,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 
@@ -147,6 +149,22 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
           iconColor: 'text-indigo-600 bg-indigo-50 border-indigo-200/70',
           badge: null,
           description: 'Durasi, kuota & persetujuan',
+        },
+        {
+          id: 'schedule_monitor',
+          label: 'Monitor Jadwal',
+          icon: CalendarDays,
+          iconColor: 'text-violet-600 bg-violet-50 border-violet-200/70',
+          badge: null,
+          description: 'Pantau sesi konseling mahasiswa',
+        },
+        {
+          id: 'counselor_schedule',
+          label: 'Atur Jadwal Konselor',
+          icon: CalendarCheck,
+          iconColor: 'text-teal-600 bg-teal-50 border-teal-200/70',
+          badge: null,
+          description: 'Template hari & sesi konselor',
         },
         {
           id: 'zoom_settings',

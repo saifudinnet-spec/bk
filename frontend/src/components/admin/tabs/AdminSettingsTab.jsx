@@ -471,7 +471,7 @@ export const AdminSettingsTab = ({
                 type="checkbox"
                 checked={settings.general_counselee_enabled !== false}
                 onChange={(e) => setSettings({ ...settings, general_counselee_enabled: e.target.checked })}
-                className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 shrink-0 ml-4"
+                className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 shrink-0 ml-4 cursor-pointer"
               />
             </div>
           </div>

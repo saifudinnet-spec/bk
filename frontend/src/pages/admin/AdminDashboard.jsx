@@ -14,6 +14,8 @@ import AdminArticlesTab from '../../components/admin/tabs/AdminArticlesTab';
 import AdminAuditTab from '../../components/admin/tabs/AdminAuditTab';
 import AdminSettingsTab from '../../components/admin/tabs/AdminSettingsTab';
 import AdminZoomTab from '../../components/admin/tabs/AdminZoomTab';
+import AdminScheduleTab from '../../components/admin/tabs/AdminScheduleTab';
+import AdminCounselorScheduleTab from '../../components/admin/tabs/AdminCounselorScheduleTab';
 
 export const AdminDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -220,6 +222,22 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleToggleTestFeature = async () => {
+    const nextState = settings.zoom_test_feature_enabled === false ? true : false;
+    try {
+      await api.put('/admin/settings', {
+        ...settings,
+        zoom_test_feature_enabled: nextState,
+      });
+      setSettings((prev) => ({ ...prev, zoom_test_feature_enabled: nextState }));
+      showSuccess(
+        `Fitur simulasi Chat & Zoom ${nextState ? 'berhasil DIAKTIFKAN' : 'berhasil DINONAKTIFKAN'}.`
+      );
+    } catch (err) {
+      showError(err.message || 'Gagal mengubah status fitur simulasi Chat & Zoom.');
+    }
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     setIsSavingSettings(true);
@@ -407,6 +425,23 @@ export const AdminDashboard = () => {
           setSettings={setSettings}
           onSave={handleSaveSettings}
           isSavingSettings={isSavingSettings}
+          showSuccess={showSuccess}
+          showError={showError}
+          onToggleTestFeature={handleToggleTestFeature}
+        />
+      )}
+
+      {/* 8. Monitor Jadwal Konseling */}
+      {activeTab === 'schedule_monitor' && (
+        <AdminScheduleTab
+          showSuccess={showSuccess}
+          showError={showError}
+        />
+      )}
+
+      {/* 9. Pengaturan Jadwal Konselor (Template) */}
+      {activeTab === 'counselor_schedule' && (
+        <AdminCounselorScheduleTab
           showSuccess={showSuccess}
           showError={showError}
         />

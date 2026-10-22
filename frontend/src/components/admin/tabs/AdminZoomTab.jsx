@@ -20,7 +20,8 @@ export const AdminZoomTab = ({
   onSave,
   isSavingSettings,
   showSuccess,
-  showError
+  showError,
+  onToggleTestFeature
 }) => {
   const navigate = useNavigate();
 
@@ -166,29 +167,34 @@ export const AdminZoomTab = ({
         </div>
 
         {/* Fitur On/Off Layanan Uji Coba Chat dan Zoom */}
-        <div className={`rounded-xl border p-3 sm:p-3.5 transition-all shadow-soft-xs ${
+        <div className={`rounded-xl border p-3.5 sm:p-4 transition-all shadow-soft-xs ${
           settings.zoom_test_feature_enabled !== false
             ? 'border-emerald-300 bg-gradient-to-br from-emerald-50/80 via-teal-50/40 to-white'
             : 'border-slate-200 bg-slate-50/80'
         }`}>
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                Layanan uji coba chat dan zoom
-              </h4>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border transition-all ${
-                settings.zoom_test_feature_enabled !== false
-                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                  : 'bg-slate-200 text-slate-600 border-slate-300'
-              }`}>
-                {settings.zoom_test_feature_enabled !== false ? 'Aktif' : 'Tidak Aktif'}
-              </span>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                  Layanan Uji Coba Chat & Zoom (Banner Simulasi Mahasiswa)
+                </h4>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border transition-all ${
+                  settings.zoom_test_feature_enabled !== false
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-slate-200 text-slate-600 border-slate-300'
+                }`}>
+                  {settings.zoom_test_feature_enabled !== false ? 'Aktif' : 'Tidak Aktif'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 max-w-xl">
+                Menampilkan banner <em>"Ingin Menguji Fitur Chat atau Video Zoom di Jam Saat Ini?"</em> pada dashboard mahasiswa untuk pengujian langsung tanpa perlu menunggu jadwal.
+              </p>
             </div>
 
             <div className="flex items-center gap-2.5 shrink-0">
               <button
                 type="button"
-                onClick={() => setSettings((prev) => ({
+                onClick={onToggleTestFeature ? onToggleTestFeature : () => setSettings((prev) => ({
                   ...prev,
                   zoom_test_feature_enabled: prev.zoom_test_feature_enabled === false ? true : false,
                 }))}
@@ -197,6 +203,7 @@ export const AdminZoomTab = ({
                 }`}
                 role="switch"
                 aria-checked={settings.zoom_test_feature_enabled !== false}
+                title="Klik untuk langsung On / Off fitur uji coba"
               >
                 <span
                   className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow-md transition-transform ${

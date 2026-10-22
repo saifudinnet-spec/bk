@@ -5,6 +5,7 @@ import {
   MessageSquareHeart,
   ClipboardList,
   History,
+  FileCheck2,
   User,
   Users,
   Calendar,
@@ -26,6 +27,7 @@ export const DesktopSidebar = () => {
     { label: 'Konseling Online', path: '/app/counseling', icon: MessageSquareHeart },
     { label: 'Screening Kebutuhan', path: '/app/screening', icon: ClipboardList },
     { label: 'Riwayat Sesi', path: '/app/history', icon: History },
+    { label: 'Rencana Tindak Lanjut', path: '/app/action-plans', icon: FileCheck2 },
     { label: 'Profil Saya', path: '/app/profile', icon: User },
   ];
 

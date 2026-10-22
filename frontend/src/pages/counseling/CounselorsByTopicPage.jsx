@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -107,122 +107,106 @@ export const CounselorsByTopicPage = () => {
     }
   };
 
+  const location = useLocation();
+  const isInsideApp = location.pathname.startsWith('/app');
+
   const activeTopic = topicInfo || topics.find((t) => t.id === selectedTopicId);
 
   return (
-    <PageTransition className="min-h-screen bg-[#F6F8FA] flex flex-col justify-between selection:bg-emerald-200 selection:text-emerald-950 font-sans">
-      {/* 1. Institutional Top Bar */}
-      <div className="bg-gradient-to-r from-[#013b29] via-[#046c4e] to-[#013b29] text-white py-2 px-4 sm:px-8 border-b border-emerald-500/30 text-[11px] font-medium z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-sm" />
-            <span className="font-bold text-amber-300 uppercase tracking-wider text-[10px]">
-              UINSSC CYBER CAMPUS
-            </span>
-            <span className="hidden sm:inline text-emerald-200/70">•</span>
-            <span className="hidden sm:inline text-emerald-100">
-              Layanan Bimbingan & Konseling Terpadu
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-emerald-200 text-[10px] sm:text-xs">
-            <span className="flex items-center gap-1">
-              <Lock className="w-3 h-3 text-emerald-300" />
-              100% Rahasia & Aman
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Sticky Header Navbar */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Left: Back Button & Brand */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200/80 hover:border-emerald-200 transition-all flex items-center gap-1.5 text-xs font-bold"
-              title="Kembali ke Beranda"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-emerald-700" />
-              <span className="hidden sm:inline">Beranda</span>
-            </button>
-
-            <div className="h-5 w-px bg-slate-200 hidden sm:block" />
-
+    <PageTransition className={`${!isInsideApp ? 'min-h-screen bg-[#F6F8FA]' : ''} flex flex-col justify-between selection:bg-emerald-200 selection:text-emerald-950 font-sans`}>
+      {/* 1. Institutional Top Bar (Disembunyikan di dalam /app/counseling) */}
+      {!isInsideApp && (
+        <div className="bg-gradient-to-r from-[#013b29] via-[#046c4e] to-[#013b29] text-white py-2 px-4 sm:px-8 border-b border-emerald-500/30 text-[11px] font-medium z-50">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 p-0.5 flex items-center justify-center">
-                <img src="/logobk.png" alt="Logo" className="w-full h-full object-contain" />
-              </div>
-              <span className="text-sm font-black text-[#164C53] tracking-wide uppercase hidden md:inline">
-                RUANG BK
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-sm" />
+              <span className="font-bold text-amber-300 uppercase tracking-wider text-[10px]">
+                UINSSC CYBER CAMPUS
+              </span>
+              <span className="hidden sm:inline text-emerald-200/70">•</span>
+              <span className="hidden sm:inline text-emerald-100">
+                Layanan Bimbingan & Konseling Terpadu
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-emerald-200 text-[10px] sm:text-xs">
+              <span className="flex items-center gap-1">
+                <Lock className="w-3 h-3 text-emerald-300" />
+                100% Rahasia & Aman
               </span>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Center: Breadcrumbs */}
-          <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-500">
-            <Link to="/" className="hover:text-emerald-700 font-medium transition-colors">
-              Beranda
-            </Link>
-            <ChevronRight className="w-3 h-3 text-slate-300" />
-            <span className="font-medium text-slate-600">Pilih Konselor</span>
-            <ChevronRight className="w-3 h-3 text-slate-300" />
-            <span className="font-bold text-emerald-800 truncate max-w-[220px]">
-              {activeTopic?.title || 'Topik Masalah'}
-            </span>
-          </div>
-
-          {/* Right: Auth Action */}
-          <div className="flex items-center gap-2">
-            {isAuthenticated ? (
+      {/* 2. Sticky Header Navbar (Disembunyikan di dalam /app/counseling) */}
+      {!isInsideApp && (
+        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 shadow-2xs">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            {/* Left: Back Button & Brand */}
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => navigate(user?.role === 'ADMIN' ? '/admin/dashboard' : (user?.role === 'TUTOR' ? '/tutor/dashboard' : '/app/dashboard'))}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-soft-xs flex items-center gap-1.5"
+                onClick={() => navigate('/')}
+                className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200/80 hover:border-emerald-200 transition-all flex items-center gap-1.5 text-xs font-bold"
+                title="Kembali ke Beranda"
               >
-                <span>Dashboard Saya</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-3.5 h-3.5 text-emerald-700" />
+                <span className="hidden sm:inline">Beranda</span>
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className="px-4 py-2 rounded-xl border border-emerald-600/30 hover:border-emerald-600 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all"
-              >
-                Masuk Akun
-              </button>
+
+              <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 p-0.5 flex items-center justify-center">
+                  <img src="/logobk.png" alt="Logo" className="w-full h-full object-contain" />
+                </div>
+                <span className="text-sm font-black text-[#164C53] tracking-wide uppercase hidden md:inline">
+                  RUANG BK
+                </span>
+              </div>
+            </div>
+
+            {/* Center: Breadcrumbs */}
+            <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-500">
+              <Link to="/" className="hover:text-emerald-700 font-medium transition-colors">
+                Beranda
+              </Link>
+              <ChevronRight className="w-3 h-3 text-slate-300" />
+              <span className="font-medium text-slate-600">Pilih Konselor</span>
+              <ChevronRight className="w-3 h-3 text-slate-300" />
+              <span className="font-bold text-emerald-800 truncate max-w-[220px]">
+                {activeTopic?.title || 'Topik Masalah'}
+              </span>
+            </div>
+
+            {/* Right: Auth Action (Hanya tombol Masuk Akun saat belum login) */}
+            {!isAuthenticated && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="px-4 py-2 rounded-xl border border-emerald-600/30 hover:border-emerald-600 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all"
+                >
+                  Masuk Akun
+                </button>
+              </div>
             )}
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* 3. Main Body Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className={`flex-1 max-w-7xl w-full mx-auto ${isInsideApp ? 'p-0 space-y-6' : 'px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8'}`}>
         {/* Banner Topic Header */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#024a35] via-[#047857] to-[#0f766e] text-white p-5 sm:p-6 md:py-6 md:px-8 shadow-soft-md border border-emerald-600/30">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-4">
-            <div className="space-y-2 max-w-2xl">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
-                Konselor untuk {activeTopic?.title || 'Topik Pilihan'}
-              </h1>
+          <div className="relative z-10 space-y-2.5">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
+              Konselor Ruang BK
+            </h1>
 
-              <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-medium">
-                Pilih konselor yang sesuai untuk mendampingi Anda. Setiap konselor di bawah ini memiliki kompetensi teruji, berlisensi, dan fokus pendampingan aktif pada topik ini.
-              </p>
-            </div>
-
-            {/* Quick Trust Highlights - Pojok Kanan Atas Sejajar Judul */}
-            <div className="flex flex-wrap sm:flex-nowrap md:flex-col lg:flex-row items-start md:items-end lg:items-center gap-2 shrink-0 text-[11px] text-emerald-100 font-semibold">
-              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-xs px-3 py-1.5 rounded-full border border-white/10 shadow-soft-xs whitespace-nowrap">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                100% Bebas Biaya
-              </span>
-              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-xs px-3 py-1.5 rounded-full border border-white/10 shadow-soft-xs whitespace-nowrap">
-                <Lock className="w-3.5 h-3.5 text-teal-300" />
-                Kerahasiaan Data Terjamin
-              </span>
-            </div>
+            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-medium lg:whitespace-nowrap">
+              Pilih konselor yang sesuai untuk mendampingi Anda. Setiap konselor di bawah ini memiliki kompetensi teruji dan fokus pendampingan aktif pada topik ini.
+            </p>
           </div>
 
           {/* Decorative Elements */}
@@ -429,17 +413,19 @@ export const CounselorsByTopicPage = () => {
         </div>
       </main>
 
-      {/* 4. Footer */}
-      <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-center text-xs text-mutedtext">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-darktext">Ruang BK Kampus</span>
-            <span>•</span>
-            <span>Pusat Layanan Bimbingan & Konseling Terpadu</span>
+      {/* 4. Footer (Disembunyikan di dalam /app/counseling) */}
+      {!isInsideApp && (
+        <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-center text-xs text-mutedtext">
+          <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-darktext">Ruang BK Kampus</span>
+              <span>•</span>
+              <span>Pusat Layanan Bimbingan & Konseling Terpadu</span>
+            </div>
+            <p>© {new Date().getFullYear()} Universitas Islam Negeri Siber Syekh Nurjati Cirebon</p>
           </div>
-          <p>© {new Date().getFullYear()} Universitas Islam Negeri Siber Syekh Nurjati Cirebon</p>
-        </div>
-      </footer>
+        </footer>
+      )}
     </PageTransition>
   );
 };

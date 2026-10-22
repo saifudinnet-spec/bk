@@ -12,8 +12,10 @@ use App\Models\QuestionnaireResponse;
 use App\Models\QuestionOption;
 use App\Models\SystemSetting;
 use App\Models\Tutor;
+use App\Models\TutorAvailability;
 use App\Models\User;
 use App\Services\AuditLogService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -452,5 +454,226 @@ class AdminController extends Controller
                 'message' => 'Validasi gagal: ' . $e->getMessage()
             ], 400);
         }
+    }
+
+    /**
+     * Admin: Monitor all counseling sessions (with counselor & student info)
+     */
+    public function getCounselingSchedules(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $query = CounselingSession::with([
+            'user:id,name,email,avatar',
+            'tutor:id,name,email,avatar',
+            'counselingCase:id,case_number,category,status,method',
+        ]);
+
+        if ($status = $request->query('status')) {
+            $query->where('status', strtoupper($status));
+        }
+
+        if ($tutorId = $request->query('tutor_id')) {
+            $query->where('tutor_id', $tutorId);
+        }
+
+        if ($from = $request->query('from')) {
+            $query->where('start_at', '>=', Carbon::parse($from)->startOfDay());
+        }
+
+        if ($to = $request->query('to')) {
+            $query->where('start_at', '<=', Carbon::parse($to)->endOfDay());
+        }
+
+        $sessions = $query->orderBy('start_at', 'desc')->paginate(20);
+
+        return response()->json($sessions);
+    }
+
+    /**
+     * Admin: Get all counselors with their availability slots (booked & available)
+     */
+    public function getCounselorSchedules(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $tutors = User::where('role', 'TUTOR')
+            ->with(['tutorProfile'])
+            ->get()
+            ->map(function ($tutor) use ($request) {
+                $from = $request->query('from', Carbon::today()->toDateString());
+                $to = $request->query('to', Carbon::today()->addDays(30)->toDateString());
+
+                $slots = TutorAvailability::where('tutor_id', $tutor->id)
+                    ->whereBetween('date', [$from, $to])
+                    ->orderBy('date')
+                    ->orderBy('start_time')
+                    ->get()
+                    ->map(function ($slot) {
+                        return [
+                            'id' => $slot->id,
+                            'date' => $slot->date->format('Y-m-d'),
+                            'start_time' => substr($slot->start_time, 0, 5),
+                            'end_time' => substr($slot->end_time, 0, 5),
+                            'method' => $slot->method,
+                            'status' => $slot->status,
+                        ];
+                    });
+
+                $bookedSessions = CounselingSession::where('tutor_id', $tutor->id)
+                    ->whereBetween('start_at', [
+                        Carbon::parse($from)->startOfDay(),
+                        Carbon::parse($to)->endOfDay(),
+                    ])
+                    ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS', 'COMPLETED'])
+                    ->with('user:id,name,email,avatar')
+                    ->orderBy('start_at')
+                    ->get()
+                    ->map(function ($session) {
+                        return [
+                            'id' => $session->id,
+                            'start_at' => $session->start_at,
+                            'end_at' => $session->end_at,
+                            'status' => $session->status,
+                            'method' => $session->method,
+                            'student' => $session->user,
+                        ];
+                    });
+
+                return [
+                    'id' => $tutor->id,
+                    'name' => $tutor->name,
+                    'email' => $tutor->email,
+                    'avatar' => $tutor->tutorProfile?->photo ?? $tutor->avatar,
+                    'specialization' => $tutor->tutorProfile?->specialization ?? 'Konselor',
+                    'is_available' => $tutor->tutorProfile?->is_available ?? true,
+                    'slots' => $slots,
+                    'booked_sessions' => $bookedSessions,
+                    'total_slots' => $slots->count(),
+                    'booked_count' => $slots->where('status', 'BOOKED')->count(),
+                    'available_count' => $slots->where('status', 'AVAILABLE')->count(),
+                ];
+            });
+
+        return response()->json(['data' => $tutors]);
+    }
+
+    /**
+     * Admin: Set schedule template for a counselor (days + sessions)
+     * Instead of manually adding per date, admin picks days (Mon-Sat) and sessions (morning/afternoon/evening)
+     */
+    public function setScheduleTemplate(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $request->validate([
+            'tutor_id'     => 'required|exists:users,id',
+            'days'         => 'required|array|min:1',
+            'days.*'       => 'in:1,2,3,4,5,6', // 1=Mon, 2=Tue, ... 6=Sat
+            'sessions'     => 'required|array|min:1',
+            'sessions.*'   => 'in:morning,afternoon,evening',
+            'method'       => 'nullable|in:ALL,ONLINE,CHAT,ZOOM,OFFLINE',
+            'weeks_ahead'  => 'nullable|integer|min:1|max:12',
+            'replace_existing' => 'nullable|boolean',
+        ]);
+
+        $tutorId    = $request->input('tutor_id');
+        $days       = $request->input('days');        // e.g. [1, 2, 3] (Mon, Tue, Wed)
+        $sessions   = $request->input('sessions');    // e.g. ['morning', 'afternoon']
+        $method     = $request->input('method', 'ALL');
+        $weeksAhead = $request->input('weeks_ahead', 4);
+        $replaceExisting = $request->boolean('replace_existing', false);
+
+        // Session time ranges
+        $sessionTimes = [
+            'morning'   => ['start' => '08:00', 'end' => '11:00'],
+            'afternoon' => ['start' => '11:00', 'end' => '14:00'],
+            'evening'   => ['start' => '14:00', 'end' => '18:00'],
+        ];
+
+        // Build list of dates for the next N weeks
+        $startDate = Carbon::today();
+        $endDate   = Carbon::today()->addWeeks($weeksAhead);
+        $created   = 0;
+        $skipped   = 0;
+
+        if ($replaceExisting) {
+            // Remove all AVAILABLE (not booked) slots for this tutor in the date range
+            TutorAvailability::where('tutor_id', $tutorId)
+                ->where('date', '>=', $startDate->toDateString())
+                ->where('date', '<=', $endDate->toDateString())
+                ->where('status', 'AVAILABLE')
+                ->delete();
+        }
+
+        $current = $startDate->copy();
+        while ($current->lte($endDate)) {
+            $dayOfWeek = (int) $current->format('N'); // 1=Mon, 7=Sun
+
+            if (in_array($dayOfWeek, $days)) {
+                foreach ($sessions as $sessionKey) {
+                    $times = $sessionTimes[$sessionKey];
+
+                    // Check if slot already exists for this tutor on this date+time
+                    $exists = TutorAvailability::where('tutor_id', $tutorId)
+                        ->where('date', $current->toDateString())
+                        ->where('start_time', $times['start'])
+                        ->exists();
+
+                    if ($exists) {
+                        $skipped++;
+                    } else {
+                        TutorAvailability::create([
+                            'tutor_id'      => $tutorId,
+                            'date'          => $current->toDateString(),
+                            'start_time'    => $times['start'],
+                            'end_time'      => $times['end'],
+                            'method'        => $method,
+                            'slot_duration' => 60,
+                            'status'        => 'AVAILABLE',
+                        ]);
+                        $created++;
+                    }
+                }
+            }
+
+            $current->addDay();
+        }
+
+        AuditLogService::log('set_schedule_template', 'TutorAvailability', (string)$tutorId, [
+            'tutor_id'   => $tutorId,
+            'days'       => $days,
+            'sessions'   => $sessions,
+            'weeks_ahead' => $weeksAhead,
+            'created'    => $created,
+            'skipped'    => $skipped,
+        ], $request->user()->id);
+
+        return response()->json([
+            'message' => "Template jadwal berhasil diterapkan. {$created} slot dibuat, {$skipped} slot dilewati (sudah ada).",
+            'created' => $created,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    /**
+     * Admin: Clear all AVAILABLE (unbooked) slots for a counselor
+     */
+    public function clearCounselorSlots(Request $request, $tutorId)
+    {
+        $this->ensureAdmin($request);
+
+        $from = $request->query('from', Carbon::today()->toDateString());
+        $to   = $request->query('to', Carbon::today()->addWeeks(12)->toDateString());
+
+        $deleted = TutorAvailability::where('tutor_id', $tutorId)
+            ->where('status', 'AVAILABLE')
+            ->whereBetween('date', [$from, $to])
+            ->delete();
+
+        return response()->json([
+            'message' => "{$deleted} slot jadwal yang belum dibooking berhasil dihapus.",
+            'deleted' => $deleted,
+        ]);
     }
 }

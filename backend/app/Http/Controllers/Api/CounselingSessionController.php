@@ -94,6 +94,25 @@ class CounselingSessionController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
+        // Guard: Mahasiswa tidak bisa booking sesi baru jika masih ada sesi aktif
+        if (!$user->isAdmin()) {
+            $activeSession = CounselingSession::where('user_id', $case->user_id)
+                ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+                ->whereHas('counselingCase', function ($q) {
+                    $q->whereNotLike('case_number', 'TEST-%');
+                })
+                ->first();
+
+            if ($activeSession) {
+                $startFormatted = \Carbon\Carbon::parse($activeSession->start_at)->translatedFormat('d F Y, H:i');
+                return response()->json([
+                    'message' => 'Anda masih memiliki sesi konseling aktif yang belum selesai (dijadwalkan pada ' . $startFormatted . ' WIB). Sesi baru hanya dapat dibuat setelah konseling sebelumnya selesai.',
+                    'active_session_id' => $activeSession->id,
+                    'active_session_status' => $activeSession->status,
+                ], 409);
+            }
+        }
+
         $session = DB::transaction(function () use ($request, $case, $user) {
             $availability = TutorAvailability::where('id', $request->input('availability_id'))
                 ->where('status', 'AVAILABLE')

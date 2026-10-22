@@ -58,18 +58,8 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
   const starLabels = ['', 'Sangat Kurang', 'Kurang Membantu', 'Cukup', 'Bagus & Bermanfaat', 'Luar Biasa / Sangat Terbantu'];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
-      <div className="relative">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 w-8 h-8 flex items-center justify-center rounded-full text-mutedtext hover:text-darktext hover:bg-gray-100 transition-colors cursor-pointer z-20"
-          aria-label="Tutup"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Evaluasi & Ulasan Sesi Konseling" maxWidth="max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-4">
           {/* 1. Main Star Rating */}
         <div className="text-center space-y-1 py-2 px-3 rounded-2xl bg-gray-50/80 border border-gray-100">
           <label className="block text-[11.5px] font-bold text-darktext">
@@ -237,7 +227,6 @@ export const SessionFeedbackModal = ({ isOpen, onClose, session, onSubmitted }) 
           </motion.button>
         </div>
       </form>
-      </div>
     </Modal>
   );
 };

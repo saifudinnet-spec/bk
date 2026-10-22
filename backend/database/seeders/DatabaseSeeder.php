@@ -271,7 +271,7 @@ class DatabaseSeeder extends Seeder
 
         // 6. Questionnaires (3 questionnaires)
         $q1 = Questionnaire::create([
-            'title' => 'Screening Kebutuhan Bimbingan & Konseling (Komprehensif)',
+            'title' => 'Screening Kebutuhan Bimbingan & Konseling',
             'description' => 'Instrumen evaluasi mandiri untuk memetakan kebutuhan dukungan akademik, emosional, sosial, dan perencanaan karier.',
             'instructions' => 'Pilihlah respon yang paling mencerminkan kondisi Anda dalam 2–4 minggu terakhir. Tidak ada jawaban yang salah atau benar.',
             'status' => 'published',

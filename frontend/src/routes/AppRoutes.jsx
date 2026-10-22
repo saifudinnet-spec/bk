@@ -22,6 +22,7 @@ const RegisterGeneral = lazy(() => import('../pages/auth/RegisterGeneral'));
 const StudentDashboard = lazy(() => import('../pages/student/StudentDashboard'));
 const Profile = lazy(() => import('../pages/student/Profile'));
 const History = lazy(() => import('../pages/student/History'));
+const ActionPlansPage = lazy(() => import('../pages/student/ActionPlansPage'));
 
 const QuestionnaireRunner = lazy(() => import('../pages/questionnaire/QuestionnaireRunner'));
 const ScreeningResult = lazy(() => import('../pages/questionnaire/ScreeningResult'));
@@ -94,6 +95,7 @@ export const AppRoutes = () => {
           <Route path="cases/:id" element={<CaseDetail />} />
           <Route path="sessions/:id" element={<SessionRoom />} />
           <Route path="history" element={<History />} />
+          <Route path="action-plans" element={<ActionPlansPage />} />
           <Route path="profile" element={<Profile />} />
         </Route>
 

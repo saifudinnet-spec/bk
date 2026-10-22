@@ -157,5 +157,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/voice-recordings/{key}/audio', [NaraVoiceController::class, 'deleteAudio']);
         Route::put('/voice-recordings/{id}', [NaraVoiceController::class, 'update']);
         Route::delete('/voice-recordings/{id}', [NaraVoiceController::class, 'destroy']);
+        // Admin Counseling Schedule Monitoring
+        Route::get('/counseling-schedules', [AdminController::class, 'getCounselingSchedules']);
+        Route::get('/counselor-schedules', [AdminController::class, 'getCounselorSchedules']);
+        Route::post('/counselor-schedules/template', [AdminController::class, 'setScheduleTemplate']);
+        Route::delete('/counselor-schedules/{tutorId}/slots', [AdminController::class, 'clearCounselorSlots']);
     });
 });
