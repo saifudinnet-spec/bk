@@ -19,6 +19,7 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
 import CounseleeDiagnosticModal from './CounseleeDiagnosticModal';
+import bgChatImage from '../../assets/bg-chat.jpg';
 
 export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) => {
   const { showSuccess, showError } = useToast();
@@ -278,80 +279,87 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
         </div>
       </div>
 
-      {/* Messages Scroll Area with WhatsApp Doodle Wallpaper Background */}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-2.5 relative selection:bg-[#d9fdd3]"
-        style={{
-          backgroundColor: '#efeae2',
-          backgroundImage: `url('/images/wa-chat-bg.svg')`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '380px',
-        }}
-      >
-        {/* WhatsApp End-to-End Privacy / Security Pill */}
-        <div className="flex justify-center my-1.5">
-          <div className="bg-[#ffeecd]/95 text-[#54656f] text-[11px] px-3.5 py-1.5 rounded-lg shadow-xs border border-amber-200/60 flex items-center gap-2 max-w-md text-center leading-snug">
-            <Shield className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-            <span>Pesan dalam sesi ini bersifat rahasia dan terenkripsi antara Anda dan konselor.</span>
-          </div>
-        </div>
+      {/* Messages Scroll Area with Custom Chat Wallpaper Background */}
+      <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col">
+        {/* Background Wallpaper Layer (Fixed within Chat Frame) */}
+        <div
+          className="absolute inset-0 pointer-events-none select-none"
+          style={{
+            backgroundColor: '#efeae2',
+            backgroundImage: `url(${bgChatImage})`,
+            backgroundRepeat: 'repeat',
+            backgroundPosition: 'center',
+            backgroundSize: 'cover',
+          }}
+        />
 
-        {isBefore && (
+        {/* Scrollable Messages Content */}
+        <div className="relative flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-2.5 selection:bg-[#d9fdd3]">
+          {/* WhatsApp End-to-End Privacy / Security Pill */}
           <div className="flex justify-center my-1.5">
-            <div className="bg-amber-50/90 border border-amber-200/80 rounded-xl px-3.5 py-1.5 text-center max-w-sm text-xs text-amber-900 flex items-center justify-center gap-1.5 shadow-xs">
-              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
-              <span>Sesi konseling belum dimulai. Anda tetap dapat menuliskan salam atau pesan awal di sini.</span>
+            <div className="bg-[#ffeecd]/95 text-[#54656f] text-[11px] px-3.5 py-1.5 rounded-lg shadow-xs border border-amber-200/60 flex items-center gap-2 max-w-md text-center leading-snug">
+              <Shield className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+              <span>Pesan dalam sesi ini bersifat rahasia dan terenkripsi antara Anda dan konselor.</span>
             </div>
           </div>
-        )}
 
-        {messages.map((msg) => {
-          const isMe = Number(msg.sender_id) === Number(user?.id);
-          const msgTime = new Date(msg.created_at);
-
-          return (
-            <div
-              key={msg.id}
-              className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}
-            >
-              {!isMe && (
-                <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-[11px] shrink-0 mb-0.5 shadow-xs border border-emerald-200/60">
-                  {msg.sender?.name?.charAt(0) || 'P'}
-                </div>
-              )}
-
-              <div
-                className={`max-w-[82%] sm:max-w-md p-2.5 sm:px-3 sm:py-2 text-xs sm:text-[13px] leading-relaxed shadow-xs ${
-                  isMe
-                    ? 'bg-[#d9fdd3] text-[#111b21] rounded-2xl rounded-tr-none border border-[#bbf7d0]/60'
-                    : 'bg-white text-[#111b21] rounded-2xl rounded-tl-none border border-slate-200/60'
-                }`}
-              >
-                {!isMe && (
-                  <p className="text-[11px] font-bold text-[#008069] mb-0.5 tracking-tight">
-                    {msg.sender?.name}
-                  </p>
-                )}
-                <p className="whitespace-pre-wrap leading-relaxed text-[#111b21]">{msg.message}</p>
-                <div
-                  className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#667781] select-none"
-                >
-                  <span>{msgTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                  {isMe && (
-                    <span>
-                      {msg.is_read ? (
-                        <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
-                      ) : (
-                        <Check className="w-3.5 h-3.5 text-[#8696a0]" />
-                      )}
-                    </span>
-                  )}
-                </div>
+          {isBefore && (
+            <div className="flex justify-center my-1.5">
+              <div className="bg-amber-50/90 border border-amber-200/80 rounded-xl px-3.5 py-1.5 text-center max-w-sm text-xs text-amber-900 flex items-center justify-center gap-1.5 shadow-xs">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>Sesi konseling belum dimulai. Anda tetap dapat menuliskan salam atau pesan awal di sini.</span>
               </div>
             </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
+          )}
+
+          {messages.map((msg) => {
+            const isMe = Number(msg.sender_id) === Number(user?.id);
+            const msgTime = new Date(msg.created_at);
+
+            return (
+              <div
+                key={msg.id}
+                className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}
+              >
+                {!isMe && (
+                  <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-[11px] shrink-0 mb-0.5 shadow-xs border border-emerald-200/60">
+                    {msg.sender?.name?.charAt(0) || 'P'}
+                  </div>
+                )}
+
+                <div
+                  className={`max-w-[82%] sm:max-w-md p-2.5 sm:px-3 sm:py-2 text-xs sm:text-[13px] leading-relaxed shadow-xs ${
+                    isMe
+                      ? 'bg-[#d9fdd3] text-[#111b21] rounded-2xl rounded-tr-none border border-[#bbf7d0]/60'
+                      : 'bg-white text-[#111b21] rounded-2xl rounded-tl-none border border-slate-200/60'
+                  }`}
+                >
+                  {!isMe && (
+                    <p className="text-[11px] font-bold text-[#008069] mb-0.5 tracking-tight">
+                      {msg.sender?.name}
+                    </p>
+                  )}
+                  <p className="whitespace-pre-wrap leading-relaxed text-[#111b21]">{msg.message}</p>
+                  <div
+                    className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#667781] select-none"
+                  >
+                    <span>{msgTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                    {isMe && (
+                      <span>
+                        {msg.is_read ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-[#8696a0]" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* WhatsApp Styled Input Form */}
