@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CounselingActionPlan;
 use App\Models\CounselingCase;
+use App\Models\Notification;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -140,6 +141,8 @@ class ActionPlanController extends Controller
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:50',
             'due_date' => 'nullable|date',
+            'counselor_feedback' => 'nullable|string|max:2000',
+            'is_verified' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -167,20 +170,48 @@ class ActionPlanController extends Controller
             $dataToUpdate['student_notes'] = $request->input('student_notes');
         }
 
-        // Counselor editing fields
+        // Counselor editing & feedback fields
         if ($user->isTutor() || $user->isAdmin()) {
             if ($request->has('title')) $dataToUpdate['title'] = $request->input('title');
             if ($request->has('description')) $dataToUpdate['description'] = $request->input('description');
             if ($request->has('category')) $dataToUpdate['category'] = $request->input('category');
             if ($request->has('due_date')) $dataToUpdate['due_date'] = $request->input('due_date');
+            if ($request->has('counselor_feedback')) {
+                $dataToUpdate['counselor_feedback'] = $request->input('counselor_feedback');
+            }
+            if ($request->has('is_verified')) {
+                $dataToUpdate['verified_at'] = $request->boolean('is_verified') ? now() : null;
+            }
         }
 
         $item->update($dataToUpdate);
+
+        // Notifications
+        if (($user->isStudent() || $user->isGeneral()) && ($request->has('status') || $request->has('student_notes'))) {
+            $tutorTargetId = $item->tutor_id ?: $item->counselingCase?->tutor_id;
+            if ($tutorTargetId) {
+                Notification::create([
+                    'user_id' => $tutorTargetId,
+                    'type' => 'action_plan_progress',
+                    'title' => 'Progres Tugas Konseli',
+                    'message' => "Konseli {$user->name} memperbarui progres rencana aksi: {$item->title}",
+                ]);
+            }
+        } elseif (($user->isTutor() || $user->isAdmin()) && ($request->has('counselor_feedback') || $request->has('is_verified'))) {
+            Notification::create([
+                'user_id' => $item->user_id,
+                'type' => 'action_plan_verified',
+                'title' => 'Bimbingan & Apresiasi Konselor',
+                'message' => "Konselor {$user->name} telah memberikan catatan untuk tugas: {$item->title}",
+            ]);
+        }
 
         AuditLogService::log('update_action_plan', 'CounselingActionPlan', (string)$item->id, [
             'case_id' => $item->counseling_case_id,
             'status' => $item->status,
             'has_student_notes' => !empty($item->student_notes),
+            'has_counselor_feedback' => !empty($item->counselor_feedback),
+            'is_verified' => !empty($item->verified_at),
             'updated_by' => $user->role,
         ], $user->id);
 

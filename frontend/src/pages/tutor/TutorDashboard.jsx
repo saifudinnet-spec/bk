@@ -14,7 +14,13 @@ import {
   ShieldAlert,
   MessageSquare,
   Zap,
-  Loader2
+  Loader2,
+  Award,
+  CheckCheck,
+  AlertTriangle,
+  FileCheck2,
+  Edit3,
+  ExternalLink
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
@@ -22,9 +28,25 @@ import { useToast } from '../../store/ToastContext';
 import StatCard from '../../components/cards/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
 import AppointmentCard from '../../components/cards/AppointmentCard';
+import Modal from '../../components/common/Modal';
 import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
 import CaseReviewModal from '../../components/counseling/CaseReviewModal';
+
+const formatPlanDueDate = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('T')[0].split('-');
+  if (parts.length < 3) return null;
+  const targetDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const formatted = targetDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  if (diffDays < 0) return { label: `Terlewat ${Math.abs(diffDays)} hari (${formatted})`, isOverdue: true, isToday: false };
+  if (diffDays === 0) return { label: `Hari Ini (${formatted})`, isOverdue: false, isToday: true };
+  return { label: `Target: ${formatted}`, isOverdue: false, isToday: false };
+};
 
 export const TutorDashboard = () => {
   const { user } = useAuth();
@@ -40,6 +62,11 @@ export const TutorDashboard = () => {
   const [counselorInfo, setCounselorInfo] = useState(null);
   const [waitingCases, setWaitingCases] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [actionPlans, setActionPlans] = useState([]);
+  const [reviewingPlan, setReviewingPlan] = useState(null);
+  const [tutorFeedbackText, setTutorFeedbackText] = useState('');
+  const [isVerifiedCheck, setIsVerifiedCheck] = useState(false);
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCaseForReview, setSelectedCaseForReview] = useState(null);
   const [isStartingInstant, setIsStartingInstant] = useState(false);
@@ -70,6 +97,7 @@ export const TutorDashboard = () => {
         setMetrics(res.metrics);
         setWaitingCases(res.waiting_cases || []);
         setSessions(res.upcoming_sessions || []);
+        setActionPlans(res.action_plans || []);
         setActiveTestSession(res.active_test_session || null);
         if (res.zoom_test_feature_enabled !== undefined) {
           setIsTestFeatureEnabled(Boolean(res.zoom_test_feature_enabled));
@@ -82,6 +110,30 @@ export const TutorDashboard = () => {
       // Silently fail — user will see empty state UI
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOpenReviewPlan = (plan) => {
+    setReviewingPlan(plan);
+    setTutorFeedbackText(plan.counselor_feedback || '');
+    setIsVerifiedCheck(Boolean(plan.verified_at));
+  };
+
+  const handleSaveReviewPlan = async () => {
+    if (!reviewingPlan) return;
+    setIsSavingFeedback(true);
+    try {
+      await api.put(`/action-plans/${reviewingPlan.id}`, {
+        counselor_feedback: tutorFeedbackText.trim() || null,
+        is_verified: isVerifiedCheck,
+      });
+      showSuccess('Catatan bimbingan & apresiasi konselor berhasil disimpan.');
+      setReviewingPlan(null);
+      fetchTutorData();
+    } catch (err) {
+      showError(err.message || 'Gagal menyimpan catatan bimbingan.');
+    } finally {
+      setIsSavingFeedback(false);
     }
   };
 
@@ -404,6 +456,191 @@ export const TutorDashboard = () => {
         )}
       </section>
 
+      {/* 4.5 Monitoring Rencana Tindak Lanjut Konseli (RTL) */}
+      <section className="space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-darktext flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200">
+                <FileCheck2 className="w-3.5 h-3.5" />
+              </div>
+              <span>Monitoring Rencana Tindak Lanjut Konseli (RTL)</span>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200">
+                {actionPlans.length} Tugas
+              </span>
+            </h3>
+            <p className="text-[11px] text-mutedtext mt-0.5">
+              Pantau progres pekerjaan rumah mandiri, catatan refleksi, dan berikan verifikasi bimbingan konselor
+            </p>
+          </div>
+
+          <Link
+            to="/app/action-plans"
+            className="text-xs font-bold text-teal-800 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3.5 py-1.5 rounded-xl border border-teal-200/80 transition-colors flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>Buka Lembar RTL Lengkap</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {actionPlans.length === 0 ? (
+          <div className="p-7 text-center bg-white rounded-3xl border border-dashed border-softborder space-y-2">
+            <div className="w-11 h-11 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto border border-teal-100">
+              <FileCheck2 className="w-5 h-5" />
+            </div>
+            <p className="text-xs font-bold text-darktext">Belum ada tugas tindak lanjut aktif dari konseli Anda</p>
+            <p className="text-[11px] text-mutedtext max-w-sm mx-auto">
+              Rencana aksi atau tugas mandiri yang dirumuskan pada sesi konseling akan muncul otomatis di sini.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {actionPlans.map((plan) => {
+              const dueMeta = formatPlanDueDate(plan.due_date);
+              const isDone = plan.status === 'COMPLETED';
+              const isProgress = plan.status === 'IN_PROGRESS';
+              const hasNotes = Boolean(plan.student_notes);
+              const isVerified = Boolean(plan.verified_at);
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                    isDone
+                      ? 'bg-emerald-50/40 border-emerald-200/80 shadow-soft-xs'
+                      : dueMeta?.isOverdue
+                        ? 'bg-rose-50/30 border-rose-300 shadow-soft-xs'
+                        : isProgress
+                          ? 'bg-teal-50/20 border-teal-300 shadow-soft-xs'
+                          : 'bg-white border-softborder shadow-soft-xs hover:border-gray-300'
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    {/* Student & Case Header */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-teal-500 to-emerald-600 text-white text-[11px] font-black flex items-center justify-center shrink-0 border border-white shadow-xs">
+                          {plan.user?.name?.charAt(0) || 'K'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-darktext truncate">
+                            {plan.user?.name || 'Konseli'}
+                          </p>
+                          {plan.counseling_case?.case_number && (
+                            <span className="text-[10px] font-mono text-mutedtext">
+                              #{plan.counseling_case.case_number}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                          isDone
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : isProgress
+                              ? 'bg-teal-100 text-teal-800 border-teal-300'
+                              : 'bg-amber-100 text-amber-800 border-amber-300'
+                        }`}
+                      >
+                        {isDone ? '✓ Selesai' : isProgress ? '⚡ Berjalan' : '⏳ Belum'}
+                      </span>
+                    </div>
+
+                    {/* Task Title & Category */}
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                          {plan.category || 'Self-Care'}
+                        </span>
+                        {dueMeta && (
+                          <span
+                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                              dueMeta.isOverdue
+                                ? 'bg-rose-100 text-rose-800 border-rose-300 font-bold'
+                                : dueMeta.isToday
+                                  ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {dueMeta.isOverdue ? '🔴 ' : dueMeta.isToday ? '🟡 ' : ''}
+                            {dueMeta.label}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-bold text-darktext leading-snug line-clamp-2">
+                        {plan.title}
+                      </h4>
+                      {plan.description && (
+                        <p className="text-[11px] text-mutedtext mt-1 line-clamp-2 leading-relaxed">
+                          {plan.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Student Reflection Snippet */}
+                    {hasNotes && (
+                      <div className="p-2 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[10px] text-amber-950">
+                        <span className="font-bold text-amber-800 block text-[9px] uppercase tracking-wide">
+                          Refleksi Konseli:
+                        </span>
+                        <p className="line-clamp-2 italic text-amber-900">"{plan.student_notes}"</p>
+                      </div>
+                    )}
+
+                    {/* Counselor Feedback status */}
+                    {plan.counselor_feedback ? (
+                      <div className="p-2 rounded-xl bg-teal-50/80 border border-teal-200/80 text-[10px] text-teal-950">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="font-bold text-teal-800 text-[9px] uppercase tracking-wide">
+                            Catatan Bimbingan:
+                          </span>
+                          {isVerified && (
+                            <span className="text-[9px] font-bold text-emerald-700 flex items-center gap-0.5">
+                              <CheckCheck className="w-2.5 h-2.5" /> Terverifikasi
+                            </span>
+                          )}
+                        </div>
+                        <p className="line-clamp-2 text-teal-900">"{plan.counselor_feedback}"</p>
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-slate-400 italic flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        <span>Belum ada catatan bimbingan konselor</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions Footer */}
+                  <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenReviewPlan(plan)}
+                      className="px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-[11px] border border-teal-200/80 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Award className="w-3 h-3 text-teal-700" />
+                      <span>{plan.counselor_feedback ? 'Edit Bimbingan' : '+ Beri Bimbingan'}</span>
+                    </button>
+
+                    {plan.counseling_case_id && (
+                      <Link
+                        to={`/app/cases/${plan.counseling_case_id}`}
+                        className="text-[11px] font-semibold text-slate-500 hover:text-emerald-700 flex items-center gap-1"
+                        title="Buka Kasus Konseling Konseli"
+                      >
+                        <span>Buka Kasus</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* 5. Quick Tools & Resources */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 pt-2">
         <Link
@@ -446,7 +683,7 @@ export const TutorDashboard = () => {
         </div>
       </section>
 
-      {/* Review Modal */}
+      {/* Review Modal for Cases */}
       {selectedCaseForReview && (
         <CaseReviewModal
           isOpen={!!selectedCaseForReview}
@@ -454,6 +691,92 @@ export const TutorDashboard = () => {
           onClose={() => setSelectedCaseForReview(null)}
           onUpdated={fetchTutorData}
         />
+      )}
+
+      {/* Review & Feedback Modal for RTL Action Plans */}
+      {reviewingPlan && (
+        <Modal
+          isOpen={Boolean(reviewingPlan)}
+          onClose={() => setReviewingPlan(null)}
+          title="Bimbingan & Verifikasi Rencana Tindak Lanjut"
+          maxWidth="max-w-lg"
+        >
+          <div className="space-y-4">
+            {/* Plan Header Summary */}
+            <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/80 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-teal-900">
+                  {reviewingPlan.user?.name || 'Konseli'} &middot; #{reviewingPlan.counseling_case?.case_number}
+                </span>
+                <span className="font-bold text-[10px] px-2 py-0.5 rounded-full bg-white border border-teal-200 text-teal-800">
+                  {reviewingPlan.category || 'Tugas Mandiri'}
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">{reviewingPlan.title}</h4>
+              {reviewingPlan.description && (
+                <p className="text-xs text-slate-600 leading-relaxed">{reviewingPlan.description}</p>
+              )}
+            </div>
+
+            {/* Student Reflection Note */}
+            {reviewingPlan.student_notes && (
+              <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-950 space-y-1">
+                <strong className="block text-[10px] uppercase text-amber-800 font-bold tracking-wide">
+                  Refleksi & Pengalaman Mahasiswa:
+                </strong>
+                <p className="leading-relaxed whitespace-pre-wrap">{reviewingPlan.student_notes}</p>
+              </div>
+            )}
+
+            {/* Tutor Feedback Input */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-darktext">
+                Catatan Bimbingan, Umpan Balik, atau Apresiasi Konselor:
+              </label>
+              <textarea
+                rows={4}
+                value={tutorFeedbackText}
+                onChange={(e) => setTutorFeedbackText(e.target.value)}
+                placeholder="Tuliskan arahan penguatan, tindak lanjut untuk sesi berikutnya, atau kalimat apresiasi yang memotivasi..."
+                className="w-full p-3 rounded-xl border border-softborder bg-white text-xs text-darktext focus:ring-2 focus:ring-teal-500/20"
+              />
+            </div>
+
+            {/* Verified Checkbox */}
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isVerifiedCheck}
+                onChange={(e) => setIsVerifiedCheck(e.target.checked)}
+                className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+              />
+              <div className="text-xs">
+                <p className="font-bold text-slate-800">Tandai Tugas Telah Diverifikasi Konselor</p>
+                <p className="text-[11px] text-mutedtext">Konseli akan menerima notifikasi apresiasi dan status terverifikasi</p>
+              </div>
+            </label>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setReviewingPlan(null)}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-mutedtext hover:bg-gray-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isSavingFeedback}
+                onClick={handleSaveReviewPlan}
+                className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>{isSavingFeedback ? 'Menyimpan...' : 'Simpan & Beri Umpan Balik'}</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </PageTransition>
   );

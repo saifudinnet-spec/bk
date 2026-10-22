@@ -35,6 +35,7 @@ export const DesktopSidebar = () => {
     { label: 'Dashboard Tutor', path: '/tutor/dashboard', icon: LayoutDashboard },
     { label: 'Jadwal Konseling', path: '/tutor/schedule', icon: Calendar },
     { label: 'Daftar Kasus', path: '/tutor/cases', icon: FolderHeart },
+    { label: 'Tindak Lanjut (RTL)', path: '/app/action-plans', icon: FileCheck2 },
     { label: 'Profil Tutor', path: '/tutor/profile', icon: User },
   ];
 

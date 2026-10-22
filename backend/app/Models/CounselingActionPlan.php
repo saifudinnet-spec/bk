@@ -23,11 +23,14 @@ class CounselingActionPlan extends Model
         'status',
         'completed_at',
         'student_notes',
+        'counselor_feedback',
+        'verified_at',
     ];
 
     protected $casts = [
         'due_date' => 'date',
         'completed_at' => 'datetime',
+        'verified_at' => 'datetime',
     ];
 
     public function counselingCase()

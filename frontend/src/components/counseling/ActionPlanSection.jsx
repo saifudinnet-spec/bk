@@ -11,7 +11,9 @@ import {
   Trash2,
   Sparkles,
   MessageSquare,
-  AlertTriangle
+  AlertTriangle,
+  Award,
+  CheckCheck
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
@@ -89,12 +91,38 @@ export const ActionPlanSection = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteInput, setNoteInput] = useState('');
+  const [editingFeedbackId, setEditingFeedbackId] = useState(null);
+  const [feedbackInput, setFeedbackInput] = useState('');
+  const [isVerifiedInput, setIsVerifiedInput] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
 
   // Keep items in sync with prop updates
   React.useEffect(() => {
     setItems(actionPlans);
   }, [actionPlans]);
+
+  const handleSaveCounselorFeedback = async (item) => {
+    setUpdatingId(item.id);
+    try {
+      const res = await api.put(`/action-plans/${item.id}`, {
+        counselor_feedback: feedbackInput.trim() || null,
+        is_verified: isVerifiedInput,
+      });
+
+      const updatedItem = res.data || res;
+      const updated = items.map((it) => (it.id === item.id ? { ...it, ...updatedItem } : it));
+      setItems(updated);
+      setEditingFeedbackId(null);
+      setFeedbackInput('');
+      setIsVerifiedInput(false);
+      showSuccess('Catatan bimbingan dan apresiasi konselor berhasil disimpan.');
+      if (onUpdated) onUpdated(updated);
+    } catch (err) {
+      showError(err.message || 'Gagal menyimpan catatan bimbingan.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const handleStatusChange = async (item, nextStatus) => {
     if (item.status === nextStatus) return;
@@ -248,6 +276,7 @@ export const ActionPlanSection = ({
             const isCompleted = item.status === 'COMPLETED';
             const isInProgress = item.status === 'IN_PROGRESS';
             const isEditingNote = editingNoteId === item.id;
+            const isEditingFeedback = editingFeedbackId === item.id;
             const dueDateMeta = getDueDateMeta(item.due_date, isCompleted);
 
             return (
@@ -326,6 +355,14 @@ export const ActionPlanSection = ({
                         </span>
                       )}
 
+                      {/* Verified Badge */}
+                      {item.verified_at && (
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-soft-xs">
+                          <CheckCheck className="w-3 h-3 text-emerald-600" />
+                          <span>Terverifikasi</span>
+                        </span>
+                      )}
+
                       {item.counseling_case?.case_number && (
                         <span className="text-[10px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200">
                           #{item.counseling_case.case_number}
@@ -394,8 +431,83 @@ export const ActionPlanSection = ({
                       </div>
                     )}
 
+                    {/* Counselor Guidance & Verification Feedback */}
+                    {item.counselor_feedback && !isEditingFeedback && (
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-teal-50/70 border border-teal-200/80 text-[11px] text-teal-950 flex items-start gap-2 shadow-soft-xs">
+                        <Award className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 flex-wrap mb-0.5">
+                            <strong className="block text-[10px] uppercase text-teal-800 tracking-wide font-bold">
+                              Catatan & Apresiasi Konselor:
+                            </strong>
+                            {item.verified_at && (
+                              <span className="text-[9px] font-bold px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                ✓ Diverifikasi {new Date(item.verified_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                              </span>
+                            )}
+                          </div>
+                          <p className="leading-relaxed whitespace-pre-wrap">{item.counselor_feedback}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Counselor Feedback Input Form */}
+                    {isEditingFeedback && (
+                      <div className="mt-2.5 p-3 rounded-xl bg-teal-50/60 border border-teal-200 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
+                            <Award className="w-3.5 h-3.5 text-teal-700" />
+                            <span>Beri Catatan Bimbingan / Apresiasi Konselor</span>
+                          </span>
+                          <span className="text-[10px] text-teal-700 font-medium">Tampak oleh konseli</span>
+                        </div>
+
+                        <textarea
+                          rows={3}
+                          value={feedbackInput}
+                          onChange={(e) => setFeedbackInput(e.target.value)}
+                          placeholder="Tuliskan arahan tindak lanjut, umpan balik terhadap catatan mahasiswa, atau kalimat apresiasi yang menguatkan..."
+                          className="w-full p-2.5 rounded-xl border border-teal-200 bg-white text-xs text-darktext focus:ring-2 focus:ring-teal-500/30"
+                        />
+
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={isVerifiedInput}
+                              onChange={(e) => setIsVerifiedInput(e.target.checked)}
+                              className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                            />
+                            <span>Tandai Terverifikasi (Telah ditinjau konselor)</span>
+                          </label>
+
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingFeedbackId(null);
+                                setFeedbackInput('');
+                                setIsVerifiedInput(false);
+                              }}
+                              className="px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 text-mutedtext hover:bg-gray-50"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              type="button"
+                              disabled={updatingId === item.id}
+                              onClick={() => handleSaveCounselorFeedback(item)}
+                              className="px-3 py-1 text-[11px] font-bold rounded-lg bg-teal-700 hover:bg-teal-800 text-white shadow-sm flex items-center gap-1"
+                            >
+                              {updatingId === item.id ? 'Menyimpan...' : 'Simpan Bimbingan'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Action buttons */}
-                    <div className="flex items-center gap-3 mt-2.5 text-[11px]">
+                    <div className="flex items-center gap-3 mt-2.5 text-[11px] flex-wrap">
                       {!isEditingNote && (
                         <button
                           type="button"
@@ -406,7 +518,22 @@ export const ActionPlanSection = ({
                           className="text-emerald-700 hover:underline font-semibold flex items-center gap-1"
                         >
                           <Edit3 className="w-3 h-3" />
-                          <span>{item.student_notes ? 'Edit Catatan' : '+ Beri Catatan Refleksi'}</span>
+                          <span>{item.student_notes ? 'Edit Catatan Mahasiswa' : '+ Beri Catatan Refleksi'}</span>
+                        </button>
+                      )}
+
+                      {isTutor && !isEditingFeedback && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingFeedbackId(item.id);
+                            setFeedbackInput(item.counselor_feedback || '');
+                            setIsVerifiedInput(Boolean(item.verified_at));
+                          }}
+                          className="text-teal-700 hover:underline font-semibold flex items-center gap-1"
+                        >
+                          <Award className="w-3.5 h-3.5" />
+                          <span>{item.counselor_feedback ? 'Edit Catatan Konselor' : '+ Catatan & Verifikasi Konselor'}</span>
                         </button>
                       )}
 

@@ -8,12 +8,14 @@ import {
   FolderHeart
 } from 'lucide-react';
 import api from '../../services/api';
+import { useAuth } from '../../store/AuthContext';
 import ActionPlanSection from '../../components/counseling/ActionPlanSection';
 import PageTransition from '../../components/common/PageTransition';
 import EmptyState from '../../components/common/EmptyState';
 import { ListSkeleton } from '../../components/common/LoadingSkeleton';
 
 export const ActionPlansPage = () => {
+  const { user, isTutor, isAdmin } = useAuth();
   const [actionPlans, setActionPlans] = useState([]);
   const [summary, setSummary] = useState({ total: 0, completed: 0, in_progress: 0, pending: 0 });
   const [cases, setCases] = useState([]);
@@ -286,7 +288,7 @@ export const ActionPlansPage = () => {
             caseId={selectedCaseId !== 'ALL' ? Number(selectedCaseId) : latestRealCase?.id}
             availableCases={cases}
             canAdd={cases.length > 0}
-            isTutor={false}
+            isTutor={isTutor || isAdmin}
             onUpdated={fetchActionPlans}
           />
         </div>

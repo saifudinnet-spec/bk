@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CounselingActionPlan;
 use App\Models\CounselingCase;
 use App\Models\CounselingSession;
 use App\Models\SystemSetting;
@@ -115,6 +116,22 @@ class TutorDashboardController extends Controller
                 ->first();
         }
 
+        // 4. Action Plans from counselees handled by this tutor (monitoring)
+        $activeActionPlans = CounselingActionPlan::with([
+            'counselingCase:id,case_number,category',
+            'user:id,name,email,avatar',
+        ])
+        ->where(function ($q) use ($user) {
+            $q->where('tutor_id', $user->id)
+              ->orWhereHas('counselingCase', function ($cq) use ($user) {
+                  $cq->where('tutor_id', $user->id);
+              });
+        })
+        ->orderByRaw("FIELD(status, 'IN_PROGRESS', 'PENDING', 'COMPLETED')")
+        ->orderBy('due_date', 'asc')
+        ->take(15)
+        ->get();
+
         return response()->json([
             'counselor' => [
                 'id' => $user->id,
@@ -130,6 +147,7 @@ class TutorDashboardController extends Controller
             ],
             'waiting_cases' => $waitingCases,
             'upcoming_sessions' => $upcomingSessions,
+            'action_plans' => $activeActionPlans,
             'active_test_session' => $activeTestSession,
             'zoom_test_feature_enabled' => $isTestFeatureEnabled,
         ]);
