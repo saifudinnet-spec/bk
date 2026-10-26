@@ -26,7 +26,8 @@ import {
   Clock,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Tag
 } from 'lucide-react';
 import api from '../../../services/api';
 
@@ -568,6 +569,9 @@ export const AdminCmsTab = ({
     setIsSavingCms(true);
     try {
       const res = await api.put('/admin/landing-content', landingContent);
+      if (res?.data) {
+        setLandingContent(res.data);
+      }
       showSuccess(res.message || 'Konten landing page berhasil diperbarui!');
     } catch (err) {
       showError(err.message || 'Gagal menyimpan konten landing page.');
@@ -1085,10 +1089,10 @@ if (!landingContent) return null;
                 <div>
                   <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
                     <MessageSquareHeart className="w-4 h-4 text-emerald-600" />
-                    <span>Daftar Topik Permasalahan ({landingContent?.problems?.items?.length || 0})</span>
+                    <span>Daftar Topik Permasalahan & Konsultasi ({landingContent?.problems?.items?.length || 0})</span>
                   </h4>
                   <p className="text-[11px] text-mutedtext mt-0.5">
-                    Klik pada judul topik permasalahan untuk membuka/menutup detail dan mengedit kontennya (Sistem Accordion).
+                    Klik pada judul topik permasalahan untuk membuka/menutup detail dan mengeditnya. <strong>Perubahan otomatis disinkronkan ke Master Topik Konseling</strong> (pilihan konselor & alur booking).
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -1153,6 +1157,11 @@ if (!landingContent) return null;
                               {prob.tag}
                             </span>
                           )}
+                          {prob.icon && (
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 shrink-0 hidden sm:inline">
+                              {prob.icon}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1189,10 +1198,10 @@ if (!landingContent) return null;
                         </div>
                       </div>
 
-                      {/* Accordion Body (Form Edit Judul, Tag & Deskripsi saat dibuka) */}
+                      {/* Accordion Body (Form Edit Judul, Tag, Ikon & Deskripsi saat dibuka) */}
                       {isOpen && (
                         <div className="p-4 pt-2 border-t border-emerald-100/70 bg-white space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                             <div className="sm:col-span-2">
                               <label className="block text-[11px] font-bold text-darktext mb-1 flex items-center gap-1">
                                 <Edit3 className="w-3 h-3 text-emerald-600" />
@@ -1208,7 +1217,7 @@ if (!landingContent) return null;
                             </div>
                             <div>
                               <label className="block text-[11px] font-bold text-darktext mb-1 flex items-center gap-1">
-                                <Sparkles className="w-3 h-3 text-emerald-600" />
+                                <Tag className="w-3 h-3 text-emerald-600" />
                                 <span>Kategori / Tag:</span>
                               </label>
                               <input
@@ -1218,6 +1227,27 @@ if (!landingContent) return null;
                                 onChange={(e) => handleProblemChange(idx, 'tag', e.target.value)}
                                 className="w-full h-10 px-3.5 rounded-xl border border-softborder bg-gray-50/50 text-xs font-semibold text-darktext focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                               />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-darktext mb-1 flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-emerald-600" />
+                                <span>Ikon:</span>
+                              </label>
+                              <select
+                                value={prob.icon || 'Sparkles'}
+                                onChange={(e) => handleProblemChange(idx, 'icon', e.target.value)}
+                                className="w-full h-10 px-3 rounded-xl border border-softborder bg-gray-50/50 text-xs font-semibold text-darktext focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                              >
+                                <option value="GraduationCap">GraduationCap (Akademik)</option>
+                                <option value="Brain">Brain (Emosi / Pikiran)</option>
+                                <option value="Sparkles">Sparkles (Mental / Pemulihan)</option>
+                                <option value="Users">Users (Sosial / Relasi)</option>
+                                <option value="Home">Home (Keluarga)</option>
+                                <option value="Compass">Compass (Karier / Masa Depan)</option>
+                                <option value="HeartHandshake">HeartHandshake (Konseling / Empati)</option>
+                                <option value="Award">Award (Prestasi)</option>
+                                <option value="ShieldCheck">ShieldCheck (Keamanan)</option>
+                              </select>
                             </div>
                           </div>
 
@@ -1236,7 +1266,7 @@ if (!landingContent) return null;
                           </div>
 
                           <div className="flex items-center justify-between text-[11px] text-mutedtext pt-1 border-t border-gray-100">
-                            <span>Perubahan akan aktif di landing page setelah menekan tombol Simpan di atas.</span>
+                            <span>💡 Perubahan otomatis disinkronkan ke Master Topik Konseling dan Landing Page setelah menekan Simpan.</span>
                             <button
                               type="button"
                               onClick={() => toggleProblem(idx)}

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CounselingTopic;
 use App\Models\SystemSetting;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class LandingContentController extends Controller
 {
@@ -363,6 +365,11 @@ class LandingContentController extends Controller
         }
         $content['hero']['image_url'] = $heroImg;
 
+        // Synchronize problems from CMS with the counseling_topics master database table
+        if (isset($content['problems']['items']) && is_array($content['problems']['items'])) {
+            $content['problems']['items'] = $this->syncCounselingTopics($content['problems']['items']);
+        }
+
         SystemSetting::updateOrCreate(
             ['key' => 'landing_content'],
             ['value' => json_encode($content)]
@@ -558,6 +565,12 @@ class LandingContentController extends Controller
     public function reset(): JsonResponse
     {
         $default = self::getDefaultContent();
+
+        // Also synchronize default topics into counseling_topics
+        if (isset($default['problems']['items']) && is_array($default['problems']['items'])) {
+            $default['problems']['items'] = $this->syncCounselingTopics($default['problems']['items']);
+        }
+
         SystemSetting::updateOrCreate(
             ['key' => 'landing_content'],
             ['value' => json_encode($default)]
@@ -576,6 +589,95 @@ class LandingContentController extends Controller
             'message' => 'Konten landing page berhasil direset ke pengaturan bawaan.',
             'data' => $default,
         ]);
+    }
+
+    /**
+     * Synchronize problems array from CMS into the counseling_topics master database table.
+     *
+     * @param array $items
+     * @return array Updated items array with accurate database IDs
+     */
+    protected function syncCounselingTopics(array $items): array
+    {
+        $activeTopicIds = [];
+        $syncedItems = [];
+
+        foreach ($items as $index => $item) {
+            $title = trim($item['title'] ?? '');
+            if ($title === '') {
+                continue;
+            }
+
+            $tag = trim($item['tag'] ?? '');
+            $desc = trim($item['desc'] ?? ($item['description'] ?? ''));
+            $icon = trim($item['icon'] ?? 'Sparkles');
+
+            // If ID is a valid integer and not a JavaScript Date.now() timestamp (> 1 billion)
+            $rawId = $item['id'] ?? null;
+            $dbId = (is_numeric($rawId) && (int)$rawId > 0 && (int)$rawId < 1000000000) ? (int)$rawId : null;
+
+            $topic = null;
+            if ($dbId) {
+                $topic = CounselingTopic::find($dbId);
+            }
+
+            if (!$topic) {
+                // Match by slug or title if ID not found
+                $candidateSlug = Str::slug($title);
+                $topic = CounselingTopic::where('slug', $candidateSlug)
+                    ->orWhere('title', $title)
+                    ->first();
+            }
+
+            if ($topic) {
+                $topic->title = $title;
+                $topic->tag = $tag ?: $topic->tag;
+                $topic->description = $desc;
+                $topic->icon = $icon ?: $topic->icon;
+                $topic->is_active = true;
+                $topic->order = $index + 1;
+                if (empty($topic->slug)) {
+                    $topic->slug = Str::slug($title) ?: 'topik-' . $topic->id;
+                }
+                $topic->save();
+            } else {
+                $baseSlug = Str::slug($title) ?: 'topik';
+                $slug = $baseSlug;
+                $counter = 1;
+                while (CounselingTopic::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter;
+                    $counter++;
+                }
+
+                $topic = CounselingTopic::create([
+                    'title' => $title,
+                    'slug' => $slug,
+                    'tag' => $tag ?: 'Konseling',
+                    'description' => $desc,
+                    'icon' => $icon ?: 'Sparkles',
+                    'is_active' => true,
+                    'order' => $index + 1,
+                ]);
+            }
+
+            $activeTopicIds[] = $topic->id;
+
+            // Reflect the accurate database topic ID back into the items array
+            $item['id'] = $topic->id;
+            $item['title'] = $topic->title;
+            $item['tag'] = $topic->tag;
+            $item['desc'] = $topic->description;
+            $item['icon'] = $topic->icon;
+
+            $syncedItems[] = $item;
+        }
+
+        // Deactivate any topics not present in the current active items list
+        if (!empty($activeTopicIds)) {
+            CounselingTopic::whereNotIn('id', $activeTopicIds)->update(['is_active' => false]);
+        }
+
+        return $syncedItems;
     }
 
     /**
