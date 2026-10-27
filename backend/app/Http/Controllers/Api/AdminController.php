@@ -257,6 +257,7 @@ class AdminController extends Controller
             'general_counselee_enabled' => SystemSetting::get('general_counselee_enabled', 'true') === 'true',
 
             // Email & Gmail SMTP Notification Settings
+            'email_booking_notifications_enabled' => SystemSetting::get('email_booking_notifications_enabled', 'true') === 'true',
             'email_reminders_enabled' => SystemSetting::get('email_reminders_enabled', 'true') === 'true',
             'mail_from_name' => SystemSetting::get('mail_from_name', env('MAIL_FROM_NAME', 'Ruang BK Online')),
             'mail_from_address' => SystemSetting::get('mail_from_address', env('MAIL_FROM_ADDRESS', '')),
@@ -318,6 +319,7 @@ class AdminController extends Controller
             'general_counselee_enabled' => 'nullable|boolean',
 
             // Email & Gmail SMTP Notification Settings
+            'email_booking_notifications_enabled' => 'nullable|boolean',
             'email_reminders_enabled' => 'nullable|boolean',
             'mail_from_name' => 'nullable|string|max:255',
             'mail_from_address' => 'nullable|string|email|max:255',
@@ -364,6 +366,7 @@ class AdminController extends Controller
         if ($request->has('general_counselee_enabled')) SystemSetting::set('general_counselee_enabled', $request->boolean('general_counselee_enabled') ? 'true' : 'false');
 
         // Email & Gmail SMTP Notification Settings
+        if ($request->has('email_booking_notifications_enabled')) SystemSetting::set('email_booking_notifications_enabled', $request->boolean('email_booking_notifications_enabled') ? 'true' : 'false');
         if ($request->has('email_reminders_enabled')) SystemSetting::set('email_reminders_enabled', $request->boolean('email_reminders_enabled') ? 'true' : 'false');
         if ($request->has('mail_from_name')) SystemSetting::set('mail_from_name', trim($request->input('mail_from_name') ?? 'Ruang BK Online'));
         if ($request->has('mail_from_address')) SystemSetting::set('mail_from_address', trim($request->input('mail_from_address') ?? ''));
@@ -440,6 +443,38 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengirim email via Gmail SMTP: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Run the 1-hour session reminders check immediately on-demand
+     */
+    public function runSessionReminders(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        try {
+            \Illuminate\Support\Facades\Artisan::call('counseling:send-reminders');
+            $output = \Illuminate\Support\Facades\Artisan::output();
+
+            AuditLogService::log('trigger_session_reminders_manual', 'CounselingSession', null, [
+                'output' => trim($output),
+                'triggered_by' => $request->user()->name,
+            ], $request->user()->id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pemeriksaan pengingat sesi konseling berhasil dijalankan.',
+                'output' => trim($output),
+                'executed_at' => now()->timezone('Asia/Jakarta')->translatedFormat('d F Y, H:i:s') . ' WIB',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Gagal menjalankan trigger pengingat sesi: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menjalankan pengingat: ' . $e->getMessage(),
             ], 500);
         }
     }

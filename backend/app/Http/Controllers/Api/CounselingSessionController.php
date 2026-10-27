@@ -191,6 +191,9 @@ class CounselingSessionController extends Controller
             'start_at' => $session->start_at->toIso8601String(),
         ], $user->id);
 
+        // Kirim email langsung ke konseli dan konselor saat booking dibuat
+        \App\Services\CounselingMailService::sendBookingConfirmationEmails($session);
+
         return response()->json([
             'message' => 'Jadwal konseling berhasil dikonfirmasi.',
             'data' => $session->load(['counselingCase', 'tutor:id,name,email', 'user:id,name,email']),

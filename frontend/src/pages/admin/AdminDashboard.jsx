@@ -49,7 +49,8 @@ export const AdminDashboard = () => {
     reminder_notifications_enabled: true,
     general_counselee_enabled: true,
 
-    // Email & Gmail SMTP Reminder Settings
+    // Email & Gmail SMTP Notification & Reminder Settings
+    email_booking_notifications_enabled: true,
     email_reminders_enabled: true,
     mail_from_name: 'Ruang BK Online',
     mail_from_address: '',
@@ -283,6 +284,18 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleRunSessionReminders = async () => {
+    try {
+      const res = await api.post('/admin/settings/run-reminders');
+      showSuccess(res.message || 'Pemeriksaan pengingat sesi berhasil dijalankan.');
+      return { success: true, message: res.message, output: res.output, executed_at: res.executed_at };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Gagal menjalankan pengingat sesi.';
+      showError(msg);
+      return { success: false, message: msg };
+    }
+  };
+
   const handleOpenCreateArticle = () => {
     setEditingArticle({
       id: Date.now(),
@@ -447,6 +460,7 @@ export const AdminDashboard = () => {
           isSavingSettings={isSavingSettings}
           setActiveTab={setActiveTab}
           onTestEmail={handleTestEmailConnection}
+          onRunReminders={handleRunSessionReminders}
         />
       )}
 

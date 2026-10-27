@@ -144,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/settings', [AdminController::class, 'getSettings']);
         Route::put('/settings', [AdminController::class, 'updateSettings']);
         Route::post('/settings/test-email', [AdminController::class, 'testEmailConnection']);
+        Route::post('/settings/run-reminders', [AdminController::class, 'runSessionReminders']);
         Route::post('/zoom/test-connection', [AdminController::class, 'testZoomConnection']);
         Route::post('/zoom/test-sdk', [AdminController::class, 'testZoomSdk']);
         Route::put('/landing-content', [LandingContentController::class, 'update']);

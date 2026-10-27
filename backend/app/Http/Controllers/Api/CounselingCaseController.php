@@ -206,6 +206,11 @@ class CounselingCaseController extends Controller
             'method' => $method,
         ], $user->id);
 
+        // Jika konseli langsung memilih slot jadwal ketersediaan (booking session), kirim email konfirmasi ke konseli & konselor
+        if (!empty($createdData['session'])) {
+            \App\Services\CounselingMailService::sendBookingConfirmationEmails($createdData['session']);
+        }
+
         return response()->json([
             'message' => 'Pengajuan konseling berhasil dikirimkan. Menunggu persetujuan konselor.',
             'data' => $case->load(['tutor:id,name,email,avatar', 'topic', 'sessions']),

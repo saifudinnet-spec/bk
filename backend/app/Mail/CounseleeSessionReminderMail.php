@@ -19,7 +19,10 @@ class CounseleeSessionReminderMail extends Mailable
     public function __construct(CounselingSession $session)
     {
         $this->session = $session;
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = env('FRONTEND_URL');
+        if (empty($frontendUrl)) {
+            $frontendUrl = config('app.url') ? str_replace(':8000', ':5173', config('app.url')) : 'http://localhost:5173';
+        }
         $this->sessionUrl = rtrim($frontendUrl, '/') . '/counseling/session/' . $session->id;
     }
 
