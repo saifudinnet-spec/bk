@@ -16,6 +16,9 @@ class DeployController extends Controller
      */
     public function webhook(Request $request)
     {
+        @set_time_limit(300);
+        @ignore_user_abort(true);
+
         // 1. Verifikasi signature dari GitHub
         $secret = config('app.deploy_secret');
         $signature = $request->header('X-Hub-Signature-256');
@@ -168,6 +171,9 @@ class DeployController extends Controller
     public function runManual(Request $request)
     {
         $this->ensureAdmin($request);
+
+        @set_time_limit(300);
+        @ignore_user_abort(true);
 
         $scriptPath = base_path('deploy.sh');
 
