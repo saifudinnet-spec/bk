@@ -41,15 +41,26 @@ else
 fi
 echo ""
 
-# --- [4/5] Migrasi Database ---
-echo ">>> [4/5] Menjalankan migrasi database..."
+# --- [4/6] Migrasi Database ---
+echo ">>> [4/6] Menjalankan migrasi database..."
 cd "$PROJECT_DIR"
 php artisan migrate --force
 echo "    ✅ Migrasi selesai."
 echo ""
 
-# --- [5/5] Clear Cache & Optimize ---
-echo ">>> [5/5] Clear cache dan optimasi..."
+# --- [5/6] Storage Symlink ---
+echo ">>> [5/6] Memastikan storage symlink terhubung..."
+cd "$PROJECT_DIR"
+php artisan storage:link --force
+chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+if [ -d "$FRONTEND_DIR/dist" ]; then
+    ln -sfn "$PROJECT_DIR/storage/app/public" "$FRONTEND_DIR/dist/storage" 2>/dev/null || true
+fi
+echo "    ✅ Storage symlink selesai."
+echo ""
+
+# --- [6/6] Clear Cache & Optimize ---
+echo ">>> [6/6] Clear cache dan optimasi..."
 php artisan optimize:clear
 php artisan optimize
 echo "    ✅ Cache & optimasi selesai."

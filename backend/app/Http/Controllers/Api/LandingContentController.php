@@ -681,12 +681,10 @@ class LandingContentController extends Controller
             }
         }
 
-        // Append new banners to existing list
-        $mergedBanners = array_values(array_unique(array_merge($existingBanners, $uploadedUrls)));
+        // Prepend new banners so the newly uploaded photo becomes the primary slide immediately
+        $mergedBanners = array_values(array_unique(array_merge($uploadedUrls, $existingBanners)));
         $data['hero']['banner_images'] = $mergedBanners;
-        if (empty($data['hero']['image_url']) || !in_array($data['hero']['image_url'], $mergedBanners)) {
-            $data['hero']['image_url'] = $mergedBanners[0] ?? '';
-        }
+        $data['hero']['image_url'] = $uploadedUrls[0] ?? ($mergedBanners[0] ?? '');
 
         SystemSetting::updateOrCreate(
             ['key' => 'landing_content'],

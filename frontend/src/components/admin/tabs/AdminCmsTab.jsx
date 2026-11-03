@@ -356,7 +356,7 @@ export const AdminCmsTab = ({
           const currentList = (prev?.hero?.banner_images || [])
             .map((img) => (typeof img === 'string' ? img : img?.url))
             .filter(Boolean);
-          const combined = Array.from(new Set([...currentList, ...newUrls]));
+          const combined = Array.from(new Set([...newUrls, ...currentList]));
           const updated = {
             ...prev,
             hero: {
