@@ -16,21 +16,21 @@ echo "  $(date '+%d %b %Y %H:%M:%S')"
 echo "============================================"
 echo ""
 
-# --- [1/5] Git Pull ---
-echo ">>> [1/5] Mengambil kode terbaru dari GitHub..."
+# --- [1/6] Git Pull ---
+echo ">>> [1/6] Mengambil kode terbaru dari GitHub..."
 cd "$PROJECT_DIR"
 git pull origin main
 echo "    ✅ Git pull selesai."
 echo ""
 
-# --- [2/5] Install/Update Composer Dependencies ---
-echo ">>> [2/5] Update Composer dependencies..."
+# --- [2/6] Install/Update Composer Dependencies ---
+echo ">>> [2/6] Update Composer dependencies..."
 composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 echo "    ✅ Composer selesai."
 echo ""
 
-# --- [3/5] Build Frontend ---
-echo ">>> [3/5] Build frontend (npm run build)..."
+# --- [3/6] Build Frontend ---
+echo ">>> [3/6] Build frontend (npm run build)..."
 if [ -d "$FRONTEND_DIR" ]; then
     cd "$FRONTEND_DIR"
     npm install --silent
