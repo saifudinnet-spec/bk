@@ -388,6 +388,7 @@ export const LandingPage = () => {
       { label: 'Artikel', href: '/artikel' },
       { label: 'Konselor Kami', href: '#konselor' },
       { label: 'Cara Kerja', href: '#cara-kerja' },
+      { label: 'Panduan', href: '/panduan' },
       { label: 'FAQ', href: '#faq' },
     ]
   };
@@ -409,6 +410,7 @@ export const LandingPage = () => {
       { label: 'Topik Bimbingan', href: '#masalah' },
       { label: 'Artikel Edukasi', href: '/artikel' },
       { label: 'Daftar Konselor', href: '#konselor' },
+      { label: 'Buku Panduan Pengguna', href: '/panduan' },
       { label: 'Masuk Akun', href: '/login' },
     ]
   };
@@ -579,6 +581,18 @@ export const LandingPage = () => {
   // Tampilkan hanya tutor dari API — tidak ada fallback data palsu
   const displayTutors = tutors;
 
+  // Deduplicate navbar menu items so duplicate entries never render
+  const cleanNavbarMenu = React.useMemo(() => {
+    const raw = navbar.menu || [];
+    const seen = new Set();
+    return raw.filter((item) => {
+      const key = item?.href || item?.label;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [navbar.menu]);
+
   return (
     <PageTransition className="min-h-screen bg-[#F6F8FA] flex flex-col justify-between selection:bg-emerald-200 selection:text-emerald-950 font-sans relative">
 
@@ -637,7 +651,7 @@ export const LandingPage = () => {
 
           {/* Desktop Nav Links (Dynamically Editable via CMS) */}
           <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-mutedtext">
-            {(navbar.menu || []).map((item, idx) =>
+            {(cleanNavbarMenu || []).map((item, idx) =>
               item.href?.startsWith('/') ? (
                 <Link key={idx} to={item.href} className="hover:text-emerald-800 transition-colors">
                   {item.label}

@@ -27,9 +27,13 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  Tag
+  Tag,
+  BookOpen,
+  GraduationCap,
+  HeartHandshake
 } from 'lucide-react';
 import api from '../../../services/api';
+import { defaultUserGuides } from '../../../data/defaultUserGuides';
 
 export const AdminCmsTab = ({
   landingContent,
@@ -44,6 +48,148 @@ export const AdminCmsTab = ({
   const [openFaqIndices, setOpenFaqIndices] = useState({});
   const [openProblemIndices, setOpenProblemIndices] = useState({});
   const [openTestimonialIndices, setOpenTestimonialIndices] = useState({ 0: true });
+  const [activeGuideRole, setActiveGuideRole] = useState('konseli');
+  const [uploadingGuideStepId, setUploadingGuideStepId] = useState(null);
+  const [openGuideIndices, setOpenGuideIndices] = useState({ 0: true });
+
+  const activeRoleGuideData = landingContent?.user_guides?.[activeGuideRole] || defaultUserGuides[activeGuideRole];
+  const activeRoleSteps = activeRoleGuideData?.steps || [];
+
+  const toggleGuideStep = (idx) => {
+    setOpenGuideIndices((prev) => ({
+      ...prev,
+      [idx]: !prev[idx],
+    }));
+  };
+
+  const handleGuideRoleMetaChange = (field, value) => {
+    setLandingContent((prev) => {
+      const currentGuides = prev?.user_guides || defaultUserGuides;
+      const currentRole = currentGuides[activeGuideRole] || defaultUserGuides[activeGuideRole];
+      return {
+        ...prev,
+        user_guides: {
+          ...currentGuides,
+          [activeGuideRole]: {
+            ...currentRole,
+            [field]: value,
+          },
+        },
+      };
+    });
+  };
+
+  const handleGuideStepFieldChange = (stepIdx, field, value) => {
+    setLandingContent((prev) => {
+      const currentGuides = prev?.user_guides || defaultUserGuides;
+      const currentRole = currentGuides[activeGuideRole] || defaultUserGuides[activeGuideRole];
+      const steps = [...(currentRole.steps || [])];
+      steps[stepIdx] = {
+        ...steps[stepIdx],
+        [field]: value,
+      };
+      return {
+        ...prev,
+        user_guides: {
+          ...currentGuides,
+          [activeGuideRole]: {
+            ...currentRole,
+            steps,
+          },
+        },
+      };
+    });
+  };
+
+  const handleAddGuideStep = () => {
+    setLandingContent((prev) => {
+      const currentGuides = prev?.user_guides || defaultUserGuides;
+      const currentRole = currentGuides[activeGuideRole] || defaultUserGuides[activeGuideRole];
+      const steps = [...(currentRole.steps || [])];
+      const newStepNumber = steps.length + 1;
+      const newStep = {
+        id: `${activeGuideRole}-${Date.now()}`,
+        step_number: newStepNumber,
+        title: `Langkah ${newStepNumber}`,
+        description: '',
+        tips: '',
+        image_url: '',
+      };
+      steps.push(newStep);
+      setOpenGuideIndices((p) => ({ ...p, [steps.length - 1]: true }));
+      return {
+        ...prev,
+        user_guides: {
+          ...currentGuides,
+          [activeGuideRole]: {
+            ...currentRole,
+            steps,
+          },
+        },
+      };
+    });
+  };
+
+  const handleDeleteGuideStep = (stepIdx) => {
+    if (!window.confirm('Yakin ingin menghapus langkah panduan ini?')) return;
+    setLandingContent((prev) => {
+      const currentGuides = prev?.user_guides || defaultUserGuides;
+      const currentRole = currentGuides[activeGuideRole] || defaultUserGuides[activeGuideRole];
+      const steps = (currentRole.steps || []).filter((_, idx) => idx !== stepIdx);
+      return {
+        ...prev,
+        user_guides: {
+          ...currentGuides,
+          [activeGuideRole]: {
+            ...currentRole,
+            steps,
+          },
+        },
+      };
+    });
+  };
+
+  const handleGuideScreenshotUpload = async (stepIdx, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      showError('Ukuran file maksimal 10MB.');
+      return;
+    }
+
+    const currentGuides = landingContent?.user_guides || defaultUserGuides;
+    const currentRole = currentGuides[activeGuideRole] || defaultUserGuides[activeGuideRole];
+    const step = currentRole.steps?.[stepIdx];
+    const stepId = step?.id || `${activeGuideRole}-${stepIdx + 1}`;
+
+    setUploadingGuideStepId(stepId);
+    showSuccess(`Mengunggah screenshot untuk langkah ${stepIdx + 1}...`);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('role', activeGuideRole);
+      formData.append('step_id', stepId);
+
+      const res = await api.post('/admin/landing-content/upload-guide-image', formData);
+      if (res.data?.url || res.data?.success) {
+        const imageUrl = res.data.url;
+        handleGuideStepFieldChange(stepIdx, 'image_url', imageUrl);
+        showSuccess('Screenshot berhasil diunggah! Jangan lupa klik "Simpan Konten".');
+      }
+    } catch (err) {
+      showError(err?.response?.data?.message || 'Gagal mengunggah screenshot.');
+    } finally {
+      setUploadingGuideStepId(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveGuideScreenshot = (stepIdx) => {
+    handleGuideStepFieldChange(stepIdx, 'image_url', '');
+    showSuccess('Screenshot dihapus. Langkah ini kembali menggunakan mockup bawaan.');
+  };
 
   const toggleTestimonial = (idx) => {
     setOpenTestimonialIndices((prev) => ({
@@ -1667,6 +1813,294 @@ if (!landingContent) return null;
                               className="font-bold text-emerald-700 hover:underline"
                             >
                               Selesai Edit (Ciutkan)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section: Panduan Pengguna (User Guide CMS) */}
+          {(cmsSubTab === 'guides' || cmsSubTab === 'all') && (
+            <div className="p-6 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                <div>
+                  <h4 className="text-sm font-bold text-darktext flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-emerald-600" />
+                    <span>Panduan Pengguna (User Guide CMS)</span>
+                  </h4>
+                  <p className="text-[11px] text-mutedtext mt-0.5">
+                    Kelola langkah-langkah panduan, deskripsi, tips penting, dan upload screenshot per langkah untuk tiap peran.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={`/panduan?role=${activeGuideRole}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-xl border border-softborder bg-gray-50 hover:bg-gray-100 text-darktext text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-mutedtext" />
+                    <span>Lihat Halaman Panduan</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Role Selector Tabs (Konseli, Konselor, Admin) */}
+              <div className="flex flex-wrap gap-2 p-1.5 bg-gray-50 rounded-2xl border border-gray-200 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setActiveGuideRole('konseli')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeGuideRole === 'konseli'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>Konseli (Mahasiswa/Umum)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveGuideRole('konselor')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeGuideRole === 'konselor'
+                      ? 'bg-sky-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                  }`}
+                >
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                  <span>Konselor / Dosen BK</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveGuideRole('admin')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeGuideRole === 'admin'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Administrator</span>
+                </button>
+              </div>
+
+              {/* Role Header Meta Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-gray-50/70 border border-gray-200">
+                <div>
+                  <label className="block text-xs font-bold text-darktext mb-1">Judul Panduan Peran</label>
+                  <input
+                    type="text"
+                    value={activeRoleGuideData?.title || ''}
+                    onChange={(e) => handleGuideRoleMetaChange('title', e.target.value)}
+                    className="w-full h-9 px-3 rounded-xl border border-softborder bg-white text-xs text-darktext"
+                    placeholder="Judul Panduan"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-darktext mb-1">Badge Tag</label>
+                  <input
+                    type="text"
+                    value={activeRoleGuideData?.badge || ''}
+                    onChange={(e) => handleGuideRoleMetaChange('badge', e.target.value)}
+                    className="w-full h-9 px-3 rounded-xl border border-softborder bg-white text-xs text-darktext"
+                    placeholder="Badge Tag"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-darktext mb-1">Deskripsi Singkat</label>
+                  <textarea
+                    rows={2}
+                    value={activeRoleGuideData?.description || ''}
+                    onChange={(e) => handleGuideRoleMetaChange('description', e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-softborder bg-white text-xs text-darktext"
+                    placeholder="Deskripsi pembuka panduan..."
+                  />
+                </div>
+              </div>
+
+              {/* Steps Accordion List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">
+                    Daftar Langkah ({activeRoleSteps.length} Langkah):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddGuideStep}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 flex items-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Langkah Baru</span>
+                  </button>
+                </div>
+
+                {activeRoleSteps.map((step, sIdx) => {
+                  const isOpen = Boolean(openGuideIndices[sIdx]);
+                  const hasImage = Boolean(step.image_url && step.image_url.trim());
+
+                  return (
+                    <div
+                      key={step.id || sIdx}
+                      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                        isOpen
+                          ? 'border-emerald-400 bg-emerald-50/10 shadow-sm'
+                          : 'border-gray-200 bg-gray-50/70 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* Step Accordion Header */}
+                      <div
+                        onClick={() => toggleGuideStep(sIdx)}
+                        className="w-full p-4 flex items-center justify-between gap-3 cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <span className="w-7 h-7 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
+                            {step.step_number || sIdx + 1}
+                          </span>
+                          <div className="truncate">
+                            <span className="text-xs font-bold text-slate-800 truncate block">
+                              {step.title || 'Langkah Baru (Belum ada judul)'}
+                            </span>
+                            <span className="text-[10px] text-mutedtext flex items-center gap-2 mt-0.5">
+                              {hasImage ? (
+                                <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" /> Screenshot Terpasang
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">Menggunakan Mockup Bawaan</span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isOpen ? (
+                            <ChevronUp className="w-4 h-4 text-emerald-700" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step Form Body */}
+                      {isOpen && (
+                        <div className="p-4 pt-2 border-t border-gray-100 bg-white space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-bold text-darktext mb-1">No. Urut</label>
+                              <input
+                                type="number"
+                                value={step.step_number || sIdx + 1}
+                                onChange={(e) => handleGuideStepFieldChange(sIdx, 'step_number', parseInt(e.target.value) || sIdx + 1)}
+                                className="w-full h-9 px-3 rounded-xl border border-softborder bg-gray-50 text-xs font-bold text-center"
+                              />
+                            </div>
+                            <div className="sm:col-span-10">
+                              <label className="block text-[11px] font-bold text-darktext mb-1">Judul Langkah</label>
+                              <input
+                                type="text"
+                                value={step.title || ''}
+                                onChange={(e) => handleGuideStepFieldChange(sIdx, 'title', e.target.value)}
+                                className="w-full h-9 px-3 rounded-xl border border-softborder bg-gray-50 text-xs text-darktext font-medium"
+                                placeholder="Contoh: Pendaftaran & Masuk Akun"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-darktext mb-1">Petunjuk Lengkap (Deskripsi)</label>
+                            <textarea
+                              rows={3}
+                              value={step.description || ''}
+                              onChange={(e) => handleGuideStepFieldChange(sIdx, 'description', e.target.value)}
+                              className="w-full p-2.5 rounded-xl border border-softborder bg-gray-50 text-xs text-darktext leading-relaxed"
+                              placeholder="Jelaskan langkah apa yang harus dilakukan pengguna..."
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-darktext mb-1">Tips / Catatan Penting (Opsional)</label>
+                            <input
+                              type="text"
+                              value={step.tips || ''}
+                              onChange={(e) => handleGuideStepFieldChange(sIdx, 'tips', e.target.value)}
+                              className="w-full h-9 px-3 rounded-xl border border-softborder bg-gray-50 text-xs text-darktext"
+                              placeholder="Contoh: Pastikan koneksi internet stabil saat otentikasi."
+                            />
+                          </div>
+
+                          {/* Screenshot Image Upload Area */}
+                          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                            <label className="block text-[11px] font-bold text-darktext">
+                              Screenshot Layar untuk Langkah Ini
+                            </label>
+
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                              {/* Preview Box */}
+                              <div className="w-32 h-20 rounded-xl border border-slate-300 bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-inner relative group">
+                                {hasImage ? (
+                                  <img
+                                    src={step.image_url}
+                                    alt="Preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="text-center p-2 text-slate-400">
+                                    <ImageIcon className="w-5 h-5 mx-auto mb-0.5 opacity-60" />
+                                    <span className="text-[9px] block leading-none">Mockup Bawaan</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Upload Controls */}
+                              <div className="space-y-1.5 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <label className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs flex items-center gap-1.5">
+                                    <Upload className="w-3.5 h-3.5" />
+                                    <span>
+                                      {uploadingGuideStepId === step.id ? 'Mengunggah...' : hasImage ? 'Ganti Screenshot' : 'Upload Screenshot Asli'}
+                                    </span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      disabled={uploadingGuideStepId === step.id}
+                                      onChange={(e) => handleGuideScreenshotUpload(sIdx, e)}
+                                      className="hidden"
+                                    />
+                                  </label>
+
+                                  {hasImage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveGuideScreenshot(sIdx)}
+                                      className="px-2.5 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      <span>Hapus (Pakai Mockup)</span>
+                                    </button>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-mutedtext leading-normal">
+                                  Format JPG, PNG, atau WebP (Maksimal 10MB). Screenshot akan otomatis disimpan di storage server.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Footer Actions of Step */}
+                          <div className="flex justify-end pt-2 border-t border-gray-100">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteGuideStep(sIdx)}
+                              className="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Hapus Langkah Ini</span>
                             </button>
                           </div>
                         </div>

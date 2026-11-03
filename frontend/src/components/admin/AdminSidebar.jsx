@@ -25,6 +25,7 @@ import {
   Building2,
   CalendarDays,
   CalendarCheck,
+  Rocket,
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 
@@ -54,12 +55,19 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
     { id: 'problems', label: 'Topik Masalah', icon: MessageSquareHeart },
     { id: 'faqs', label: 'Tanya Jawab (FAQ)', icon: HelpCircle },
     { id: 'testimonials', label: 'Testimoni', icon: Star },
+    { id: 'guides', label: 'Panduan Pengguna', icon: BookOpen },
     { id: 'screening_cta', label: 'Banner Screening', icon: ShieldCheck },
     { id: 'footer', label: 'Footer & Kontak', icon: Building2 },
   ];
 
-  const handleNavClick = (tabId) => {
+  const handleNavClick = (tabId, itemPath) => {
     setIsMobileOpen(false);
+
+    // Item dengan path khusus (halaman terpisah)
+    if (itemPath) {
+      navigate(itemPath);
+      return;
+    }
 
     if (tabId === 'cms') {
       if (currentTab === 'cms') {
@@ -200,6 +208,15 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
       title: 'SISTEM & AUDIT',
       items: [
         {
+          id: 'deploy',
+          label: 'Update & Deployment',
+          icon: Rocket,
+          iconColor: 'text-orange-600 bg-orange-50 border-orange-200/70',
+          badge: null,
+          description: 'Riwayat deploy dari GitHub',
+          path: '/admin/deploy',
+        },
+        {
           id: 'audit',
           label: 'Audit Logs & Aktivitas',
           icon: ShieldCheck,
@@ -260,14 +277,16 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = currentTab === item.id;
+                const isActive = item.path
+                  ? location.pathname === item.path
+                  : currentTab === item.id;
                 const isCms = item.id === 'cms';
 
                 return (
                   <div key={item.id} className="space-y-1">
                     <button
                       type="button"
-                      onClick={() => handleNavClick(item.id)}
+                      onClick={() => handleNavClick(item.id, item.path)}
                       className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-all group ${
                         isActive
                           ? 'bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white font-bold shadow-md shadow-emerald-900/15'

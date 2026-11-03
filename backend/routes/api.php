@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\TtsController;
 use App\Http\Controllers\Api\TutorDashboardController;
 use App\Http\Controllers\Api\TutorProfileController;
 use App\Http\Controllers\Api\TutorScheduleController;
+use App\Http\Controllers\Api\DeployController;
 use App\Http\Controllers\Api\ZoomController;
 use Illuminate\Support\Facades\Route;
 
@@ -150,6 +151,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/landing-content', [LandingContentController::class, 'update']);
         Route::post('/landing-content/reset', [LandingContentController::class, 'resetDefault']);
         Route::post('/landing-content/upload-image', [LandingContentController::class, 'uploadImage']);
+        Route::post('/landing-content/upload-guide-image', [LandingContentController::class, 'uploadGuideScreenshot']);
         Route::post('/landing-content/delete-image', [LandingContentController::class, 'deleteImage']);
 
         // Nara Voice Recording Management
@@ -164,5 +166,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/counselor-schedules', [AdminController::class, 'getCounselorSchedules']);
         Route::post('/counselor-schedules/template', [AdminController::class, 'setScheduleTemplate']);
         Route::delete('/counselor-schedules/{tutorId}/slots', [AdminController::class, 'clearCounselorSlots']);
+
+        // Deploy Logs (Admin Panel)
+        Route::get('/deploy/logs', [DeployController::class, 'logs']);
+        Route::get('/deploy/status', [DeployController::class, 'status']);
+        Route::post('/deploy/run', [DeployController::class, 'runManual']);
     });
 });
+
+// =========================================================
+// GitHub Webhook — Tidak pakai auth token, tapi pakai HMAC secret
+// Route publik khusus, di luar middleware auth
+// =========================================================
+Route::post('/deploy/webhook', [DeployController::class, 'webhook'])
+    ->withoutMiddleware([\Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class]);

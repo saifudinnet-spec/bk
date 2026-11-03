@@ -13,6 +13,7 @@ import { DashboardSkeleton } from '../components/common/LoadingSkeleton';
 
 // Lazy Loaded Pages
 const LandingPage = lazy(() => import('../pages/landing/LandingPage'));
+const UserGuidePage = lazy(() => import('../pages/guide/UserGuidePage'));
 const ArticlesPage = lazy(() => import('../pages/articles/ArticlesPage'));
 const ArticleDetailPage = lazy(() => import('../pages/articles/ArticleDetailPage'));
 const Login = lazy(() => import('../pages/auth/Login'));
@@ -42,6 +43,7 @@ const TutorSchedule = lazy(() => import('../pages/tutor/TutorSchedule'));
 const TutorProfile = lazy(() => import('../pages/tutor/TutorProfile'));
 
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
+const AdminDeployPage = lazy(() => import('../pages/admin/AdminDeployPage'));
 
 const PageLoader = () => (
   <div className="p-6 max-w-xl mx-auto w-full">
@@ -55,6 +57,9 @@ export const AppRoutes = () => {
       <Routes>
         {/* Public Pages */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/panduan" element={<UserGuidePage />} />
+        <Route path="/panduan-pengguna" element={<UserGuidePage />} />
+        <Route path="/guide" element={<UserGuidePage />} />
         <Route path="/artikel" element={<ArticlesPage />} />
         <Route path="/artikel/:id" element={<ArticleDetailPage />} />
         <Route path="/articles" element={<ArticlesPage />} />
@@ -160,6 +165,7 @@ export const AppRoutes = () => {
           <Route path="users" element={<AdminDashboard />} />
           <Route path="audit-logs" element={<AdminDashboard />} />
           <Route path="settings" element={<AdminDashboard />} />
+          <Route path="deploy" element={<AdminDeployPage />} />
         </Route>
 
         {/* Fallback Catch-all */}

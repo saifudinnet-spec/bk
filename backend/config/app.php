@@ -67,6 +67,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // GitHub Webhook Deploy Secret
+    'deploy_secret' => env('DEPLOY_SECRET', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

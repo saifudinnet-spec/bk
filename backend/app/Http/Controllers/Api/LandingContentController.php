@@ -51,6 +51,7 @@ class LandingContentController extends Controller
                     ['label' => 'Artikel', 'href' => '/artikel'],
                     ['label' => 'Konselor Kami', 'href' => '#konselor'],
                     ['label' => 'Cara Kerja', 'href' => '#cara-kerja'],
+                    ['label' => 'Panduan', 'href' => '/panduan'],
                     ['label' => 'FAQ', 'href' => '#faq'],
                 ],
             ],
@@ -71,6 +72,7 @@ class LandingContentController extends Controller
                     ['label' => 'Topik Bimbingan', 'href' => '#masalah'],
                     ['label' => 'Artikel Edukasi', 'href' => '/artikel'],
                     ['label' => 'Daftar Konselor', 'href' => '#konselor'],
+                    ['label' => 'Buku Panduan Pengguna', 'href' => '/panduan'],
                     ['label' => 'Masuk Akun', 'href' => '/login'],
                 ],
             ],
@@ -262,6 +264,149 @@ class LandingContentController extends Controller
                     ],
                 ],
             ],
+            'user_guides' => [
+                'konseli' => [
+                    'badge' => 'Panduan Konseli',
+                    'title' => 'Panduan Penggunaan untuk Mahasiswa & Sivitas Akademika',
+                    'description' => 'Tata cara mengakses layanan bimbingan konseling digital, mulai dari pendaftaran akun, asesmen mandiri, memilih konselor, booking jadwal, hingga mengikuti sesi konsultasi.',
+                    'steps' => [
+                        [
+                            'id' => 'konseli-1',
+                            'step_number' => 1,
+                            'title' => 'Pendaftaran & Masuk Akun',
+                            'description' => 'Bagi Mahasiswa UINSSC, masuk menggunakan akun SSO Cyber Campus (NIM dan Password). Bagi sivitas umum atau keluarga mahasiswa, silakan gunakan tombol Daftar Akun Umum.',
+                            'tips' => 'Pastikan koneksi internet stabil saat melakukan otentikasi login kampus.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konseli-2',
+                            'step_number' => 2,
+                            'title' => 'Skrining Mandiri & Deteksi Dini',
+                            'description' => 'Ikuti kuesioner asesmen mandiri singkat (DASS-21 / tingkat stres / burnout). Hasil asesmen akan membantu merekomendasikan konselor yang paling tepat secara objektif dan rahasia.',
+                            'tips' => 'Jawab setiap pertanyaan dengan jujur sesuai apa yang Anda rasakan selama 2 minggu terakhir.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konseli-3',
+                            'step_number' => 3,
+                            'title' => 'Memilih Topik & Profil Konselor',
+                            'description' => 'Pilih topik permasalahan yang sedang dihadapi (Kendala Skripsi, Kecemasan, Karir, atau Masalah Relasi). Telusuri daftar konselor dan psikolog berlisensi yang tersedia.',
+                            'tips' => 'Anda bebas memilih konselor pria atau wanita sesuai dengan kenyamanan bercerita Anda.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konseli-4',
+                            'step_number' => 4,
+                            'title' => 'Menentukan Jadwal & Booking Sesi',
+                            'description' => 'Tentukan metode konseling (Online via Chat/Video Terenkripsi atau Tatap Muka di Gedung Kemahasiswaan), lalu pilih tanggal dan slot waktu luang yang cocok.',
+                            'tips' => 'Sistem akan otomatis mengirimkan email konfirmasi dan pengingat ke alamat email kampus Anda.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konseli-5',
+                            'step_number' => 5,
+                            'title' => 'Menghadiri Ruang Konseling',
+                            'description' => 'Pada hari dan jam yang telah dijadwalkan, buka menu Konseling Saya lalu klik Masuk Ruang Sesi. Anda dapat langsung berkonsultasi dalam ruang privat yang aman.',
+                            'tips' => 'Gunakan tempat yang tenang dan kenakan headphone/earphone demi menjaga kenyamanan privasi Anda.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konseli-6',
+                            'step_number' => 6,
+                            'title' => 'Melihat Catatan & Rencana Aksi (Action Plan)',
+                            'description' => 'Setelah sesi selesai, Anda dapat meninjau ringkasan hasil bimbingan, rekomendasi latihan mandiri (action plan), atau mengajukan sesi tindak lanjut.',
+                            'tips' => 'Luangkan waktu untuk mempraktikkan rencana aksi yang disepakati bersama konselor.',
+                            'image_url' => '',
+                        ],
+                    ],
+                ],
+                'konselor' => [
+                    'badge' => 'Panduan Konselor',
+                    'title' => 'Panduan Layanan untuk Konselor, Tutor & Dosen BK',
+                    'description' => 'Pedoman operasional bagi konselor dalam mengelola ketersediaan jadwal, memverifikasi janji bimbingan, mencatat rekam konseling, dan memberikan rencana aksi.',
+                    'steps' => [
+                        [
+                            'id' => 'konselor-1',
+                            'step_number' => 1,
+                            'title' => 'Masuk ke Dashboard Konselor',
+                            'description' => 'Login menggunakan akun konselor terdaftar. Dashboard menampilkan ringkasan kasus aktif, jadwal bimbingan hari ini, dan tiket janji konseling masuk.',
+                            'tips' => 'Periksa dashboard secara berkala untuk melihat jadwal konsultasi terdekat.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konselor-2',
+                            'step_number' => 2,
+                            'title' => 'Mengatur Slot Ketersediaan Jadwal',
+                            'description' => 'Buka menu Jadwal Konselor untuk menentukan hari operasional, durasi konsultasi, dan jam aktif (baik sesi online maupun tatap muka langsung).',
+                            'tips' => 'Segera nonaktifkan slot waktu tertentu jika Anda memiliki agenda akademik atau dinas mendadak.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konselor-3',
+                            'step_number' => 3,
+                            'title' => 'Menerima & Memverifikasi Booking Masuk',
+                            'description' => 'Saat ada mahasiswa yang memilih Anda, notifikasi email instan dan tiket janji temu akan masuk. Anda dapat meninjau deskripsi awal permasalahan konseli.',
+                            'tips' => 'Pelajari hasil asesmen awal konseli sebelum sesi dimulai agar sesi berjalan lebih terarah.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konselor-4',
+                            'step_number' => 4,
+                            'title' => 'Melaksanakan Sesi Konseling',
+                            'description' => 'Masuk ke ruang sesi privat bersama konseli. Fasilitas catatan langsung membantu Anda mendokumentasikan poin-poin penting secara aman.',
+                            'tips' => 'Seluruh riwayat sesi dilindungi enkripsi dan hanya dapat diakses oleh konselor bersangkutan.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'konselor-5',
+                            'step_number' => 5,
+                            'title' => 'Menyusun Catatan Rekam & Action Plan',
+                            'description' => 'Setelah sesi berakhir, lengkapi formulir ringkasan sesi, tentukan target tindak lanjut (Action Plan) bagi konseli, atau buat rujukan krisis bila dibutuhkan.',
+                            'tips' => 'Berikan target aksi yang realistis dan mudah diterapkan oleh mahasiswa.',
+                            'image_url' => '',
+                        ],
+                    ],
+                ],
+                'admin' => [
+                    'badge' => 'Panduan Administrator',
+                    'title' => 'Panduan Pengelolaan Portal & Konfigurasi Sistem',
+                    'description' => 'Panduan lengkap bagi tim pengelola sistem dalam memverifikasi pengguna, mengedit konten CMS, mengatur notifikasi email Google Workspace, dan memantau analitik.',
+                    'steps' => [
+                        [
+                            'id' => 'admin-1',
+                            'step_number' => 1,
+                            'title' => 'Manajemen Pengguna & Verifikasi Konselor',
+                            'description' => 'Kelola basis data pengguna, perbarui hak akses role, dan setujui pendaftaran konselor baru agar tampil aktif di halaman publik.',
+                            'tips' => 'Pastikan konselor memiliki nomor izin praktik/kepegawaian resmi sebelum statusnya diaktifkan.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'admin-2',
+                            'step_number' => 2,
+                            'title' => 'Kustomisasi Konten Landing Page (CMS)',
+                            'description' => 'Edit slide banner hero, teks deskripsi layanan, topik bimbingan konseling, daftar FAQ, kelola panduan pengguna, serta publikasikan artikel edukasi.',
+                            'tips' => 'Gunakan tombol Reset Standar jika ingin mengembalikan teks bawaan sistem.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'admin-3',
+                            'step_number' => 3,
+                            'title' => 'Konfigurasi Email Notifikasi Google Workspace',
+                            'description' => 'Buka tab Pengaturan Email untuk memasukkan akun resmi kampus (@uinssc.ac.id) beserta Sandi Aplikasi (App Password) 16 digit. Lakukan tes koneksi kirim email.',
+                            'tips' => 'Aktifkan pengingat otomatis agar konseli dan konselor menerima email 1 jam sebelum sesi bimbingan dimulai.',
+                            'image_url' => '',
+                        ],
+                        [
+                            'id' => 'admin-4',
+                            'step_number' => 4,
+                            'title' => 'Pemantauan Laporan & Statistik Konseling',
+                            'description' => 'Tinjau grafik tren kesehatan mental kampus, topik permasalahan yang paling banyak dikonsultasikan, total jam layanan, dan tingkat kepuasan.',
+                            'tips' => 'Data statistik disajikan secara anonim guna menjaga etika kerahasiaan konseli.',
+                            'image_url' => '',
+                        ],
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -304,6 +449,88 @@ class LandingContentController extends Controller
                 } else {
                     $base['hero']['image_url'] = $base['hero']['banner_images'][0] ?? '';
                 }
+
+                if (isset($content['user_guides']) && is_array($content['user_guides'])) {
+                    $base['user_guides'] = $content['user_guides'];
+                }
+
+                // Explicitly override navbar menu from $content if defined to prevent index-based merge duplications
+                if (isset($content['navbar']['menu']) && is_array($content['navbar']['menu'])) {
+                    $base['navbar']['menu'] = $content['navbar']['menu'];
+                }
+
+                // Deduplicate navbar menu items and ensure /panduan is present
+                $seenHrefs = [];
+                $cleanMenu = [];
+                $hasPanduanMenu = false;
+                if (isset($base['navbar']['menu']) && is_array($base['navbar']['menu'])) {
+                    foreach ($base['navbar']['menu'] as $m) {
+                        $href = $m['href'] ?? '';
+                        if (empty($href) || isset($seenHrefs[$href])) {
+                            continue;
+                        }
+                        $seenHrefs[$href] = true;
+                        if ($href === '/panduan') {
+                            $hasPanduanMenu = true;
+                        }
+                        $cleanMenu[] = $m;
+                    }
+                }
+                if (!$hasPanduanMenu) {
+                    // Place Panduan right before FAQ if exists
+                    $faqIdx = -1;
+                    foreach ($cleanMenu as $idx => $m) {
+                        if (($m['href'] ?? '') === '#faq') {
+                            $faqIdx = $idx;
+                            break;
+                        }
+                    }
+                    if ($faqIdx !== -1) {
+                        array_splice($cleanMenu, $faqIdx, 0, [['label' => 'Panduan', 'href' => '/panduan']]);
+                    } else {
+                        $cleanMenu[] = ['label' => 'Panduan', 'href' => '/panduan'];
+                    }
+                }
+                $base['navbar']['menu'] = array_values($cleanMenu);
+
+                // Explicitly override footer quick links from $content if defined
+                if (isset($content['footer']['quick_links']) && is_array($content['footer']['quick_links'])) {
+                    $base['footer']['quick_links'] = $content['footer']['quick_links'];
+                }
+
+                // Deduplicate footer quick_links and ensure /panduan is present
+                $seenFooter = [];
+                $cleanFooter = [];
+                $hasPanduanFooter = false;
+                if (isset($base['footer']['quick_links']) && is_array($base['footer']['quick_links'])) {
+                    foreach ($base['footer']['quick_links'] as $q) {
+                        $href = $q['href'] ?? '';
+                        if (empty($href) || isset($seenFooter[$href])) {
+                            continue;
+                        }
+                        $seenFooter[$href] = true;
+                        if ($href === '/panduan') {
+                            $hasPanduanFooter = true;
+                        }
+                        $cleanFooter[] = $q;
+                    }
+                }
+                if (!$hasPanduanFooter) {
+                    $loginIdx = -1;
+                    foreach ($cleanFooter as $idx => $q) {
+                        if (($q['href'] ?? '') === '/login') {
+                            $loginIdx = $idx;
+                            break;
+                        }
+                    }
+                    if ($loginIdx !== -1) {
+                        array_splice($cleanFooter, $loginIdx, 0, [['label' => 'Buku Panduan Pengguna', 'href' => '/panduan']]);
+                    } else {
+                        $cleanFooter[] = ['label' => 'Buku Panduan Pengguna', 'href' => '/panduan'];
+                    }
+                }
+                $base['footer']['quick_links'] = array_values($cleanFooter);
+
                 $isCustom = true;
             }
         }
@@ -556,6 +783,45 @@ class LandingContentController extends Controller
             'success' => true,
             'message' => 'Foto banner berhasil dihapus!',
             'data' => $data,
+        ]);
+    }
+
+    /**
+     * Upload screenshot for User Guide (Admin only).
+     */
+    public function uploadGuideScreenshot(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'role' => 'nullable|string|max:50',
+            'step_id' => 'nullable|string|max:50',
+        ]);
+
+        $file = $request->file('image');
+        $dir = storage_path('app/public/guides');
+        if (!File::exists($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        $uniqueSuffix = time() . '_' . bin2hex(random_bytes(4));
+        $originalExt = strtolower($file->getClientOriginalExtension());
+        $rolePrefix = preg_replace('/[^a-zA-Z0-9_-]/', '', $request->input('role', 'guide'));
+        $filename = 'guide_' . $rolePrefix . '_' . $uniqueSuffix . '.' . $originalExt;
+        $file->move($dir, $filename);
+        $url = '/storage/guides/' . $filename;
+
+        AuditLogService::log(
+            'upload_guide_screenshot',
+            'landing_content',
+            null,
+            ['desc' => 'Screenshot panduan (' . $rolePrefix . ') berhasil diunggah: ' . $filename],
+            Auth::id()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Screenshot panduan berhasil diunggah!',
+            'url' => $url,
         ]);
     }
 
