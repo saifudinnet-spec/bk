@@ -1157,13 +1157,13 @@ if (!landingContent) return null;
                 {/* Online Card */}
                 <div className="p-3.5 rounded-xl bg-white border border-emerald-200/70 space-y-2">
                   <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
-                    1. Kartu Konseling Online (Zoom)
+                    1. Kartu Konseling Online (Chat & Zoom)
                   </span>
                   <div>
                     <label className="block text-[11px] font-semibold text-darktext mb-1">Judul Layanan Online</label>
                     <input
                       type="text"
-                      value={landingContent?.hero?.online_card_title ?? 'Konseling Individu Online'}
+                      value={landingContent?.hero?.online_card_title ?? 'Sesi Chat / Video Zoom Privat'}
                       onChange={(e) => handleHeroChange('online_card_title', e.target.value)}
                       className="w-full h-9 px-3 rounded-lg border border-softborder bg-gray-50 text-xs font-bold text-darktext focus:bg-white"
                     />
@@ -1181,7 +1181,7 @@ if (!landingContent) return null;
                     <label className="block text-[11px] font-semibold text-darktext mb-1">Deskripsi Singkat</label>
                     <textarea
                       rows={2}
-                      value={landingContent?.hero?.online_card_desc ?? 'Sesi video privat via Zoom terenkripsi dari mana saja, fleksibel dengan jadwal perkuliahan Anda.'}
+                      value={landingContent?.hero?.online_card_desc ?? 'Konsultasi fleksibel dan terenkripsi via Chat atau Zoom dari mana saja, sesuai jadwal perkuliahan Anda.'}
                       onChange={(e) => handleHeroChange('online_card_desc', e.target.value)}
                       className="w-full p-2 rounded-lg border border-softborder bg-gray-50 text-xs text-darktext focus:bg-white"
                     />
@@ -1206,7 +1206,7 @@ if (!landingContent) return null;
                     <label className="block text-[11px] font-semibold text-darktext mb-1">Lencana / Badge</label>
                     <input
                       type="text"
-                      value={landingContent?.hero?.offline_card_badge ?? 'Offline'}
+                      value={landingContent?.hero?.offline_card_badge ?? 'Tatap Muka'}
                       onChange={(e) => handleHeroChange('offline_card_badge', e.target.value)}
                       className="w-full h-9 px-3 rounded-lg border border-softborder bg-gray-50 text-xs text-darktext focus:bg-white"
                     />

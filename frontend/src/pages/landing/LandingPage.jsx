@@ -28,7 +28,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Image as ImageIcon
+  Image as ImageIcon,
+  MessageSquare,
+  MapPin
 } from 'lucide-react';
 import api from '../../services/api';
 import BottomSheet from '../../components/common/BottomSheet';
@@ -650,36 +652,37 @@ export const LandingPage = () => {
           </div>
 
           {/* Desktop Nav Links (Dynamically Editable via CMS) */}
-          <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-mutedtext">
+          <div className="hidden md:flex items-center gap-2 lg:gap-3 text-xs lg:text-sm font-bold text-slate-600">
             {(cleanNavbarMenu || []).map((item, idx) =>
               item.href?.startsWith('/') ? (
-                <Link key={idx} to={item.href} className="hover:text-emerald-800 transition-colors">
+                <Link
+                  key={idx}
+                  to={item.href}
+                  className="px-3 py-1.5 rounded-xl hover:text-emerald-800 hover:bg-emerald-50/80 transition-all"
+                >
                   {item.label}
                 </Link>
               ) : (
-                <a key={idx} href={item.href} className="hover:text-emerald-800 transition-colors">
+                <a
+                  key={idx}
+                  href={item.href}
+                  className="px-3 py-1.5 rounded-xl hover:text-emerald-800 hover:bg-emerald-50/80 transition-all"
+                >
                   {item.label}
                 </a>
               )
             )}
           </div>
 
-          <div className="flex items-center gap-2.5">
+          {/* Right Action: Masuk Akun Utama */}
+          <div className="flex items-center">
             <Link
               to="/login"
-              className="px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-50 rounded-xl transition-colors min-h-[40px] flex items-center"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-[#047857] to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-soft-xs flex items-center gap-2 transition-all min-h-[38px] sm:min-h-[40px] ring-2 ring-emerald-600/20 active:scale-98"
             >
-              Masuk Akun
+              <User className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Masuk Akun</span>
             </Link>
-
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => navigate('/konselor')}
-              className="px-4 sm:px-5 py-2.5 bg-gradient-to-r from-[#047857] to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-bold shadow-soft-sm flex items-center gap-1.5 transition-all min-h-[40px] ring-2 ring-emerald-600/20 cursor-pointer"
-            >
-              <span>Jelajahi Konselor</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </motion.button>
           </div>
         </div>
       </nav>
@@ -845,71 +848,68 @@ export const LandingPage = () => {
               </div>
             </ScrollReveal>
 
-            {/* Kolom Kanan: Pilihan Layanan Konseling */}
+            {/* Kolom Kanan: Pilihan Layanan Konseling (Informational Showcase) */}
             <ScrollReveal direction="up" delay={0.2} className="lg:col-span-5">
               <div id="layanan" className="bg-[#F8FAFC] border border-emerald-200/80 rounded-3xl p-4 sm:p-5 shadow-soft-sm space-y-3">
-                <p className="text-xs font-bold text-emerald-950 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                  Dukungan seperti apa yang kamu butuhkan?
-                </p>
+                <div className="flex items-center justify-between pb-1.5 border-b border-emerald-100/80">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                    <p className="text-xs font-bold text-slate-800">
+                      Metode Layanan Tersedia
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                    100% Bebas Biaya
+                  </span>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
-                  {/* Online Card */}
-                  <motion.div
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setSelectedServiceMode('online');
-                      navigate('/konselor');
-                    }}
-                    className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all shadow-soft-sm flex items-center justify-between ${selectedServiceMode === 'online'
-                      ? 'border-emerald-600 bg-white ring-2 ring-emerald-500/20 shadow-emerald-600/10'
-                      : 'border-emerald-200/70 bg-white hover:border-emerald-400'
-                      }`}
-                  >
-                    <div className="space-y-1">
-                      <h3 className="text-xs sm:text-sm font-bold text-emerald-950">
-                        {hero.online_card_title}
-                      </h3>
-                      <div className="flex items-center gap-1 text-emerald-700 text-xs font-bold">
-                        <span>Pilih Online</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                  {/* Card 1: Online (Chat & Video Zoom) */}
+                  <div className="p-3.5 rounded-2xl border border-emerald-200/70 bg-white shadow-soft-xs flex items-start justify-between gap-3 transition-all hover:border-emerald-300">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/70">
+                          {hero.online_card_badge || 'Online'}
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                          {hero.online_card_title || 'Sesi Chat / Video Zoom Privat'}
+                        </h3>
                       </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                        {hero.online_card_desc || 'Konsultasi fleksibel dan terenkripsi via Chat atau Zoom dari mana saja.'}
+                      </p>
                     </div>
 
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-300/80 shadow-2xs">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-300/80 shadow-2xs">
                       <Video className="w-5 h-5" />
                     </div>
-                  </motion.div>
+                  </div>
 
-                  {/* Offline Card */}
-                  <motion.div
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setSelectedServiceMode('offline');
-                      navigate('/konselor');
-                    }}
-                    className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all shadow-soft-sm flex items-center justify-between ${selectedServiceMode === 'offline'
-                      ? 'border-teal-600 bg-white ring-2 ring-teal-500/20 shadow-teal-600/10'
-                      : 'border-emerald-200/70 bg-white hover:border-teal-400'
-                      }`}
-                  >
-                    <div className="space-y-1">
-                      <h3 className="text-xs sm:text-sm font-bold text-teal-950">
-                        {hero.offline_card_title}
-                      </h3>
-                      <div className="flex items-center gap-1 text-teal-700 text-xs font-bold">
-                        <span>Pilih Offline</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                  {/* Card 2: Tatap Muka Kampus */}
+                  <div className="p-3.5 rounded-2xl border border-teal-200/70 bg-white shadow-soft-xs flex items-start justify-between gap-3 transition-all hover:border-teal-300">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/70">
+                          {hero.offline_card_badge || 'Tatap Muka'}
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                          {hero.offline_card_title || 'Konseling Tatap Muka Kampus'}
+                        </h3>
                       </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                        {hero.offline_card_desc || 'Pertemuan langsung di Ruang Konseling Gedung Kemahasiswaan Lt. 2.'}
+                      </p>
                     </div>
 
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-100 to-emerald-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-300/80 shadow-2xs">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-100 to-emerald-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-300/80 shadow-2xs">
                       <Building2 className="w-5 h-5" />
                     </div>
-                  </motion.div>
+                  </div>
                 </div>
+
+                <p className="text-[10px] text-slate-400 text-center pt-0.5">
+                  Metode konseling di atas dapat Anda tentukan saat memilih jadwal bimbingan.
+                </p>
               </div>
             </ScrollReveal>
 
