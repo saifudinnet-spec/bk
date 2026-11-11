@@ -1,23 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import api from '../../services/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-// URL domain server — sesuaikan jika domain berubah
-const SERVER_DOMAIN = 'https://konseling.uinssc.ac.id';
+// URL domain server webhook — otomatis mendeteksi origin saat ini atau domain production
+const SERVER_DOMAIN = typeof window !== 'undefined' && window.location.origin.includes('http')
+  ? window.location.origin
+  : 'https://konseling.uinssc.ac.id';
 const WEBHOOK_URL   = `${SERVER_DOMAIN}/api/deploy/webhook`;
-
-// ─── Helper fetch dengan auth ────────────────────────────────
-function authFetch(path, options = {}) {
-  const token = localStorage.getItem('auth_token');
-  return fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-  });
-}
 
 // ─── Status Badge ────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -166,8 +154,7 @@ function DeployActionPanel({ onDeployDone }) {
     setOutput('Menghubungi server...\nMemulai proses deploy...\n\n');
 
     try {
-      const res = await authFetch('/admin/deploy/run', { method: 'POST' });
-      const data = await res.json();
+      const data = await api.post('/admin/deploy/run');
 
       setOutput(data.output || '(Tidak ada output)');
       setDeployStatus(data.success ? 'success' : 'failed');
@@ -175,7 +162,7 @@ function DeployActionPanel({ onDeployDone }) {
 
       if (onDeployDone) onDeployDone();
     } catch (err) {
-      setOutput(`ERROR: Gagal menghubungi server.\n${err.message}`);
+      setOutput(`ERROR: Gagal menghubungi server.\n${err.message || 'Terjadi kesalahan sistem'}`);
       setDeployStatus('failed');
     } finally {
       setRunning(false);
@@ -326,11 +313,10 @@ export default function AdminDeployPage() {
   const fetchLogs = useCallback(async () => {
     setLoadingLogs(true);
     try {
-      const res = await authFetch('/admin/deploy/logs');
-      const data = await res.json();
+      const data = await api.get('/admin/deploy/logs');
       setLogs(data.logs || []);
-    } catch {
-      setError('Gagal memuat riwayat deployment.');
+    } catch (err) {
+      setError(err.message || 'Gagal memuat riwayat deployment.');
     } finally {
       setLoadingLogs(false);
     }
@@ -339,8 +325,7 @@ export default function AdminDeployPage() {
   const fetchStatus = useCallback(async () => {
     setLoadingStatus(true);
     try {
-      const res = await authFetch('/admin/deploy/status');
-      const data = await res.json();
+      const data = await api.get('/admin/deploy/status');
       setServerStatus(data);
     } catch {
       // tidak kritis

@@ -103,25 +103,30 @@ class DeployController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $logs = DeploymentLog::orderBy('started_at', 'desc')
-            ->limit(50)
-            ->get()
-            ->map(function ($log) {
-                return [
-                    'id'            => $log->id,
-                    'triggered_by'  => $log->triggered_by,
-                    'action'        => $log->action,
-                    'status'        => $log->status,
-                    'commit_before' => $log->commit_before ? substr($log->commit_before, 0, 7) : null,
-                    'commit_after'  => $log->commit_after  ? substr($log->commit_after, 0, 7)  : null,
-                    'output'        => $log->output,
-                    'started_at'    => $log->started_at?->format('d M Y, H:i') . ' WIB',
-                    'finished_at'   => $log->finished_at?->format('d M Y, H:i') . ' WIB',
-                    'duration'      => $log->started_at && $log->finished_at
-                        ? $log->started_at->diffInSeconds($log->finished_at) . ' detik'
-                        : null,
-                ];
-            });
+        $logs = [];
+        try {
+            $logs = DeploymentLog::orderBy('started_at', 'desc')
+                ->limit(50)
+                ->get()
+                ->map(function ($log) {
+                    return [
+                        'id'            => $log->id,
+                        'triggered_by'  => $log->triggered_by,
+                        'action'        => $log->action,
+                        'status'        => $log->status,
+                        'commit_before' => $log->commit_before ? substr($log->commit_before, 0, 7) : null,
+                        'commit_after'  => $log->commit_after  ? substr($log->commit_after, 0, 7)  : null,
+                        'output'        => $log->output,
+                        'started_at'    => $log->started_at?->format('d M Y, H:i') . ' WIB',
+                        'finished_at'   => $log->finished_at?->format('d M Y, H:i') . ' WIB',
+                        'duration'      => $log->started_at && $log->finished_at
+                            ? $log->started_at->diffInSeconds($log->finished_at) . ' detik'
+                            : null,
+                    ];
+                });
+        } catch (\Throwable $e) {
+            Log::warning('[DeployController@logs] ' . $e->getMessage());
+        }
 
         return response()->json(['logs' => $logs]);
     }
@@ -134,20 +139,43 @@ class DeployController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $projectPath = base_path();
+        $rootPath = dirname(base_path());
 
-        $gitCommit  = trim(shell_exec("cd {$projectPath} && git log --oneline -1 2>&1") ?? 'N/A');
-        $gitBranch  = trim(shell_exec("cd {$projectPath} && git branch --show-current 2>&1") ?? 'N/A');
-        $phpVersion = trim(shell_exec('php -v 2>&1 | head -1') ?? 'N/A');
-        $nodeVersion = trim(shell_exec('node -v 2>&1') ?? 'N/A');
+        $gitCommit   = 'N/A';
+        $gitBranch   = 'main';
+        $behindCount = 0;
+        $phpVersion  = PHP_VERSION;
+        $nodeVersion = 'N/A';
 
-        // Cek commit tertinggal dari origin (fetch dulu)
-        shell_exec("cd {$projectPath} && git fetch origin main 2>&1");
-        $behindCount = trim(shell_exec("cd {$projectPath} && git rev-list HEAD..origin/main --count 2>&1") ?? '0');
+        try {
+            if (function_exists('shell_exec')) {
+                $commitOut = @shell_exec("cd {$rootPath} && git log --oneline -1 2>&1");
+                if ($commitOut && !str_contains($commitOut, 'fatal') && !str_contains($commitOut, 'not found')) {
+                    $gitCommit = trim($commitOut);
+                }
 
-        $lastDeploy = DeploymentLog::where('status', 'success')
-            ->orderBy('finished_at', 'desc')
-            ->first();
+                $branchOut = @shell_exec("cd {$rootPath} && git branch --show-current 2>&1");
+                if ($branchOut && !str_contains($branchOut, 'fatal')) {
+                    $gitBranch = trim($branchOut);
+                }
+
+                $nodeOut = @shell_exec('node -v 2>&1');
+                if ($nodeOut && str_starts_with(trim($nodeOut), 'v')) {
+                    $nodeVersion = trim($nodeOut);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[DeployController@status] ' . $e->getMessage());
+        }
+
+        $lastDeploy = null;
+        try {
+            $lastDeploy = DeploymentLog::where('status', 'success')
+                ->orderBy('finished_at', 'desc')
+                ->first();
+        } catch (\Throwable $e) {
+            // Table belum ada sebelum migrasi dijalankan
+        }
 
         return response()->json([
             'git_commit'   => $gitCommit,
@@ -180,52 +208,76 @@ class DeployController extends Controller
         if (!file_exists($scriptPath)) {
             return response()->json([
                 'success' => false,
-                'message' => 'deploy.sh tidak ditemukan di server.',
+                'message' => 'deploy.sh tidak ditemukan di ' . $scriptPath,
                 'output'  => null,
             ], 500);
         }
 
-        // Ambil commit sebelum pull
-        $projectPath  = base_path();
-        $commitBefore = trim(shell_exec("cd {$projectPath} && git rev-parse HEAD 2>&1") ?? '');
+        $rootPath = dirname(base_path());
+        $commitBefore = null;
+        try {
+            if (function_exists('shell_exec')) {
+                $commitBefore = trim(@shell_exec("cd {$rootPath} && git rev-parse HEAD 2>&1") ?? '');
+            }
+        } catch (\Throwable $e) {}
 
-        $log = DeploymentLog::create([
-            'triggered_by'  => ($request->user()->name ?? 'Admin') . ' (manual)',
-            'action'        => 'full_deploy',
-            'status'        => 'running',
-            'commit_before' => $commitBefore ?: null,
-            'commit_after'  => null,
-            'output'        => "Deploy manual dimulai oleh admin.\n",
-            'started_at'    => now(),
-        ]);
+        $log = null;
+        try {
+            $log = DeploymentLog::create([
+                'triggered_by'  => ($request->user()->name ?? 'Admin') . ' (manual)',
+                'action'        => 'full_deploy',
+                'status'        => 'running',
+                'commit_before' => $commitBefore ?: null,
+                'commit_after'  => null,
+                'output'        => "Deploy manual dimulai oleh admin.\n",
+                'started_at'    => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[DeployController@runManual] Gagal mencatat log awal: ' . $e->getMessage());
+        }
 
-        $logPath  = storage_path('logs/deploy_' . $log->id . '.txt');
-        $command  = "bash {$scriptPath} >> {$logPath} 2>&1";
+        $logId   = $log ? $log->id : time();
+        $logPath = storage_path('logs/deploy_' . $logId . '.txt');
+        $command = "bash {$scriptPath} >> {$logPath} 2>&1";
         $exitCode = null;
 
-        $process = proc_open($command, [], $pipes);
-        if (is_resource($process)) {
-            $exitCode = proc_close($process);
+        if (function_exists('proc_open')) {
+            $process = proc_open($command, [], $pipes);
+            if (is_resource($process)) {
+                $exitCode = proc_close($process);
+            }
+        } else {
+            @exec($command, $dummy, $exitCode);
         }
 
         $output      = file_exists($logPath) ? file_get_contents($logPath) : 'Tidak ada output.';
-        $commitAfter = trim(shell_exec("cd {$projectPath} && git rev-parse HEAD 2>&1") ?? '');
-        $status      = ($exitCode === 0) ? 'success' : 'failed';
+        $commitAfter = null;
+        try {
+            if (function_exists('shell_exec')) {
+                $commitAfter = trim(@shell_exec("cd {$rootPath} && git rev-parse HEAD 2>&1") ?? '');
+            }
+        } catch (\Throwable $e) {}
 
-        $log->update([
-            'status'        => $status,
-            'commit_after'  => $commitAfter ?: null,
-            'output'        => $output,
-            'finished_at'   => now(),
-        ]);
+        $status = ($exitCode === 0) ? 'success' : 'failed';
 
-        Log::info("[Deploy Manual] Selesai oleh {$log->triggered_by}. Exit: {$exitCode}");
+        if ($log) {
+            try {
+                $log->update([
+                    'status'        => $status,
+                    'commit_after'  => $commitAfter ?: null,
+                    'output'        => $output,
+                    'finished_at'   => now(),
+                ]);
+            } catch (\Throwable $e) {}
+        }
+
+        Log::info("[Deploy Manual] Selesai. Exit: {$exitCode}");
 
         return response()->json([
             'success' => $status === 'success',
             'message' => $status === 'success' ? 'Deploy berhasil!' : 'Deploy selesai dengan error.',
             'output'  => $output,
-            'log_id'  => $log->id,
+            'log_id'  => $log?->id,
             'status'  => $status,
         ]);
     }
@@ -233,7 +285,7 @@ class DeployController extends Controller
     private function ensureAdmin(Request $request): void
     {
         if (!$request->user() || !$request->user()->isAdmin()) {
-            abort(403, 'Akses ditolak.');
+            abort(response()->json(['message' => 'Akses ditolak. Khusus Admin.'], 403));
         }
     }
 }
