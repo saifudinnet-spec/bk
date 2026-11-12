@@ -9,9 +9,8 @@
   <link rel="preconnect" href="https://source.zoom.us" crossorigin />
   <link rel="dns-prefetch" href="https://source.zoom.us" />
 
-  <!-- Zoom Meeting SDK Component View CSS -->
-  <link type="text/css" rel="stylesheet" href="https://source.zoom.us/3.8.5/css/bootstrap.css" />
-  <link type="text/css" rel="stylesheet" href="https://source.zoom.us/3.8.5/css/react-select.css" />
+  <!-- Zoom Meeting SDK Component View CSS (v6.10.0) -->
+  <link type="text/css" rel="stylesheet" href="https://source.zoom.us/6.10.0/ui/zoom-meetingsdk.css" />
 
   <style>
     *, *::before, *::after {
@@ -346,13 +345,14 @@
   <!-- Zoom Meeting Component Root Container -->
   <div id="meetingSDKElement"></div>
 
-  <!-- Zoom Meeting SDK Dependencies -->
-  <script src="https://source.zoom.us/3.8.5/lib/vendor/react.min.js"></script>
-  <script src="https://source.zoom.us/3.8.5/lib/vendor/react-dom.min.js"></script>
-  <script src="https://source.zoom.us/3.8.5/lib/vendor/redux.min.js"></script>
-  <script src="https://source.zoom.us/3.8.5/lib/vendor/redux-thunk.min.js"></script>
-  <script src="https://source.zoom.us/3.8.5/lib/vendor/lodash.min.js"></script>
-  <script src="https://source.zoom.us/3.8.5/zoom-meeting-embedded-3.8.5.min.js"></script>
+  <!-- Zoom Meeting SDK Dependencies (v6.10.0) -->
+  <script src="https://source.zoom.us/6.10.0/lib/vendor/react.min.js"></script>
+  <script src="https://source.zoom.us/6.10.0/lib/vendor/react-dom.min.js"></script>
+  <script src="https://source.zoom.us/6.10.0/lib/vendor/redux.min.js"></script>
+  <script src="https://source.zoom.us/6.10.0/lib/vendor/redux-thunk.min.js"></script>
+  <script src="https://source.zoom.us/6.10.0/lib/vendor/react-redux.min.js"></script>
+  <script src="https://source.zoom.us/6.10.0/lib/vendor/lodash.min.js"></script>
+  <script src="https://source.zoom.us/6.10.0/zoom-meeting-embedded-6.10.0.min.js"></script>
 
   <script>
     (function () {
@@ -683,11 +683,9 @@
 
           // 4. Start joining Zoom Meeting
           return client.join({
-            sdkKey: config.sdkKey,
             signature: config.signature,
             meetingNumber: String(config.meetingNumber),
             password: String(config.password || ''),
-            passWord: String(config.password || ''),
             userName: String(config.userName || 'Peserta BK'),
             userEmail: String(config.userEmail || ''),
             tk: '',

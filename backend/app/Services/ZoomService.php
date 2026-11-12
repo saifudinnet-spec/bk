@@ -100,7 +100,6 @@ class ZoomService
         $header = ['alg' => 'HS256', 'typ' => 'JWT'];
         $payload = [
             'appKey' => $sdkKey,
-            'sdkKey' => $sdkKey,
             'mn' => (string)$meetingNumber,
             'role' => 0, // 0 allows both tutor and student to join reliably without requiring ZAK token
             'iat' => $iat,
