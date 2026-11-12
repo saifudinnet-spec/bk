@@ -83,6 +83,23 @@ class CounselingCaseController extends Controller
             ], 403);
         }
 
+        // [FIX H5] Guard: konseli tidak boleh buat kasus baru jika masih ada kasus aktif
+        if ($user->isStudent() || $user->isGeneral()) {
+            $activeCase = CounselingCase::where('user_id', $user->id)
+                ->whereNotIn('status', ['CLOSED'])
+                ->where('case_number', 'NOT LIKE', 'TEST-%')
+                ->first();
+
+            if ($activeCase) {
+                return response()->json([
+                    'message' => "Anda masih memiliki kasus konseling aktif ({$activeCase->case_number}) dengan status {$activeCase->status}. Kasus baru hanya dapat dibuat setelah kasus sebelumnya ditutup.",
+                    'active_case_id' => $activeCase->id,
+                    'active_case_number' => $activeCase->case_number,
+                    'active_case_status' => $activeCase->status,
+                ], 409);
+            }
+        }
+
         $topicId = $request->input('topic_id');
         $customTopic = $request->input('custom_topic');
         $category = $request->input('category');
@@ -95,6 +112,17 @@ class CounselingCaseController extends Controller
         }
 
         $assignedTutorId = $request->input('tutor_id');
+        if ($assignedTutorId) {
+            $validTutor = User::where('id', $assignedTutorId)
+                ->where('role', 'TUTOR')
+                ->where('status', 'active')
+                ->exists();
+            if (!$validTutor) {
+                return response()->json([
+                    'message' => 'Konselor yang dipilih tidak valid atau sedang tidak aktif.',
+                ], 422);
+            }
+        }
         $method = strtoupper($request->input('method', 'ZOOM'));
         $assessmentAnswers = $request->input('assessment_answers', []);
         $initialReason = $request->input('initial_reason');
@@ -137,8 +165,28 @@ class CounselingCaseController extends Controller
                     abort(409, 'Slot jadwal yang dipilih baru saja dipesan oleh pengguna lain. Silakan pilih slot jam lain.');
                 }
 
+                if ($assignedTutorId && (int) $availability->tutor_id !== (int) $assignedTutorId) {
+                    abort(422, 'Slot jadwal tidak sesuai dengan konselor yang dipilih.');
+                }
+
+                $slotTutorActive = User::where('id', $availability->tutor_id)
+                    ->where('role', 'TUTOR')
+                    ->where('status', 'active')
+                    ->exists();
+                if (!$slotTutorActive) {
+                    abort(422, 'Konselor pada slot jadwal ini sedang tidak aktif.');
+                }
+
+                if (!TutorScheduleController::slotSupportsMethod($availability->method, $method)) {
+                    abort(422, "Slot jadwal konselor hanya tersedia untuk metode {$availability->method}, bukan {$method}.");
+                }
+
                 $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time, 'Asia/Jakarta')->utc();
                 $endAt   = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time,   'Asia/Jakarta')->utc();
+
+                if ($startAt->lte(Carbon::now('UTC'))) {
+                    abort(422, 'Slot jadwal yang dipilih sudah terlewat. Silakan pilih slot waktu yang masih akan datang.');
+                }
 
                 CounselingSessionController::assertNoSlotConflicts((int) $availability->tutor_id, $startAt, $endAt, $method);
 
@@ -289,6 +337,8 @@ class CounselingCaseController extends Controller
 
     /**
      * Tutor approves a counseling request
+     * [FIX C1] Tutor hanya boleh approve kasus yang di-assign ke dirinya
+     * [FIX C2] Status diset REVIEWED jika belum ada sesi, SCHEDULED jika sudah ada sesi
      */
     public function approve(Request $request, $id)
     {
@@ -298,25 +348,60 @@ class CounselingCaseController extends Controller
         }
 
         $case = CounselingCase::with(['sessions', 'user'])->findOrFail($id);
-        $case->status = 'SCHEDULED';
-        $case->save();
 
-        foreach ($case->sessions as $s) {
-            $s->status = 'SCHEDULED';
-            $s->save();
+        // [FIX C1] Tutor hanya boleh approve kasus miliknya, kecuali admin
+        if ($user->isTutor() && $case->tutor_id !== null && $case->tutor_id !== $user->id) {
+            return response()->json([
+                'message' => 'Akses ditolak: Kasus ini tidak di-assign ke Anda.',
+            ], 403);
         }
+
+        // Jika tutor_id belum di-set, assign tutor yang melakukan approve
+        if (!$case->tutor_id && $user->isTutor()) {
+            $case->tutor_id = $user->id;
+        }
+
+        // [FIX C2] Status REVIEWED jika belum ada sesi terjadwal, SCHEDULED jika sudah ada
+        $hasScheduledSession = $case->sessions->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])->isNotEmpty();
+        $newStatus = $hasScheduledSession ? 'SCHEDULED' : 'REVIEWED';
+        $case->status = $newStatus;
+        $case->save();
 
         Notification::create([
             'user_id' => $case->user_id,
             'type' => 'case_approved',
             'title' => 'Pengajuan Konseling Disetujui',
-            'message' => "Pengajuan konseling Anda ({$case->case_number}) telah disetujui oleh {$user->name}. Sesi Anda siap dilaksanakan sesuai jadwal.",
+            'message' => $hasScheduledSession
+                ? "Pengajuan konseling Anda ({$case->case_number}) telah disetujui oleh {$user->name}. Sesi Anda siap dilaksanakan sesuai jadwal."
+                : "Pengajuan konseling Anda ({$case->case_number}) telah disetujui oleh {$user->name}. Silakan pilih jadwal sesi konseling Anda.",
         ]);
 
         return response()->json([
             'message' => 'Pengajuan konseling berhasil disetujui.',
             'data' => $case,
         ]);
+    }
+
+    /**
+     * Cancel active (SCHEDULED/READY) sessions for a case and release their WIB availability slots.
+     */
+    private function cancelActiveSessionsAndReleaseSlots(CounselingCase $case): void
+    {
+        $activeSessions = $case->relationLoaded('sessions')
+            ? $case->sessions->whereIn('status', ['SCHEDULED', 'READY'])
+            : $case->sessions()->whereIn('status', ['SCHEDULED', 'READY'])->get();
+
+        foreach ($activeSessions as $s) {
+            $s->status = 'CANCELLED';
+            $s->save();
+
+            // Release slot in WIB (tutor_availabilities menyimpan tanggal & jam dalam Asia/Jakarta)
+            $startWib = Carbon::parse($s->start_at)->timezone('Asia/Jakarta');
+            TutorAvailability::where('tutor_id', $s->tutor_id)
+                ->whereDate('date', $startWib->format('Y-m-d'))
+                ->whereIn('start_time', [$startWib->format('H:i:s'), $startWib->format('H:i')])
+                ->update(['status' => 'AVAILABLE']);
+        }
     }
 
     /**
@@ -334,22 +419,29 @@ class CounselingCaseController extends Controller
         }
 
         $case = CounselingCase::with('sessions')->findOrFail($id);
-        $case->status = 'CLOSED';
-        $case->closed_at = now();
-        $case->save();
 
-        // Cancel associated sessions and release slots
-        foreach ($case->sessions as $s) {
-            $s->status = 'CANCELLED';
-            $s->save();
-
-            // Release slot in WIB (tutor_availabilities menyimpan tanggal & jam dalam Asia/Jakarta)
-            $startWib = Carbon::parse($s->start_at)->timezone('Asia/Jakarta');
-            TutorAvailability::where('tutor_id', $s->tutor_id)
-                ->whereDate('date', $startWib->format('Y-m-d'))
-                ->whereIn('start_time', [$startWib->format('H:i:s'), $startWib->format('H:i')])
-                ->update(['status' => 'AVAILABLE']);
+        if ($user->isTutor() && $case->tutor_id !== null && $case->tutor_id !== $user->id) {
+            return response()->json([
+                'message' => 'Akses ditolak: Kasus ini ditangani oleh konselor lain.',
+            ], 403);
         }
+
+        if ($case->status === 'CLOSED') {
+            return response()->json([
+                'message' => 'Kasus ini sudah ditutup sebelumnya.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($case, $user) {
+            if (!$case->tutor_id && $user->isTutor()) {
+                $case->tutor_id = $user->id;
+            }
+            $case->status = 'CLOSED';
+            $case->closed_at = now();
+            $case->save();
+
+            $this->cancelActiveSessionsAndReleaseSlots($case);
+        });
 
         $reason = $request->input('reason');
 
@@ -390,7 +482,26 @@ class CounselingCaseController extends Controller
         }
 
         $case = CounselingCase::findOrFail($id);
-        $suggestedMethod = $request->input('suggested_method');
+
+        if ($user->isTutor() && $case->tutor_id !== null && $case->tutor_id !== $user->id) {
+            return response()->json([
+                'message' => 'Akses ditolak: Kasus ini ditangani oleh konselor lain.',
+            ], 403);
+        }
+
+        if ($case->status === 'CLOSED') {
+            return response()->json([
+                'message' => 'Kasus yang sudah ditutup tidak dapat diubah metodenya.',
+            ], 422);
+        }
+
+        $suggestedMethod = strtoupper($request->input('suggested_method'));
+        if ($suggestedMethod === strtoupper($case->method ?? '')) {
+            return response()->json([
+                'message' => 'Metode yang disarankan sudah sama dengan metode konseling saat ini.',
+            ], 422);
+        }
+
         $note = $request->input('note');
 
         $case->suggested_method = $suggestedMethod;
@@ -433,9 +544,15 @@ class CounselingCaseController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
+        if ($case->suggested_method_status !== 'PENDING' || empty($case->suggested_method)) {
+            return response()->json([
+                'message' => 'Tidak ada saran perubahan metode yang menunggu persetujuan pada kasus ini.',
+            ], 422);
+        }
+
         $action = $request->input('action');
 
-        if ($action === 'accept' && $case->suggested_method) {
+        if ($action === 'accept') {
             DB::transaction(function () use ($case, $user) {
                 $newMethod = strtoupper($case->suggested_method);
 
@@ -480,28 +597,31 @@ class CounselingCaseController extends Controller
                 $case->save();
             });
         } else {
-            $case->suggested_method_status = 'REJECTED';
+            DB::transaction(function () use ($case, $user) {
+                $case->suggested_method_status = 'REJECTED';
+                $case->save();
 
-            if ($case->tutor_id) {
-                Notification::create([
-                    'user_id' => $case->tutor_id,
-                    'type' => 'method_suggestion_rejected',
-                    'title' => 'Saran Perubahan Metode Ditolak',
-                    'message' => "Mahasiswa {$user->name} tetap memilih menggunakan metode {$case->method}.",
-                ]);
-            }
+                if ($case->tutor_id) {
+                    Notification::create([
+                        'user_id' => $case->tutor_id,
+                        'type' => 'method_suggestion_rejected',
+                        'title' => 'Saran Perubahan Metode Ditolak',
+                        'message' => "Mahasiswa {$user->name} tetap memilih menggunakan metode {$case->method}.",
+                    ]);
+                }
+            });
         }
-
-        $case->save();
 
         return response()->json([
             'message' => $action === 'accept' ? 'Metode konseling berhasil diperbarui.' : 'Saran perubahan metode ditolak.',
-            'data' => $case,
+            'data' => $case->fresh('sessions'),
         ]);
     }
 
     /**
      * Update case status (Tutor or Admin)
+     * [FIX H2] Tutor hanya boleh update kasus yang di-assign ke dirinya
+     * [FIX H2] Validasi whitelist transisi status yang diizinkan
      */
     public function updateStatus(Request $request, $id)
     {
@@ -527,20 +647,53 @@ class CounselingCaseController extends Controller
         }
 
         $case = CounselingCase::findOrFail($id);
+
+        // [FIX H2] Tutor hanya boleh update status kasus yang di-assign ke dirinya
+        if ($user->isTutor() && $case->tutor_id !== null && $case->tutor_id !== $user->id) {
+            return response()->json([
+                'message' => 'Akses ditolak: Kasus ini tidak di-assign ke Anda.',
+            ], 403);
+        }
+
         $oldStatus = $case->status;
         $newStatus = $request->input('status');
 
-        $case->status = $newStatus;
-        if ($request->filled('priority')) {
-            $case->priority = $request->input('priority');
+        // [FIX H2] Whitelist transisi status yang diizinkan per role
+        $allowedTransitions = [
+            'TUTOR' => [
+                'NEW'                 => ['WAITING_REVIEW', 'REVIEWED', 'CLOSED'],
+                'SCREENING_COMPLETED' => ['WAITING_REVIEW', 'REVIEWED', 'CLOSED'],
+                'WAITING_REVIEW'      => ['REVIEWED', 'CLOSED'],
+                'REVIEWED'            => ['WAITING_SCHEDULE', 'SCHEDULED', 'FOLLOW_UP', 'CLOSED'],
+                'WAITING_SCHEDULE'    => ['SCHEDULED', 'FOLLOW_UP', 'CLOSED'],
+                'SCHEDULED'           => ['IN_PROGRESS', 'FOLLOW_UP', 'CLOSED'],
+                'IN_PROGRESS'         => ['FOLLOW_UP', 'CLOSED'],
+                'FOLLOW_UP'           => ['WAITING_SCHEDULE', 'SCHEDULED', 'IN_PROGRESS', 'CLOSED'],
+            ],
+        ];
+
+        if ($user->isTutor() && isset($allowedTransitions['TUTOR'][$oldStatus])) {
+            if (!in_array($newStatus, $allowedTransitions['TUTOR'][$oldStatus], true)) {
+                return response()->json([
+                    'message' => "Transisi status dari {$oldStatus} ke {$newStatus} tidak diizinkan untuk konselor.",
+                ], 422);
+            }
         }
-        if ($request->filled('tutor_id')) {
-            $case->tutor_id = $request->input('tutor_id');
-        }
-        if ($newStatus === 'CLOSED') {
-            $case->closed_at = now();
-        }
-        $case->save();
+
+        DB::transaction(function () use ($case, $newStatus, $request) {
+            $case->status = $newStatus;
+            if ($request->filled('priority')) {
+                $case->priority = $request->input('priority');
+            }
+            if ($request->filled('tutor_id')) {
+                $case->tutor_id = $request->input('tutor_id');
+            }
+            if ($newStatus === 'CLOSED') {
+                $case->closed_at = now();
+                $this->cancelActiveSessionsAndReleaseSlots($case);
+            }
+            $case->save();
+        });
 
         AuditLogService::log('change_case_status', 'CounselingCase', (string)$case->id, [
             'from' => $oldStatus,

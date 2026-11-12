@@ -130,7 +130,7 @@ class TutorDashboardController extends Controller
                   $cq->where('tutor_id', $user->id);
               });
         })
-        ->orderByRaw("FIELD(status, 'IN_PROGRESS', 'PENDING', 'COMPLETED')")
+        ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 1 WHEN 'PENDING' THEN 2 WHEN 'COMPLETED' THEN 3 ELSE 4 END")
         ->orderBy('due_date', 'asc')
         ->take(15)
         ->get();

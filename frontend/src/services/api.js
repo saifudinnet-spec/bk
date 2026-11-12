@@ -73,6 +73,7 @@ class ApiClient {
         const error = new Error(data.message || 'Terjadi kesalahan pada sistem.');
         error.status = response.status;
         error.errors = data.errors || null;
+        error.data = data;
         throw error;
       }
 

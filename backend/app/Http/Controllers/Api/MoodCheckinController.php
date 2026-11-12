@@ -39,9 +39,13 @@ class MoodCheckinController extends Controller
     public function getHistory(Request $request)
     {
         $user = $request->user();
+        $todayWib = Carbon::today('Asia/Jakarta');
 
         $today = MoodCheckin::where('user_id', $user->id)
-            ->whereDate('created_at', Carbon::today())
+            ->whereBetween('created_at', [
+                $todayWib->copy()->startOfDay()->utc(),
+                $todayWib->copy()->endOfDay()->utc(),
+            ])
             ->latest()
             ->first();
 

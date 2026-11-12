@@ -19,7 +19,8 @@ export const BookingSchedule = () => {
   const tutorIdParam = searchParams.get('tutor_id');
 
   const [tutors, setTutors] = useState([]);
-  const [selectedTutorId, setSelectedTutorId] = useState(tutorIdParam ? parseInt(tutorIdParam) : null);
+  const [caseDetail, setCaseDetail] = useState(null);
+  const [selectedTutorId, setSelectedTutorId] = useState(tutorIdParam ? parseInt(tutorIdParam, 10) : null);
   const [groupedSlots, setGroupedSlots] = useState({});
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -28,6 +29,9 @@ export const BookingSchedule = () => {
 
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
+
+  const caseMethod = (caseDetail?.method || 'ZOOM').toUpperCase();
+  const lockedTutorId = caseDetail?.tutor_id ? parseInt(caseDetail.tutor_id, 10) : null;
 
   const handleStartNow = async () => {
     setIsBooking(true);
@@ -46,14 +50,28 @@ export const BookingSchedule = () => {
     }
   };
 
-  // Load tutors
+  // Load case & tutors once
   useEffect(() => {
-    const fetchTutors = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await api.get('/tutors');
-        setTutors(response.data || []);
-        if (!selectedTutorId && response.data?.length > 0) {
-          setSelectedTutorId(response.data[0].id);
+        const [tutorsRes, caseRes] = await Promise.all([
+          api.get('/tutors'),
+          caseId ? api.get(`/cases/${caseId}`).catch(() => null) : Promise.resolve(null),
+        ]);
+        const tutorList = tutorsRes.data || [];
+        setTutors(tutorList);
+
+        const loadedCase = caseRes?.data || null;
+        if (loadedCase) {
+          setCaseDetail(loadedCase);
+        }
+
+        const initialTutorId = loadedCase?.tutor_id
+          ? parseInt(loadedCase.tutor_id, 10)
+          : (tutorIdParam ? parseInt(tutorIdParam, 10) : (tutorList[0]?.id || null));
+
+        if (initialTutorId) {
+          setSelectedTutorId(initialTutorId);
         }
       } catch (err) {
         showError('Gagal memuat konselor.');
@@ -61,22 +79,25 @@ export const BookingSchedule = () => {
         setIsLoading(false);
       }
     };
-    fetchTutors();
-  }, [selectedTutorId, showError]);
+    fetchInitialData();
+  }, [caseId, tutorIdParam, showError]);
 
-  // Load slots for chosen tutor
+  // Load slots for chosen tutor & case method
   useEffect(() => {
     if (!selectedTutorId) return;
 
     const fetchSlots = async () => {
       try {
-        const res = await api.get(`/tutors/${selectedTutorId}/slots?method=ZOOM`);
+        const res = await api.get(`/tutors/${selectedTutorId}/slots?method=${caseMethod}`);
         setGroupedSlots(res.grouped_by_date || {});
 
         // Auto select first available date
         const dates = Object.keys(res.grouped_by_date || {});
         if (dates.length > 0) {
           setSelectedDate(dates[0]);
+          setSelectedSlot(null);
+        } else {
+          setSelectedDate('');
           setSelectedSlot(null);
         }
       } catch (err) {
@@ -85,7 +106,7 @@ export const BookingSchedule = () => {
     };
 
     fetchSlots();
-  }, [selectedTutorId]);
+  }, [selectedTutorId, caseMethod]);
 
   const handleConfirmBooking = async () => {
     if (!selectedSlot) {
@@ -139,20 +160,23 @@ export const BookingSchedule = () => {
               Konselor yang Bertugas:
             </label>
             <div className="flex flex-wrap gap-2">
-              {tutors.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setSelectedTutorId(t.id)}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all min-h-[44px] ${
-                    selectedTutorId === t.id
-                      ? 'bg-emerald-600 text-white shadow-soft-sm'
-                      : 'bg-gray-50 border border-softborder text-darktext hover:bg-gray-100'
-                  }`}
-                >
-                  {t.name}
-                </button>
-              ))}
+              {tutors
+                .filter((t) => !lockedTutorId || t.id === lockedTutorId)
+                .map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    disabled={Boolean(lockedTutorId)}
+                    onClick={() => setSelectedTutorId(t.id)}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all min-h-[44px] ${
+                      selectedTutorId === t.id
+                        ? 'bg-emerald-600 text-white shadow-soft-sm'
+                        : 'bg-gray-50 border border-softborder text-darktext hover:bg-gray-100'
+                    }`}
+                  >
+                    {t.name}
+                  </button>
+                ))}
             </div>
           </div>
 
@@ -338,7 +362,11 @@ export const BookingSchedule = () => {
                   </strong>
                 </p>
                 <p className="text-[11px] text-mutedtext mt-1">
-                  Ruang video meeting Zoom akan dibuat secara otomatis di dalam aplikasi.
+                  {caseMethod === 'ZOOM'
+                    ? 'Ruang video meeting Zoom akan dibuat secara otomatis di dalam aplikasi.'
+                    : caseMethod === 'CHAT'
+                    ? 'Sesi akan berlangsung melalui Ruang Chat Konseling pribadi di dalam aplikasi.'
+                    : 'Sesi tatap muka langsung di Ruang Layanan BK Kampus.'}
                 </p>
               </div>
 

@@ -5,22 +5,24 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CounselingMessage;
 use App\Models\CounselingSession;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 
 class CounselingChatController extends Controller
 {
     /**
-     * Get all chat messages for a specific session
+     * Authorize participant access (or auto-pair for active TEST- sessions when enabled).
      */
-    public function getMessages(Request $request, $sessionId)
+    private function authorizeParticipant(Request $request, $sessionId): CounselingSession
     {
         $user = $request->user();
-        $session = CounselingSession::findOrFail($sessionId);
+        $session = CounselingSession::with('counselingCase')->findOrFail($sessionId);
 
-        // Security check: Only participant student and assigned tutor can view chat (or admin)
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-')) {
-                // Auto-pair participant for instant test sessions across laptops
+            $isTestSession = str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-');
+            $isTestFeatureEnabled = SystemSetting::get('zoom_test_feature_enabled', 'true') === 'true';
+
+            if ($isTestSession && $isTestFeatureEnabled) {
                 if ($user->isTutor()) {
                     $session->tutor_id = $user->id;
                     $session->save();
@@ -30,12 +32,23 @@ class CounselingChatController extends Controller
                     $session->save();
                     $session->counselingCase?->update(['user_id' => $user->id]);
                 } else {
-                    return response()->json(['message' => 'Akses ditolak: Percakapan konseling bersifat rahasia.'], 403);
+                    abort(403, 'Akses ditolak: Percakapan konseling bersifat rahasia.');
                 }
             } else {
-                return response()->json(['message' => 'Akses ditolak: Percakapan konseling bersifat rahasia dan hanya dapat diakses oleh konseli dan konselor terkait.'], 403);
+                abort(403, 'Akses ditolak: Percakapan konseling bersifat rahasia dan hanya dapat diakses oleh konseli dan konselor terkait.');
             }
         }
+
+        return $session;
+    }
+
+    /**
+     * Get all chat messages for a specific session
+     */
+    public function getMessages(Request $request, $sessionId)
+    {
+        $user = $request->user();
+        $this->authorizeParticipant($request, $sessionId);
 
         // Mark unread messages sent by the other party as read
         CounselingMessage::where('session_id', $sessionId)
@@ -64,26 +77,12 @@ class CounselingChatController extends Controller
         ]);
 
         $user = $request->user();
-        $session = CounselingSession::findOrFail($sessionId);
+        $session = $this->authorizeParticipant($request, $sessionId);
 
-        // Security check: Only participant student and assigned tutor can send message (or admin)
-        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-')) {
-                // Auto-pair participant for instant test sessions across laptops
-                if ($user->isTutor()) {
-                    $session->tutor_id = $user->id;
-                    $session->save();
-                    $session->counselingCase?->update(['tutor_id' => $user->id]);
-                } elseif ($user->isStudent() || $user->isGeneral()) {
-                    $session->user_id = $user->id;
-                    $session->save();
-                    $session->counselingCase?->update(['user_id' => $user->id]);
-                } else {
-                    return response()->json(['message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.'], 403);
-                }
-            } else {
-                return response()->json(['message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.'], 403);
-            }
+        if ($session->status === 'CANCELLED') {
+            return response()->json([
+                'message' => 'Tidak dapat mengirim pesan pada sesi konseling yang telah dibatalkan.',
+            ], 422);
         }
 
         $message = CounselingMessage::create([

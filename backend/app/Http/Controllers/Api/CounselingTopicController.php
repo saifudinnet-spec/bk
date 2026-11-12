@@ -45,23 +45,29 @@ class CounselingTopicController extends Controller
     {
         $topic = CounselingTopic::findOrFail($topicId);
 
-        // Fetch tutors who handle this topic
+        $todayWib = Carbon::today('Asia/Jakarta')->toDateString();
+        $nowUtc   = Carbon::now('UTC');
+
+        // Fetch active tutors who handle this topic
         $tutors = Tutor::whereHas('topics', function ($q) use ($topicId) {
                 $q->where('counseling_topics.id', $topicId);
             })
             ->where('is_available', true)
+            ->whereHas('user', function ($q) {
+                $q->where('status', 'active');
+            })
             ->with([
                 'user:id,name,email,avatar,role,status',
                 'topics',
-                'user.availabilities' => function ($q) {
-                    $q->whereDate('date', '>=', Carbon::today('Asia/Jakarta')->toDateString())
+                'user.availabilities' => function ($q) use ($todayWib) {
+                    $q->whereDate('date', '>=', $todayWib)
                       ->where('status', 'AVAILABLE')
                       ->orderBy('date')
                       ->orderBy('start_time');
                 }
             ])
             ->get()
-            ->map(function ($tutor) use ($topicId) {
+            ->map(function ($tutor) use ($topicId, $nowUtc) {
                 $user = $tutor->user;
                 $matchingTopicPivot = $tutor->topics->firstWhere('id', (int)$topicId);
                 $expertiseTags = [];
@@ -70,7 +76,13 @@ class CounselingTopicController extends Controller
                     $expertiseTags = is_array($raw) ? $raw : (json_decode($raw, true) ?: []);
                 }
 
-                $nextSlot = $user ? $user->availabilities->first() : null;
+                $futureSlots = $user
+                    ? $user->availabilities->filter(function ($slot) use ($nowUtc) {
+                        $startUtc = Carbon::parse($slot->date->format('Y-m-d') . ' ' . substr($slot->start_time, 0, 5), 'Asia/Jakarta')->utc();
+                        return $startUtc->gt($nowUtc);
+                    })->values()
+                    : collect();
+                $nextSlot = $futureSlots->first();
 
                 // Methods supported
                 $methodsSupported = ['CHAT', 'ZOOM', 'OFFLINE'];
@@ -94,7 +106,7 @@ class CounselingTopicController extends Controller
                         'end_time' => substr($nextSlot->end_time, 0, 5),
                         'method' => $nextSlot->method,
                     ] : null,
-                    'total_available_slots' => $user ? $user->availabilities->count() : 0,
+                    'total_available_slots' => $futureSlots->count(),
                 ];
             });
 

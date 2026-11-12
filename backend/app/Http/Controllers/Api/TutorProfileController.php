@@ -61,7 +61,9 @@ class TutorProfileController extends Controller
         // Calculate statistics
         $totalSessions = CounselingSession::where('tutor_id', $user->id)->count();
         $completedSessions = CounselingSession::where('tutor_id', $user->id)->where('status', 'COMPLETED')->count();
-        $activeCases = CounselingCase::where('tutor_id', $user->id)->whereIn('status', ['APPROVED', 'SCHEDULED', 'IN_PROGRESS'])->count();
+        $activeCases = CounselingCase::where('tutor_id', $user->id)
+            ->whereIn('status', ['WAITING_REVIEW', 'REVIEWED', 'WAITING_SCHEDULE', 'SCHEDULED', 'IN_PROGRESS', 'FOLLOW_UP'])
+            ->count();
 
         // Calculate rating from session feedbacks
         $feedbacks = SessionFeedback::whereHas('session', function ($q) use ($user) {

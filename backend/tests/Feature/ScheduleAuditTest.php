@@ -297,7 +297,9 @@ class ScheduleAuditTest extends TestCase
             'availability_id' => $t2Slot09->id,
         ])->assertStatus(409);
 
-        // Student 2 memilih metode CHAT di jam 09:00 WIB -> DIPERBOLEHKAN
+        // Student 3 memilih metode CHAT di jam 09:00 WIB -> DIPERBOLEHKAN (tidak bentrok Zoom)
+        $studentChat = User::factory()->create(['role' => 'STUDENT', 'status' => 'active']);
+        Sanctum::actingAs($studentChat);
         $chatCaseRes = $this->postJson('/api/cases', [
             'category' => 'Pribadi',
             'method' => 'CHAT',
@@ -315,7 +317,7 @@ class ScheduleAuditTest extends TestCase
             'note' => 'Mari pindahkan ke video Zoom.',
         ])->assertStatus(200);
 
-        Sanctum::actingAs($student2);
+        Sanctum::actingAs($studentChat);
         $this->postJson("/api/cases/{$chatCaseId}/respond-method-suggestion", [
             'action' => 'accept',
         ])->assertStatus(409);

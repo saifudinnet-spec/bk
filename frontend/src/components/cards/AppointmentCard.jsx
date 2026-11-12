@@ -25,9 +25,10 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
   const endDate = new Date(session.end_at);
   const now = new Date();
 
-  // Active 15 minutes before until end
-  const canJoin = now >= new Date(startDate.getTime() - 15 * 60 * 1000) && now <= endDate;
-  const isPast = now > endDate || session.status === 'COMPLETED';
+  // Active 15 minutes before until end (only if session not ended/cancelled)
+  const isTerminal = ['COMPLETED', 'CANCELLED'].includes(session.status);
+  const canJoin = !isTerminal && now >= new Date(startDate.getTime() - 15 * 60 * 1000) && now <= endDate;
+  const isCompleted = session.status === 'COMPLETED';
 
   const partnerName = isTutor ? session.user?.name : session.tutor?.name;
   const partnerRole = isTutor ? 'Mahasiswa / Klien' : 'Konselor BK';
@@ -157,7 +158,7 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
           </motion.button>
         </div>
 
-        {isPast && !isTutor && !currentFeedback && (
+        {isCompleted && !isTutor && !currentFeedback && (
           <button
             type="button"
             onClick={() => setIsFeedbackOpen(true)}

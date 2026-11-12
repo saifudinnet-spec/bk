@@ -27,9 +27,12 @@ class ZoomService
      */
     public static function generateSignature(User $user, CounselingSession $session, bool $forceTest = false): array
     {
-        // 1. Authorization: Only the assigned student or tutor may join (auto-pair for test sessions)
+        // 1. Authorization: Only the assigned student or tutor may join (auto-pair for active TEST- sessions if enabled)
+        $isTestSession = str_starts_with($session->counselingCase?->case_number ?? '', 'TEST');
+        $isTestFeatureEnabled = SystemSetting::get('zoom_test_feature_enabled', 'true') === 'true';
+
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST')) {
+            if ($isTestSession && $isTestFeatureEnabled) {
                 if ($user->isTutor()) {
                     $session->tutor_id = $user->id;
                     $session->save();
@@ -51,13 +54,13 @@ class ZoomService
             throw new \Exception('Sesi konseling ini sudah selesai atau telah dibatalkan.', 400);
         }
 
-        // 3. Time Window Validation: Can join up to 15 minutes before start (bypassed if forceTest or test session)
+        // 3. Time Window Validation: Can join up to 15 minutes before start (bypassed for TEST sessions or Admin/Tutor forceTest)
         $now = Carbon::now();
         $startTime = Carbon::parse($session->start_at);
         $endTime = Carbon::parse($session->end_at);
 
-        $isTestSession = str_starts_with($session->counselingCase?->case_number ?? '', 'TEST');
-        if (!$forceTest && !$isTestSession) {
+        $allowForceBypass = $isTestSession || ($forceTest && ($user->isAdmin() || $user->isTutor()));
+        if (!$allowForceBypass) {
             if ($now->lt($startTime->copy()->subMinutes(15))) {
                 $diffMins = $now->diffInMinutes($startTime);
                 throw new \Exception("Ruang konseling baru dibuka 15 menit sebelum jadwal (mulai dalam {$diffMins} menit lagi).", 400);

@@ -42,8 +42,26 @@ class CounselingCase extends Model
         static::creating(function ($case) {
             if (empty($case->case_number)) {
                 $year = date('Y');
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $case->case_number = sprintf('BK-%s-%06d', $year, $count);
+                $prefix = "BK-{$year}-";
+                $latest = static::where('case_number', 'LIKE', "{$prefix}%")
+                    ->orderByDesc('case_number')
+                    ->value('case_number');
+
+                $nextSeq = 1;
+                if ($latest && preg_match('/-(\d+)$/', $latest, $matches)) {
+                    $nextSeq = ((int) $matches[1]) + 1;
+                }
+
+                // Loop singkat untuk mencegah tabrakan jika ada request paralel atau row TEST-%
+                do {
+                    $candidate = sprintf('%s%06d', $prefix, $nextSeq);
+                    $exists = static::where('case_number', $candidate)->exists();
+                    if ($exists) {
+                        $nextSeq++;
+                    }
+                } while ($exists);
+
+                $case->case_number = $candidate;
             }
             if (empty($case->opened_at)) {
                 $case->opened_at = now();

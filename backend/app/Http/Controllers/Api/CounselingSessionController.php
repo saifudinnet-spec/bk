@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CounselingCase;
 use App\Models\CounselingMessage;
-use App\Models\CounselingNote;
 use App\Models\CounselingSession;
 use App\Models\CounselingTopic;
 use App\Models\Notification;
@@ -133,6 +132,12 @@ class CounselingSessionController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
+        if ($case->status === 'CLOSED') {
+            return response()->json([
+                'message' => 'Kasus konseling ini sudah ditutup dan tidak dapat dijadwalkan ulang.',
+            ], 422);
+        }
+
         // Guard: Mahasiswa tidak bisa booking sesi baru jika masih ada sesi aktif
         if (!$user->isAdmin()) {
             $activeSession = CounselingSession::where('user_id', $case->user_id)
@@ -164,10 +169,31 @@ class CounselingSessionController extends Controller
                 abort(409, 'Slot jadwal yang dipilih baru saja dipesan oleh pengguna lain. Silakan pilih slot jam lain.');
             }
 
+            // [FIX C3] Validasi bahwa slot yang dipilih milik tutor yang di-assign ke kasus
+            // (kecuali admin atau kasus belum punya tutor yang di-assign)
+            if (!$user->isAdmin() && $case->tutor_id && (int)$availability->tutor_id !== (int)$case->tutor_id) {
+                abort(422, 'Slot jadwal yang dipilih tidak sesuai dengan konselor yang ditugaskan untuk kasus ini.');
+            }
+
+            $slotTutorActive = User::where('id', $availability->tutor_id)
+                ->where('role', 'TUTOR')
+                ->where('status', 'active')
+                ->exists();
+            if (!$slotTutorActive) {
+                abort(422, 'Konselor pada slot jadwal ini sedang tidak aktif.');
+            }
+
             $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time, 'Asia/Jakarta')->utc();
             $endAt   = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time,   'Asia/Jakarta')->utc();
 
+            if ($startAt->lte(Carbon::now('UTC'))) {
+                abort(422, 'Slot jadwal yang dipilih sudah terlewat. Silakan pilih slot waktu yang masih akan datang.');
+            }
+
             $sessionMethod = strtoupper($case->method ?: 'ZOOM');
+            if (!TutorScheduleController::slotSupportsMethod($availability->method, $sessionMethod)) {
+                abort(422, "Slot jadwal konselor hanya mendukung metode {$availability->method}, bukan {$sessionMethod}.");
+            }
 
             self::assertNoSlotConflicts((int) $availability->tutor_id, $startAt, $endAt, $sessionMethod);
 
@@ -331,7 +357,16 @@ class CounselingSessionController extends Controller
             // Student/General/Admin is testing
             $studentId = $user->id;
             if ($request->filled('tutor_id')) {
-                $tutorId = (int)$request->input('tutor_id');
+                $requestedTutor = User::where('id', (int)$request->input('tutor_id'))
+                    ->where('role', 'TUTOR')
+                    ->where('status', 'active')
+                    ->first();
+                if (!$requestedTutor) {
+                    return response()->json([
+                        'message' => 'Konselor yang dipilih tidak valid atau sedang tidak aktif.',
+                    ], 422);
+                }
+                $tutorId = $requestedTutor->id;
             } else {
                 // Pick an active tutor
                 $tutorUser = User::where('role', 'TUTOR')->where(function($q) {
@@ -452,8 +487,11 @@ class CounselingSessionController extends Controller
         ])->findOrFail($id);
 
         // Security check
+        $isTestSession = str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-');
+        $isTestFeatureEnabled = SystemSetting::get('zoom_test_feature_enabled', 'true') === 'true';
+
         if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            if (str_starts_with($session->counselingCase?->case_number ?? '', 'TEST-')) {
+            if ($isTestSession && $isTestFeatureEnabled) {
                 // Auto-pair counterpart for instant test sessions across laptops
                 if ($user->isTutor()) {
                     $session->tutor_id = $user->id;
@@ -492,8 +530,9 @@ class CounselingSessionController extends Controller
         $endTime = Carbon::parse($session->end_at);
 
         $canJoin = $now->between($startTime->copy()->subMinutes(15), $endTime);
-        // If testing mode / force_test or test case, bypass time constraint
-        if ($request->boolean('force_test') || str_starts_with($session->counselingCase?->case_number ?? '', 'TEST')) {
+        // Bypass time constraint only for TEST sessions, or when Admin/Tutor explicitly enables force_test
+        $allowForceBypass = $isTestSession || (($user->isAdmin() || $user->isTutor()) && $request->boolean('force_test'));
+        if ($allowForceBypass) {
             $canJoin = true;
         }
         $minutesUntilStart = $now->lt($startTime) ? $now->diffInMinutes($startTime) : 0;
@@ -513,93 +552,7 @@ class CounselingSessionController extends Controller
             'data' => $session,
             'can_join' => $canJoin,
             'minutes_until_start' => $minutesUntilStart,
-            'is_in_time_window' => $now->lte($endTime) || $request->boolean('force_test'),
-        ]);
-    }
-
-    /**
-     * Get notes for a session
-     */
-    public function getNotes(Request $request, $id)
-    {
-        $user = $request->user();
-        $session = CounselingSession::with('note')->findOrFail($id);
-
-        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Akses ditolak.'], 403);
-        }
-
-        $note = $session->note;
-
-        if ($note && ($user->isStudent() || $user->isGeneral())) {
-            $note->makeHidden('private_note');
-        }
-
-        return response()->json([
-            'data' => $note,
-        ]);
-    }
-
-    /**
-     * Save post-counseling notes and recommendations
-     */
-    public function saveNotes(Request $request, $id)
-    {
-        $request->validate([
-            'summary' => 'required|string|min:5|max:5000',
-            'private_note' => 'nullable|string|max:5000',
-            'student_recommendation' => 'required|string|min:5|max:5000',
-            'follow_up_required' => 'nullable|boolean',
-            'next_follow_up_at' => 'nullable|date',
-        ]);
-
-        $user = $request->user();
-        $session = CounselingSession::with('counselingCase')->findOrFail($id);
-
-        if ($session->tutor_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Hanya konselor bertugas yang dapat menyimpan catatan konseling.'], 403);
-        }
-
-        $followUpRequired = (bool)$request->input('follow_up_required', false);
-
-        $note = CounselingNote::updateOrCreate(
-            ['session_id' => $session->id],
-            [
-                'tutor_id' => $user->id,
-                'summary' => $request->input('summary'),
-                'private_note' => $request->input('private_note'),
-                'student_recommendation' => $request->input('student_recommendation'),
-                'follow_up_required' => $followUpRequired,
-                'next_follow_up_at' => $followUpRequired ? $request->input('next_follow_up_at') : null,
-            ]
-        );
-
-        // Mark session completed
-        $session->status = 'COMPLETED';
-        $session->save();
-
-        // Update case status
-        if ($session->counselingCase) {
-            $session->counselingCase->status = $followUpRequired ? 'FOLLOW_UP' : 'COMPLETED';
-            $session->counselingCase->save();
-        }
-
-        // Notify student about post-counseling recommendation
-        Notification::create([
-            'user_id' => $session->user_id,
-            'type' => 'counseling_notes_published',
-            'title' => 'Catatan & Rekomendasi Konseling Tersedia',
-            'message' => "Konselor telah menyelesaikan sesi dan memberikan rekomendasi untuk Anda. " . ($followUpRequired ? "Konselor juga merekomendasikan sesi tindak lanjut." : ""),
-        ]);
-
-        AuditLogService::log('save_session_note', 'CounselingNote', (string)$note->id, [
-            'session_id' => $session->id,
-            'follow_up_required' => $followUpRequired,
-        ], $user->id);
-
-        return response()->json([
-            'message' => 'Catatan konseling berhasil disimpan.',
-            'data' => $note,
+            'is_in_time_window' => $now->lte($endTime) || $allowForceBypass,
         ]);
     }
 }

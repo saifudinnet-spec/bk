@@ -123,12 +123,19 @@ export const StudentDashboard = () => {
   };
 
   const hasFollowUpRequired = Boolean(
-    activeCase?.sessions?.some((s) => s.note?.follow_up_required)
+    activeCase &&
+    activeCase.status !== 'CLOSED' &&
+    (activeCase.status === 'FOLLOW_UP' || activeCase?.sessions?.some((s) => s.note?.follow_up_required))
   );
 
   const hasScreening = Boolean(latestScreening);
 
   const handleQuickBookFollowUp = () => {
+    if (activeCase?.id && activeCase.status !== 'CLOSED') {
+      const tutorParam = activeCase.tutor_id ? `?tutor_id=${activeCase.tutor_id}` : '';
+      navigate(`/app/counseling/book/${activeCase.id}${tutorParam}`);
+      return;
+    }
     if (activeCase?.tutor) {
       startWithCounselor(activeCase.tutor);
     }

@@ -50,7 +50,7 @@ class ActionPlanController extends Controller
             $query->where('status', $request->query('status'));
         }
 
-        $items = $query->orderByRaw("FIELD(status, 'PENDING', 'IN_PROGRESS', 'COMPLETED')")
+        $items = $query->orderByRaw("CASE status WHEN 'PENDING' THEN 1 WHEN 'IN_PROGRESS' THEN 2 WHEN 'COMPLETED' THEN 3 ELSE 4 END")
             ->orderBy('due_date', 'asc')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -95,6 +95,17 @@ class ActionPlanController extends Controller
             return response()->json([
                 'message' => 'Anda tidak memiliki hak akses untuk menambahkan rencana aksi pada kasus ini.',
             ], 403);
+        }
+
+        if ($request->filled('session_id')) {
+            $belongsToCase = \App\Models\CounselingSession::where('id', $request->input('session_id'))
+                ->where('counseling_case_id', $case->id)
+                ->exists();
+            if (!$belongsToCase) {
+                return response()->json([
+                    'message' => 'Sesi yang dipilih tidak terkait dengan kasus konseling ini.',
+                ], 422);
+            }
         }
 
         $actionPlan = CounselingActionPlan::create([

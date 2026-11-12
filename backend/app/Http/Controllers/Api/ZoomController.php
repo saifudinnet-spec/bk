@@ -49,6 +49,22 @@ class ZoomController extends Controller
     }
 
     /**
+     * Authorize participant access to WebRTC signaling for a session.
+     */
+    private function authorizeSignalingParticipant(Request $request, string $sessionId): void
+    {
+        $user = $request->user();
+        $session = CounselingSession::find($sessionId);
+        if (!$session) {
+            abort(404, 'Sesi konseling tidak ditemukan.');
+        }
+
+        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
+            abort(403, 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.');
+        }
+    }
+
+    /**
      * Post a WebRTC signaling message (relay between laptops on same network/WiFi)
      */
     public function postSignal(Request $request)
@@ -60,6 +76,7 @@ class ZoomController extends Controller
         ]);
 
         $sessionId = (string)$request->input('session_id');
+        $this->authorizeSignalingParticipant($request, $sessionId);
         $cacheKey = "zoom_signals_{$sessionId}";
 
         $signals = Cache::get($cacheKey, []);
@@ -89,6 +106,9 @@ class ZoomController extends Controller
     public function getSignals(Request $request)
     {
         $sessionId = (string)$request->input('session_id');
+        if ($sessionId !== '') {
+            $this->authorizeSignalingParticipant($request, $sessionId);
+        }
         $afterTime = (float)$request->input('after', 0);
         $myPeerId = (string)$request->input('sender', '');
 
@@ -112,6 +132,7 @@ class ZoomController extends Controller
     {
         $sessionId = (string)$request->input('session_id');
         if ($sessionId) {
+            $this->authorizeSignalingParticipant($request, $sessionId);
             Cache::forget("zoom_signals_{$sessionId}");
         }
         return response()->json(['status' => 'cleared']);

@@ -41,6 +41,21 @@ class TutorScheduleController extends Controller
     }
 
     /**
+     * Cek apakah metode slot konselor mendukung metode konseling yang diminta.
+     */
+    public static function slotSupportsMethod(?string $slotMethod, string $requestedMethod): bool
+    {
+        $slotMethod = strtoupper($slotMethod ?: 'ALL');
+        $requestedMethod = strtoupper($requestedMethod);
+
+        if ($slotMethod === 'ALL' || $slotMethod === $requestedMethod) {
+            return true;
+        }
+
+        return $slotMethod === 'ONLINE' && in_array($requestedMethod, ['CHAT', 'ZOOM'], true);
+    }
+
+    /**
      * Filter query TutorAvailability berdasarkan metode konseling.
      */
     private static function applyMethodFilter($query, string $method): void
@@ -285,6 +300,7 @@ class TutorScheduleController extends Controller
         $nowUtc   = Carbon::now('UTC');
 
         $user = User::where('role', 'TUTOR')
+            ->where('status', 'active')
             ->with([
                 'tutorProfile.topics',
                 'availabilities' => function ($q) use ($todayWib) {
@@ -584,22 +600,42 @@ class TutorScheduleController extends Controller
                 ->delete();
         }
 
+        $nowUtc = Carbon::now('UTC');
+        $existingSlots = TutorAvailability::where('tutor_id', $user->id)
+            ->whereDate('date', $date)
+            ->get(['start_time', 'end_time']);
+
+        $existingRanges = $existingSlots->map(fn ($ex) => [
+            substr($ex->start_time, 0, 5),
+            substr($ex->end_time, 0, 5),
+        ])->toArray();
+
         $createdSlots = [];
         foreach ($request->input('slots') as $slot) {
             $startHi  = substr($slot['start_time'], 0, 5);
+            $endHi    = substr($slot['end_time'], 0, 5);
             $startHis = $startHi . ':00';
-            $endHis   = substr($slot['end_time'], 0, 5) . ':00';
+            $endHis   = $endHi . ':00';
 
-            $existing = TutorAvailability::where('tutor_id', $user->id)
-                ->whereDate('date', $date)
-                ->whereIn('start_time', [$startHis, $startHi])
-                ->exists();
-
-            if ($existing) {
+            // Lewati slot yang jam mulainya sudah terlewat (Asia/Jakarta)
+            $slotStartUtc = Carbon::parse($date . ' ' . $startHi, 'Asia/Jakarta')->utc();
+            if ($slotStartUtc->lte($nowUtc)) {
                 continue;
             }
 
-            $createdSlots[] = TutorAvailability::create([
+            // Cegah duplikat maupun tumpang tindih jam di tanggal yang sama
+            $overlaps = false;
+            foreach ($existingRanges as [$exStart, $exEnd]) {
+                if ($exStart < $endHi && $exEnd > $startHi) {
+                    $overlaps = true;
+                    break;
+                }
+            }
+            if ($overlaps) {
+                continue;
+            }
+
+            $created = TutorAvailability::create([
                 'tutor_id'      => $user->id,
                 'date'          => $date,
                 'start_time'    => $startHis,
@@ -608,6 +644,8 @@ class TutorScheduleController extends Controller
                 'slot_duration' => $duration,
                 'status'        => 'AVAILABLE',
             ]);
+            $createdSlots[] = $created;
+            $existingRanges[] = [$startHi, $endHi];
         }
 
         return response()->json([

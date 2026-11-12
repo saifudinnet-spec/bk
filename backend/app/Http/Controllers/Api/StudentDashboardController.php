@@ -26,8 +26,8 @@ class StudentDashboardController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $now = Carbon::now();
-        $today = Carbon::today();
+        $now = Carbon::now('UTC');
+        $todayWib = Carbon::today('Asia/Jakarta');
 
         // 1. Upcoming session
         $upcomingSession = CounselingSession::with([
@@ -47,10 +47,7 @@ class StudentDashboardController extends Controller
             'tutor:id,name',
         ])
         ->where('user_id', $user->id)
-        ->where(function ($q) use ($now) {
-            $q->where('end_at', '<', $now)->orWhere('status', 'COMPLETED');
-        })
-        ->whereNotIn('status', ['CANCELLED'])
+        ->where('status', 'COMPLETED')
         ->whereDoesntHave('feedback')
         ->latest('end_at')
         ->first();
@@ -76,9 +73,12 @@ class StudentDashboardController extends Controller
             ->latest('submitted_at')
             ->first();
 
-        // 5. Today's mood check-in & latest check-in
+        // 5. Today's mood check-in (WIB) & latest check-in
         $todayMood = MoodCheckin::where('user_id', $user->id)
-            ->whereDate('created_at', $today)
+            ->whereBetween('created_at', [
+                $todayWib->copy()->startOfDay()->utc(),
+                $todayWib->copy()->endOfDay()->utc(),
+            ])
             ->latest()
             ->first();
 
@@ -91,7 +91,7 @@ class StudentDashboardController extends Controller
             'counselingCase:id,case_number,category',
         ])
         ->where('user_id', $user->id)
-        ->orderByRaw("FIELD(status, 'PENDING', 'IN_PROGRESS', 'COMPLETED')")
+        ->orderByRaw("CASE status WHEN 'PENDING' THEN 1 WHEN 'IN_PROGRESS' THEN 2 WHEN 'COMPLETED' THEN 3 ELSE 4 END")
         ->orderBy('due_date', 'asc')
         ->orderBy('created_at', 'desc')
         ->take(10)

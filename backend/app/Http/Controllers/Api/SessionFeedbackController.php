@@ -27,6 +27,15 @@ class SessionFeedbackController extends Controller
             ], 403);
         }
 
+        // [FIX H3] Hanya sesi yang sudah COMPLETED yang boleh di-feedback
+        // Feedback tidak boleh mengubah status sesi — itu adalah wewenang tutor via save notes
+        if ($session->status !== 'COMPLETED') {
+            return response()->json([
+                'message' => 'Anda belum dapat memberikan ulasan. Sesi konseling harus diselesaikan terlebih dahulu oleh konselor.',
+                'session_status' => $session->status,
+            ], 422);
+        }
+
         $validator = Validator::make($request->all(), [
             'rating' => 'required|integer|min:1|max:5',
             'mood_after' => 'nullable|string|max:50',
@@ -56,10 +65,8 @@ class SessionFeedbackController extends Controller
             ]
         );
 
-        // Ensure session status is COMPLETED
-        if ($session->status !== 'COMPLETED') {
-            $session->update(['status' => 'COMPLETED']);
-        }
+        // [FIX H3] Session status sudah dipastikan COMPLETED di guard atas
+        // Tidak perlu (dan tidak boleh) mengubah status sesi dari sini
 
         AuditLogService::log('session_feedback', 'CounselingSession', (string)$session->id, [
             'rating' => $feedback->rating,
@@ -76,8 +83,17 @@ class SessionFeedbackController extends Controller
     /**
      * Get feedback for a specific session
      */
-    public function show($sessionId)
+    public function show(Request $request, $sessionId)
     {
+        $user = $request->user() ?? Auth::user();
+        $session = CounselingSession::findOrFail($sessionId);
+
+        if ($session->user_id !== $user->id && $session->tutor_id !== $user->id && !$user->isAdmin()) {
+            return response()->json([
+                'message' => 'Akses ditolak: Anda bukan partisipan dalam sesi konseling ini.',
+            ], 403);
+        }
+
         $feedback = SessionFeedback::with(['user:id,name', 'tutor:id,name'])
             ->where('session_id', $sessionId)
             ->first();
@@ -90,7 +106,7 @@ class SessionFeedbackController extends Controller
         }
 
         $response = $feedback->toArray();
-        if ($feedback->is_anonymous && Auth::id() !== $feedback->user_id && !Auth::user()->isAdmin()) {
+        if ($feedback->is_anonymous && $user->id !== $feedback->user_id && !$user->isAdmin()) {
             $response['user'] = ['id' => null, 'name' => 'Mahasiswa (Anonim)'];
         }
 
@@ -106,7 +122,14 @@ class SessionFeedbackController extends Controller
     public function getTutorRatings(Request $request)
     {
         $user = $request->user() ?? Auth::user();
-        $tutorId = $request->query('tutor_id', $user->isTutor() ? $user->id : null);
+        if (!$user->isTutor() && !$user->isAdmin()) {
+            return response()->json([
+                'message' => 'Akses ditolak: Hanya konselor atau administrator yang dapat mengakses statistik ulasan.',
+            ], 403);
+        }
+
+        // Tutor hanya dapat melihat statistik miliknya sendiri; Admin dapat filter tutor_id atau semua
+        $tutorId = $user->isTutor() ? $user->id : $request->query('tutor_id');
 
         $query = SessionFeedback::query();
         if ($tutorId) {

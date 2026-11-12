@@ -232,23 +232,25 @@ export const CaseDetail = () => {
               <span>Riwayat & Jadwal Pertemuan ({sessions.length})</span>
             </h3>
 
-            <button
-              onClick={() => navigate(`/app/counseling/book/${caseItem.id}`)}
-              className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Buat Sesi Baru</span>
-            </button>
+            {caseItem.status !== 'CLOSED' && (
+              <button
+                onClick={() => navigate(`/app/counseling/book/${caseItem.id}${caseItem.tutor_id ? `?tutor_id=${caseItem.tutor_id}` : ''}`)}
+                className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Buat Sesi Baru</span>
+              </button>
+            )}
           </div>
 
           {sessions.length === 0 ? (
             <div className="p-6 bg-white rounded-3xl border border-softborder text-center">
-              <p className="text-xs text-mutedtext">Belum ada sesi video konseling untuk kasus ini.</p>
+              <p className="text-xs text-mutedtext">Belum ada sesi konseling untuk kasus ini.</p>
             </div>
           ) : (
             sessions.map((s) => {
               const startDate = new Date(s.start_at);
-              const isPast = new Date() > new Date(s.end_at) || s.status === 'COMPLETED';
+              const isCompleted = s.status === 'COMPLETED';
 
               return (
                 <div
@@ -320,7 +322,7 @@ export const CaseDetail = () => {
                         </p>
                       )}
                     </div>
-                  ) : isPast && isStudent ? (
+                  ) : isCompleted && isStudent ? (
                     <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs text-amber-950">
                         <Star className="w-4 h-4 fill-amber-400 text-amber-500" />

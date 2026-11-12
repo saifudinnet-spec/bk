@@ -53,8 +53,10 @@ class CounselingNoteController extends Controller
         // Update case status
         if ($note->follow_up_required) {
             $session->counselingCase->status = 'FOLLOW_UP';
+            $session->counselingCase->closed_at = null;
         } else {
-            $session->counselingCase->status = 'REVIEWED';
+            $session->counselingCase->status = 'CLOSED';
+            $session->counselingCase->closed_at = now();
         }
         $session->counselingCase->save();
 
