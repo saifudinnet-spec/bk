@@ -106,14 +106,14 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
           <div className="flex items-center gap-1.5 font-medium">
             <Calendar className="w-3.5 h-3.5 text-emerald-700" />
             <span>
-              {startDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+              {startDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
           </div>
           <div className="flex items-center gap-1.5 font-bold text-slate-800">
             <Clock className="w-3.5 h-3.5 text-teal-700" />
             <span>
-              {startDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} –{' '}
-              {endDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+              {startDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} –{' '}
+              {endDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB
             </span>
           </div>
         </div>

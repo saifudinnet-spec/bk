@@ -272,12 +272,12 @@ export default function AdminScheduleTab({ showSuccess, showError }) {
                           {startAt ? (
                             <div>
                               <div className="font-medium text-slate-700">
-                                {startAt.toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                                {startAt.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
                               </div>
                               <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                                 <Clock size={11} />
-                                {startAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                                {endAt && ` – ${endAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`}
+                                {startAt.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })}
+                                {endAt && ` – ${endAt.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB`}
                               </div>
                             </div>
                           ) : <span className="text-slate-400 text-xs">-</span>}

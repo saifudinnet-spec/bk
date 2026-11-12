@@ -99,7 +99,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tutors', [TutorScheduleController::class, 'getTutors']);
     Route::get('/tutors/{id}', [TutorScheduleController::class, 'show']);
     Route::get('/tutors/{id}/slots', [TutorScheduleController::class, 'getTutorSlots']);
+    Route::post('/tutors/availability/template', [TutorScheduleController::class, 'setTemplate']);
     Route::post('/tutors/availability', [TutorScheduleController::class, 'setAvailability']);
+    Route::delete('/tutors/availability/clear', [TutorScheduleController::class, 'clearMySlots']);
     Route::delete('/tutors/availability/{slotId}', [TutorScheduleController::class, 'deleteAvailability']);
 
     Route::get('/sessions', [CounselingSessionController::class, 'index']);

@@ -268,9 +268,9 @@ export const CounselingChatRoom = ({ session, user, isTutor, onLeaveSession }) =
         <div className="flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 text-emerald-700" />
           <span>
-            Jadwal: {startDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })},{' '}
-            {startDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} –{' '}
-            {endDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+            Jadwal: {startDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'short', day: 'numeric', month: 'short' })},{' '}
+            {startDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} –{' '}
+            {endDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB
           </span>
         </div>
         <div className="flex items-center gap-1 text-slate-500">

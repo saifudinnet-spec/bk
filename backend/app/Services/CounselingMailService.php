@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Mail\CounseleeBookingConfirmedMail;
+use App\Mail\CounseleeRejectionMail;
 use App\Mail\CounselorNewBookingMail;
+use App\Models\CounselingCase;
 use App\Models\CounselingSession;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Log;
@@ -98,5 +100,45 @@ class CounselingMailService
     {
         return SystemSetting::get('email_reminders_enabled', 'true') === 'true'
             && SystemSetting::get('reminder_notifications_enabled', 'true') === 'true';
+    }
+
+    /**
+     * [5] Send rejection notification email to the counselee
+     */
+    public static function sendRejectionEmail(CounselingCase $case, string $reason, string $counselorName): bool
+    {
+        $enabled = SystemSetting::get('email_booking_notifications_enabled', 'true') === 'true';
+        if (!$enabled) {
+            Log::info("[CounselingMailService] Email notifications disabled. Skipping rejection email for case #{$case->id}.");
+            return false;
+        }
+
+        // Apply dynamic SMTP configuration
+        MailConfigService::applySettings();
+
+        $case->loadMissing('user');
+        $counselee = $case->user;
+
+        if (!$counselee || !filter_var($counselee->email, FILTER_VALIDATE_EMAIL)) {
+            Log::warning("[CounselingMailService] Konseli tidak valid atau email tidak ada untuk case #{$case->id}.");
+            return false;
+        }
+
+        try {
+            Mail::to($counselee->email)->send(new CounseleeRejectionMail($case, $reason, $counselorName));
+            Log::info("✓ Email penolakan berhasil terkirim ke konseli: {$counselee->email} (Case #{$case->id})");
+            try {
+                AuditLogService::log('send_rejection_email', 'CounselingCase', (string) $case->id, [
+                    'recipient' => $counselee->email,
+                    'case_number' => $case->case_number,
+                ], $case->tutor_id);
+            } catch (\Throwable $e) {
+                Log::warning('AuditLog gagal dicatat saat send_rejection_email: ' . $e->getMessage());
+            }
+            return true;
+        } catch (\Throwable $e) {
+            Log::error("✗ Gagal kirim email penolakan ke {$counselee->email}: " . $e->getMessage());
+            return false;
+        }
     }
 }

@@ -152,13 +152,13 @@ export const OfflineSessionView = ({ session, user, isTutor, onLeaveSession }) =
             <span className="text-xs font-bold text-slate-900">Jadwal Sesi</span>
           </div>
           <p className="text-xs text-slate-600">
-            {startDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {startDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
           <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 pt-1 border-t border-slate-100">
             <Clock className="w-3.5 h-3.5" />
             <span>
-              {startDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} –{' '}
-              {endDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+              {startDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} –{' '}
+              {endDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB
             </span>
           </div>
         </div>

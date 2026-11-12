@@ -594,11 +594,11 @@ class AdminController extends Controller
         }
 
         if ($from = $request->query('from')) {
-            $query->where('start_at', '>=', Carbon::parse($from)->startOfDay());
+            $query->where('start_at', '>=', Carbon::parse($from, 'Asia/Jakarta')->startOfDay()->utc());
         }
 
         if ($to = $request->query('to')) {
-            $query->where('start_at', '<=', Carbon::parse($to)->endOfDay());
+            $query->where('start_at', '<=', Carbon::parse($to, 'Asia/Jakarta')->endOfDay()->utc());
         }
 
         $sessions = $query->orderBy('start_at', 'desc')->paginate(20);
@@ -617,11 +617,12 @@ class AdminController extends Controller
             ->with(['tutorProfile'])
             ->get()
             ->map(function ($tutor) use ($request) {
-                $from = $request->query('from', Carbon::today()->toDateString());
-                $to = $request->query('to', Carbon::today()->addDays(30)->toDateString());
+                $from = $request->query('from', Carbon::today('Asia/Jakarta')->toDateString());
+                $to = $request->query('to', Carbon::today('Asia/Jakarta')->addDays(30)->toDateString());
 
                 $slots = TutorAvailability::where('tutor_id', $tutor->id)
-                    ->whereBetween('date', [$from, $to])
+                    ->whereDate('date', '>=', $from)
+                    ->whereDate('date', '<=', $to)
                     ->orderBy('date')
                     ->orderBy('start_time')
                     ->get()
@@ -638,8 +639,8 @@ class AdminController extends Controller
 
                 $bookedSessions = CounselingSession::where('tutor_id', $tutor->id)
                     ->whereBetween('start_at', [
-                        Carbon::parse($from)->startOfDay(),
-                        Carbon::parse($to)->endOfDay(),
+                        Carbon::parse($from, 'Asia/Jakarta')->startOfDay()->utc(),
+                        Carbon::parse($to, 'Asia/Jakarta')->endOfDay()->utc(),
                     ])
                     ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS', 'COMPLETED'])
                     ->with('user:id,name,email,avatar')
@@ -693,82 +694,35 @@ class AdminController extends Controller
             'replace_existing' => 'nullable|boolean',
         ]);
 
-        $tutorId    = $request->input('tutor_id');
-        $days       = $request->input('days');        // e.g. [1, 2, 3] (Mon, Tue, Wed)
-        $sessions   = $request->input('sessions');    // e.g. ['morning', 'afternoon']
-        $method     = $request->input('method', 'ALL');
-        $weeksAhead = $request->input('weeks_ahead', 4);
+        $tutorId         = (int) $request->input('tutor_id');
+        $days            = $request->input('days');
+        $sessions        = $request->input('sessions');
+        $method          = $request->input('method', 'ALL');
+        $weeksAhead      = (int) $request->input('weeks_ahead', 4);
         $replaceExisting = $request->boolean('replace_existing', false);
 
-        // Session time ranges
-        $sessionTimes = [
-            'morning'   => ['start' => '08:00', 'end' => '11:00'],
-            'afternoon' => ['start' => '11:00', 'end' => '14:00'],
-            'evening'   => ['start' => '14:00', 'end' => '18:00'],
-        ];
-
-        // Build list of dates for the next N weeks
-        $startDate = Carbon::today();
-        $endDate   = Carbon::today()->addWeeks($weeksAhead);
-        $created   = 0;
-        $skipped   = 0;
-
-        if ($replaceExisting) {
-            // Remove all AVAILABLE (not booked) slots for this tutor in the date range
-            TutorAvailability::where('tutor_id', $tutorId)
-                ->where('date', '>=', $startDate->toDateString())
-                ->where('date', '<=', $endDate->toDateString())
-                ->where('status', 'AVAILABLE')
-                ->delete();
-        }
-
-        $current = $startDate->copy();
-        while ($current->lte($endDate)) {
-            $dayOfWeek = (int) $current->format('N'); // 1=Mon, 7=Sun
-
-            if (in_array($dayOfWeek, $days)) {
-                foreach ($sessions as $sessionKey) {
-                    $times = $sessionTimes[$sessionKey];
-
-                    // Check if slot already exists for this tutor on this date+time
-                    $exists = TutorAvailability::where('tutor_id', $tutorId)
-                        ->where('date', $current->toDateString())
-                        ->where('start_time', $times['start'])
-                        ->exists();
-
-                    if ($exists) {
-                        $skipped++;
-                    } else {
-                        TutorAvailability::create([
-                            'tutor_id'      => $tutorId,
-                            'date'          => $current->toDateString(),
-                            'start_time'    => $times['start'],
-                            'end_time'      => $times['end'],
-                            'method'        => $method,
-                            'slot_duration' => 60,
-                            'status'        => 'AVAILABLE',
-                        ]);
-                        $created++;
-                    }
-                }
-            }
-
-            $current->addDay();
-        }
+        $result = TutorScheduleController::applyScheduleTemplateForTutor(
+            $tutorId,
+            $days,
+            $sessions,
+            $method,
+            $weeksAhead,
+            $replaceExisting
+        );
 
         AuditLogService::log('set_schedule_template', 'TutorAvailability', (string)$tutorId, [
             'tutor_id'   => $tutorId,
             'days'       => $days,
             'sessions'   => $sessions,
             'weeks_ahead' => $weeksAhead,
-            'created'    => $created,
-            'skipped'    => $skipped,
+            'created'    => $result['created'],
+            'skipped'    => $result['skipped'],
         ], $request->user()->id);
 
         return response()->json([
-            'message' => "Template jadwal berhasil diterapkan. {$created} slot dibuat, {$skipped} slot dilewati (sudah ada).",
-            'created' => $created,
-            'skipped' => $skipped,
+            'message' => "Template jadwal berhasil diterapkan. {$result['created']} slot 30 menit dibuat, {$result['skipped']} slot dilewati (sudah ada).",
+            'created' => $result['created'],
+            'skipped' => $result['skipped'],
         ]);
     }
 
@@ -779,12 +733,13 @@ class AdminController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $from = $request->query('from', Carbon::today()->toDateString());
-        $to   = $request->query('to', Carbon::today()->addWeeks(12)->toDateString());
+        $from = $request->query('from', Carbon::today('Asia/Jakarta')->toDateString());
+        $to   = $request->query('to', Carbon::today('Asia/Jakarta')->addWeeks(12)->toDateString());
 
         $deleted = TutorAvailability::where('tutor_id', $tutorId)
             ->where('status', 'AVAILABLE')
-            ->whereBetween('date', [$from, $to])
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
             ->delete();
 
         return response()->json([

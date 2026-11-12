@@ -1,545 +1,683 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar,
+  CalendarCheck,
   Clock,
-  Plus,
   Trash2,
   Check,
-  Video,
-  MessageSquare,
-  Building2,
-  Globe,
-  Sparkles,
-  CheckCircle2,
-  AlertCircle,
-  Filter,
+  CheckSquare,
+  Square,
+  AlertTriangle,
   Loader2,
   MapPin,
   RefreshCw,
-  Info,
+  Sun,
+  Sunset,
+  Moon,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import PageTransition from '../../components/common/PageTransition';
+import {
+  SESSION_PERIODS,
+  SESSION_SLOTS_COUNT,
+  formatYmdDate,
+  getWibDateStr,
+  groupSlotsBySessionPeriod,
+} from '../../utils/scheduleHelpers';
+
+const DAYS = [
+  { value: 1, label: 'Senin', short: 'Sen' },
+  { value: 2, label: 'Selasa', short: 'Sel' },
+  { value: 3, label: 'Rabu', short: 'Rab' },
+  { value: 4, label: 'Kamis', short: 'Kam' },
+  { value: 5, label: 'Jumat', short: 'Jum' },
+  { value: 6, label: 'Sabtu', short: 'Sab' },
+];
+
+const SESSION_ICONS = {
+  morning: { icon: Sun, color: 'text-amber-500' },
+  afternoon: { icon: Sunset, color: 'text-orange-500' },
+  evening: { icon: Moon, color: 'text-indigo-500' },
+};
+
+const METHODS = [
+  { value: 'ALL', label: 'Semua Metode' },
+  { value: 'ONLINE', label: 'Online (Chat & Zoom)' },
+  { value: 'CHAT', label: 'Chat' },
+  { value: 'ZOOM', label: 'Zoom' },
+  { value: 'OFFLINE', label: 'Tatap Muka' },
+];
+
+function generate30MinSlots(startH, startM, endH, endM) {
+  const slots = [];
+  let h = startH;
+  let m = startM;
+  while (h * 60 + m + 30 <= endH * 60 + endM) {
+    const nH = Math.floor((h * 60 + m + 30) / 60);
+    const nM = (h * 60 + m + 30) % 60;
+    slots.push({
+      start: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+      end: `${String(nH).padStart(2, '0')}:${String(nM).padStart(2, '0')}`,
+    });
+    h = nH;
+    m = nM;
+  }
+  return slots;
+}
+
+function CheckboxGroup({ label, options, selected, onChange }) {
+  const toggle = (val) => {
+    const next = selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val];
+    onChange(next);
+  };
+  return (
+    <div>
+      <div className="text-xs font-semibold text-slate-500 uppercase mb-2">{label}</div>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const checked = selected.includes(opt.value);
+          const Icon = opt.icon;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => toggle(opt.value)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                checked
+                  ? 'bg-teal-600 text-white border-teal-600 shadow-sm shadow-teal-200'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-teal-300 hover:bg-teal-50'
+              }`}
+            >
+              {checked ? <CheckSquare size={15} /> : <Square size={15} />}
+              {Icon && <Icon size={14} className={checked ? 'text-white' : opt.color} />}
+              <span>{opt.short || opt.label}</span>
+              {opt.time && (
+                <span className={`text-xs ml-1 ${checked ? 'text-teal-100' : 'text-slate-400'}`}>
+                  {opt.time}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export const TutorSchedule = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
 
-  const [date, setDate] = useState(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  });
+  // Form mode ('template' matches Admin layout | 'custom' for single date override)
+  const [mode, setMode] = useState('template');
+  const [selectedDays, setSelectedDays] = useState([1, 2, 3, 4, 5]);
+  const [selectedSessions, setSelectedSessions] = useState(['morning', 'afternoon']);
+  const [selectedMethod, setSelectedMethod] = useState('ALL');
+  const [weeksAhead, setWeeksAhead] = useState(4);
+  const [replaceExisting, setReplaceExisting] = useState(false);
 
-  const [defaultMethod, setDefaultMethod] = useState('ALL'); // ALL | ONLINE | CHAT | ZOOM | OFFLINE
+  // Specific date form
+  const [customDate, setCustomDate] = useState(() => getWibDateStr(1));
+  const [customStart, setCustomStart] = useState('08:00');
+  const [customEnd, setCustomEnd] = useState('12:00');
 
-  const [slots, setSlots] = useState([
-    { start_time: '09:00', end_time: '10:00', method: 'ALL' },
-    { start_time: '10:30', end_time: '11:30', method: 'ALL' },
-  ]);
+  const previewCustomSlots = (() => {
+    const [sh, sm] = customStart.split(':').map(Number);
+    const [eh, em] = customEnd.split(':').map(Number);
+    if (eh * 60 + em <= sh * 60 + sm) return [];
+    return generate30MinSlots(sh, sm, eh, em);
+  })();
 
+  // Existing slots state
   const [existingGroupedSlots, setExistingGroupedSlots] = useState({});
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isDeletingSlotId, setIsDeletingSlotId] = useState(null);
-  const [filterMethod, setFilterMethod] = useState('ALL'); // ALL | ONLINE | OFFLINE | BOOKED
+  const [filterStatus, setFilterStatus] = useState('ALL');
 
-  const fetchMySlots = async () => {
+  const sessionOptions = SESSION_PERIODS.map((s) => ({
+    ...s,
+    icon: SESSION_ICONS[s.value].icon,
+    color: SESSION_ICONS[s.value].color,
+  }));
+
+  const fetchMySlots = useCallback(async () => {
     if (!user?.id) return;
     setIsLoadingSlots(true);
     try {
-      // Pass include_booked=1 to see both available and booked slots
       const res = await api.get(`/tutors/${user.id}/slots?include_booked=1`);
       setExistingGroupedSlots(res.grouped_by_date || {});
-    } catch (err) {
-      console.error('Failed to load slots:', err);
+    } catch {
       showError('Gagal memuat jadwal tersimpan.');
     } finally {
       setIsLoadingSlots(false);
     }
-  };
+  }, [user, showError]);
 
   useEffect(() => {
     fetchMySlots();
-  }, [user]);
+  }, [fetchMySlots]);
 
-  // Method options definition
-  const methodOptions = [
-    {
-      id: 'ALL',
-      name: 'Semua Format (Online & Offline)',
-      short: 'Fleksibel (Online/Offline)',
-      icon: Globe,
-      color: 'emerald',
-      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-      desc: 'Mahasiswa bebas memilih sesi Chat, Video Zoom, ataupun Tatap Muka di kampus.',
-    },
-    {
-      id: 'ONLINE',
-      name: 'Online Saja (Chat & Zoom)',
-      short: 'Daring (Chat / Zoom)',
-      icon: Video,
-      color: 'teal',
-      badgeClass: 'bg-teal-50 text-teal-800 border-teal-200',
-      desc: 'Hanya melayani sesi konsultasi online (Chat atau Video Zoom).',
-    },
-    {
-      id: 'OFFLINE',
-      name: 'Offline Saja (Tatap Muka di Kampus)',
-      short: 'Tatap Muka di Kampus',
-      icon: Building2,
-      color: 'purple',
-      badgeClass: 'bg-purple-50 text-purple-800 border-purple-200',
-      desc: 'Pertemuan fisik di Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2.',
-    },
-    {
-      id: 'CHAT',
-      name: 'Khusus Chat Konseling',
-      short: 'Khusus Chat',
-      icon: MessageSquare,
-      color: 'blue',
-      badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
-      desc: 'Khusus pesan teks interaktif di platform web.',
-    },
-    {
-      id: 'ZOOM',
-      name: 'Khusus Video Zoom',
-      short: 'Khusus Zoom',
-      icon: Video,
-      color: 'indigo',
-      badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-      desc: 'Khusus panggilan video tatap maya via Zoom.',
-    },
-  ];
-
-  // Set default method and apply to all current slots
-  const handleDefaultMethodChange = (newMethod) => {
-    setDefaultMethod(newMethod);
-    setSlots((prev) => prev.map((s) => ({ ...s, method: newMethod })));
-  };
-
-  const handleAddSlot = () => {
-    // Propose a reasonable next time slot
-    let nextStart = '13:30';
-    let nextEnd = '14:30';
-    if (slots.length > 0) {
-      const lastSlot = slots[slots.length - 1];
-      const [h, m] = lastSlot.end_time.split(':').map(Number);
-      const startH = (h + 1).toString().padStart(2, '0');
-      const endH = (h + 2).toString().padStart(2, '0');
-      if (h < 20) {
-        nextStart = `${startH}:${m.toString().padStart(2, '0')}`;
-        nextEnd = `${endH}:${m.toString().padStart(2, '0')}`;
-      }
-    }
-    setSlots((prev) => [...prev, { start_time: nextStart, end_time: nextEnd, method: defaultMethod }]);
-  };
-
-  const handleRemoveSlot = (index) => {
-    setSlots((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSlotChange = (index, field, value) => {
-    setSlots((prev) => {
-      const next = [...prev];
-      next[index][field] = value;
-      return next;
-    });
-  };
-
-  // Quick Preset Handlers
-  const applyPreset = (presetType) => {
-    if (presetType === 'morning') {
-      setSlots([
-        { start_time: '09:00', end_time: '10:00', method: defaultMethod },
-        { start_time: '10:30', end_time: '11:30', method: defaultMethod },
-      ]);
-    } else if (presetType === 'afternoon') {
-      setSlots([
-        { start_time: '13:30', end_time: '14:30', method: defaultMethod },
-        { start_time: '15:00', end_time: '16:00', method: defaultMethod },
-      ]);
-    } else if (presetType === 'full') {
-      setSlots([
-        { start_time: '09:00', end_time: '10:00', method: defaultMethod },
-        { start_time: '10:30', end_time: '11:30', method: defaultMethod },
-        { start_time: '13:30', end_time: '14:30', method: defaultMethod },
-        { start_time: '15:00', end_time: '16:00', method: defaultMethod },
-      ]);
-    }
-    showSuccess('Template jam berhasil dimuat.');
-  };
-
-  const handleSubmit = async (e) => {
+  // Apply template via single backend endpoint (mirrors Admin setScheduleTemplate)
+  const handleApplyTemplate = async (e) => {
     e.preventDefault();
-    if (slots.length === 0) {
-      showError('Tambahkan minimal 1 slot ketersediaan waktu.');
+    if (selectedDays.length === 0) {
+      showError('Pilih minimal 1 hari kerja.');
+      return;
+    }
+    if (selectedSessions.length === 0) {
+      showError('Pilih minimal 1 sesi waktu.');
       return;
     }
 
-    // Validate times
-    for (let i = 0; i < slots.length; i++) {
-      if (slots[i].start_time >= slots[i].end_time) {
-        showError(`Jam selesai pada slot ke-${i + 1} harus lebih besar dari jam mulai.`);
-        return;
-      }
+    setIsSubmitting(true);
+    try {
+      const res = await api.post('/tutors/availability/template', {
+        days: selectedDays,
+        sessions: selectedSessions,
+        method: selectedMethod,
+        weeks_ahead: weeksAhead,
+        replace_existing: replaceExisting,
+      });
+      showSuccess(res.message || 'Template jadwal berhasil diterapkan.');
+      fetchMySlots();
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Gagal menerapkan template jadwal.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Clear all unbooked AVAILABLE slots
+  const handleClearSlots = async () => {
+    setIsClearing(true);
+    try {
+      const res = await api.delete('/tutors/availability/clear');
+      showSuccess(res.message || 'Slot kosong berhasil dihapus.');
+      setShowClearConfirm(false);
+      fetchMySlots();
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Gagal menghapus slot jadwal.');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  // Specific date submission
+  const handleSubmitCustom = async (e) => {
+    e.preventDefault();
+    if (previewCustomSlots.length === 0) {
+      showError('Rentang jam tidak valid atau kurang dari 30 menit.');
+      return;
     }
 
     setIsSubmitting(true);
     try {
       await api.post('/tutors/availability', {
-        date,
-        slots,
-        slot_duration: 60,
+        date: customDate,
+        slots: previewCustomSlots.map((s) => ({
+          start_time: s.start,
+          end_time: s.end,
+          method: selectedMethod,
+        })),
+        slot_duration: 30,
       });
 
-      showSuccess(`Ketersediaan jadwal (${slots.length} slot) berhasil ditambahkan.`);
+      showSuccess(`${previewCustomSlots.length} slot 30 menit berhasil ditambahkan untuk ${customDate}.`);
       fetchMySlots();
     } catch (err) {
-      showError(err.message || 'Gagal menambahkan jadwal.');
+      showError(err.response?.data?.message || err.message || 'Gagal menambahkan slot jadwal.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteSlot = async (slotId) => {
-    if (!window.confirm('Yakin ingin menghapus slot waktu ini? Mahasiswa tidak akan dapat memilih jam ini lagi.')) {
-      return;
-    }
-
+    if (!window.confirm('Yakin ingin menghapus slot waktu ini?')) return;
     setIsDeletingSlotId(slotId);
     try {
       await api.delete(`/tutors/availability/${slotId}`);
       showSuccess('Slot jadwal berhasil dihapus.');
       fetchMySlots();
     } catch (err) {
-      showError(err.message || 'Gagal menghapus slot jadwal.');
+      showError(err.response?.data?.message || err.message || 'Gagal menghapus slot jadwal.');
     } finally {
       setIsDeletingSlotId(null);
     }
   };
 
-  const dates = Object.keys(existingGroupedSlots);
-
-  // Compute stats
-  let totalExistingSlots = 0;
-  let totalBookedSlots = 0;
+  // Stats
+  const todayWib = getWibDateStr(0);
+  const dates = Object.keys(existingGroupedSlots).sort();
+  let totalSlots = 0;
+  let totalBooked = 0;
   dates.forEach((d) => {
     const list = existingGroupedSlots[d] || [];
-    totalExistingSlots += list.length;
-    totalBookedSlots += list.filter((s) => s.status === 'BOOKED').length;
+    totalSlots += list.length;
+    totalBooked += list.filter((s) => s.status === 'BOOKED').length;
   });
+
+  const slotsPerSelectedDay = selectedSessions.reduce(
+    (sum, s) => sum + (SESSION_SLOTS_COUNT[s] || 0),
+    0
+  );
+  const estimatedNewSlots = selectedDays.length * weeksAhead * slotsPerSelectedDay;
+
+  const getFilteredSlots = (daySlots) => {
+    if (filterStatus === 'BOOKED') return daySlots.filter((s) => s.status === 'BOOKED');
+    if (filterStatus === 'FREE') return daySlots.filter((s) => s.status === 'AVAILABLE');
+    return daySlots;
+  };
 
   return (
     <PageTransition className="space-y-6 pb-12">
-      {/* Flat Header (matches /tutor/cases) */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-darktext">Kelola Ketersediaan Jadwal Konseling</h2>
-          <p className="text-xs text-mutedtext">
-            Atur ketersediaan waktu dan format sesi konseling Anda
+          <h2 className="text-xl font-bold text-slate-900">Kelola Jadwal Konseling</h2>
+          <p className="text-xs text-slate-500">
+            Atur ketersediaan sesi per 30 menit (WIB) untuk Pagi, Siang, dan Sore
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={fetchMySlots}
-            disabled={isLoadingSlots}
-            className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors shadow-soft-xs text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            title="Muat Ulang Jadwal"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSlots ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={fetchMySlots}
+          disabled={isLoadingSlots}
+          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition-colors text-xs font-semibold flex items-center gap-1.5 self-start sm:self-auto"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSlots ? 'animate-spin' : ''}`} />
+          Segarkan Jadwal
+        </button>
       </div>
 
-      {/* Main Grid: Add Form (Left) & Upcoming Slots (Right) */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT / TOP: ADD SLOTS FORM (7 cols) */}
-        <form onSubmit={handleSubmit} className="lg:col-span-7 p-6 rounded-3xl bg-white border border-slate-200 shadow-soft-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h2 className="text-base font-black text-slate-900">Buka Slot Waktu Baru</h2>
-              <p className="text-xs text-slate-500 font-medium">Tentukan tanggal dan format sesi konseling</p>
-            </div>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200">
-              {slots.length} Slot Siap Dibuat
-            </span>
+        {/* Left: Schedule Setup (Admin-style template + Custom date) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* Mode Tabs */}
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
+            {[
+              { id: 'template', label: '🗓️ Template Jadwal Mingguan' },
+              { id: 'custom', label: '🎯 Tambah Tanggal Spesifik' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setMode(tab.id)}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  mode === tab.id
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* 1. Pick Date */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              <span>Tanggal Konseling:</span>
-            </label>
-            <input
-              type="date"
-              required
-              value={date}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full h-11 px-3.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
-            />
-          </div>
-
-          {/* 2. Format / Method Selector */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-teal-600" />
-                <span>Format Konseling Utama (Online / Offline):</span>
-              </span>
-              <span className="text-[11px] font-normal text-slate-500">Berlaku untuk slot baru</span>
-            </label>
-
-            {/* Quick Method Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {[
-                {
-                  id: 'ALL',
-                  label: 'Semua Format',
-                  sub: 'Online & Offline',
-                  icon: Globe,
-                  color: 'emerald',
-                },
-                {
-                  id: 'ONLINE',
-                  label: 'Online Saja',
-                  sub: 'Chat & Zoom',
-                  icon: Video,
-                  color: 'teal',
-                },
-                {
-                  id: 'OFFLINE',
-                  label: 'Offline Saja',
-                  sub: 'Tatap Muka Kampus',
-                  icon: Building2,
-                  color: 'purple',
-                },
-              ].map((m) => {
-                const isSelected = defaultMethod === m.id;
-                const IconComp = m.icon;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => handleDefaultMethodChange(m.id)}
-                    className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-2 ring-emerald-600/20'
-                        : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <IconComp
-                        className={`w-4 h-4 ${
-                          isSelected ? 'text-emerald-700' : 'text-slate-500'
-                        }`}
-                      />
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center border text-[10px] ${
-                          isSelected
-                            ? 'bg-emerald-600 border-emerald-600 text-white font-bold'
-                            : 'border-slate-300'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-black text-slate-900">{m.label}</div>
-                      <div className="text-[10px] text-slate-500 font-medium">{m.sub}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Offline location note */}
-            {(defaultMethod === 'OFFLINE' || defaultMethod === 'ALL') && (
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-purple-50/60 border border-purple-200/70 text-[11px] text-purple-900">
-                <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Lokasi Pertemuan Offline:</strong> Ruang Layanan Bimbingan Konseling, Gedung Pusat Mahasiswa Lt. 2 Kampus.
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* 3. Time Slots List */}
-          <div className="space-y-2.5 pt-2 border-t border-slate-100">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-emerald-600" />
-                <span>Daftar Jam Sesi (WIB):</span>
-              </label>
-
-              {/* Quick Preset Buttons */}
-              <div className="flex items-center gap-1.5 text-[11px]">
-                <span className="text-slate-400 font-medium hidden sm:inline">Preset:</span>
-                <button
-                  type="button"
-                  onClick={() => applyPreset('morning')}
-                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold transition-colors cursor-pointer"
-                >
-                  Pagi (2)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyPreset('afternoon')}
-                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold transition-colors cursor-pointer"
-                >
-                  Siang (2)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyPreset('full')}
-                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 font-bold transition-colors cursor-pointer"
-                >
-                  Penuh (4)
-                </button>
-              </div>
-            </div>
-
-            {/* Slots Rows */}
-            <div className="space-y-2.5">
-              {slots.map((slot, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2"
-                >
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-                    <span>Slot #{idx + 1}</span>
-                    {slots.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSlot(idx)}
-                        className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-1 font-semibold cursor-pointer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Hapus</span>
-                      </button>
-                    )}
+          {mode === 'template' ? (
+            <div className="bg-white border border-slate-200 rounded-xl shadow-soft-xs">
+              <div className="flex items-center justify-between p-5 border-b border-slate-100">
+                <div>
+                  <div className="font-bold text-slate-800">🗓️ Template Jadwal Konselor</div>
+                  <div className="text-xs text-slate-500">
+                    Pilih hari aktif dan sesi waktu — sistem memecah setiap sesi menjadi slot 30 menit otomatis
                   </div>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 text-xs">
+                  <span className="bg-green-50 text-green-700 px-2 py-1 rounded-full border border-green-200">
+                    {totalSlots - totalBooked} tersedia
+                  </span>
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full border border-blue-200">
+                    {totalBooked} terbook
+                  </span>
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                    {/* Time start & end */}
-                    <div className="sm:col-span-7 flex items-center gap-2">
-                      <input
-                        type="time"
-                        required
-                        value={slot.start_time}
-                        onChange={(e) => handleSlotChange(idx, 'start_time', e.target.value)}
-                        className="flex-1 h-9 px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
-                      />
-                      <span className="text-xs text-slate-400 font-medium">s/d</span>
-                      <input
-                        type="time"
-                        required
-                        value={slot.end_time}
-                        onChange={(e) => handleSlotChange(idx, 'end_time', e.target.value)}
-                        className="flex-1 h-9 px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
+              <form onSubmit={handleApplyTemplate} className="p-5 space-y-5">
+                {/* Day selector */}
+                <CheckboxGroup
+                  label="Hari Aktif"
+                  options={DAYS}
+                  selected={selectedDays}
+                  onChange={setSelectedDays}
+                />
 
-                    {/* Per-Slot Method Selector */}
-                    <div className="sm:col-span-5">
-                      <select
-                        value={slot.method || defaultMethod}
-                        onChange={(e) => handleSlotChange(idx, 'method', e.target.value)}
-                        className="w-full h-9 px-2.5 text-xs bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
-                      >
-                        <option value="ALL">🌐 Semua (Online & Offline)</option>
-                        <option value="ONLINE">💻 Online (Chat / Zoom)</option>
-                        <option value="OFFLINE">🏢 Offline (Tatap Muka)</option>
-                        <option value="CHAT">💬 Khusus Chat</option>
-                        <option value="ZOOM">📹 Khusus Video Zoom</option>
-                      </select>
+                {/* Session selector */}
+                <CheckboxGroup
+                  label="Sesi Waktu"
+                  options={sessionOptions}
+                  selected={selectedSessions}
+                  onChange={setSelectedSessions}
+                />
+
+                {/* Method + weeks */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">
+                      Metode Konseling
+                    </label>
+                    <select
+                      value={selectedMethod}
+                      onChange={(e) => setSelectedMethod(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+                    >
+                      {METHODS.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">
+                      Berlaku <span className="text-teal-600">{weeksAhead} Minggu</span> ke Depan
+                    </label>
+                    <input
+                      type="range"
+                      min={1}
+                      max={12}
+                      value={weeksAhead}
+                      onChange={(e) => setWeeksAhead(Number(e.target.value))}
+                      className="w-full accent-teal-600"
+                    />
+                    <div className="flex justify-between text-xs text-slate-400 mt-0.5">
+                      <span>1 mgg</span>
+                      <span>12 mgg</span>
                     </div>
                   </div>
                 </div>
-              ))}
+
+                {/* Replace existing toggle */}
+                <label className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={replaceExisting}
+                    onChange={(e) => setReplaceExisting(e.target.checked)}
+                    className="w-4 h-4 rounded accent-amber-600"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-amber-800">Timpa slot yang sudah ada</div>
+                    <div className="text-xs text-amber-600">
+                      Hapus slot AVAILABLE yang ada dalam rentang tanggal sebelum menambah yang baru (slot BOOKED tidak terpengaruh)
+                    </div>
+                  </div>
+                </label>
+
+                {/* Preview summary */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+                  <div className="font-semibold text-slate-600 mb-2">Pratinjau Template:</div>
+                  <div className="text-slate-500 text-xs space-y-1">
+                    <div>
+                      📅 Hari:{' '}
+                      {selectedDays.length > 0 ? (
+                        DAYS.filter((d) => selectedDays.includes(d.value))
+                          .map((d) => d.label)
+                          .join(', ')
+                      ) : (
+                        <span className="text-red-400">Belum dipilih</span>
+                      )}
+                    </div>
+                    <div>
+                      🕐 Sesi:{' '}
+                      {selectedSessions.length > 0 ? (
+                        SESSION_PERIODS.filter((s) => selectedSessions.includes(s.value))
+                          .map((s) => `${s.label} (${s.time} · ${s.slotsPerDay} slot)`)
+                          .join(', ')
+                      ) : (
+                        <span className="text-red-400">Belum dipilih</span>
+                      )}
+                    </div>
+                    <div>📡 Metode: {METHODS.find((m) => m.value === selectedMethod)?.label}</div>
+                    <div>📆 Periode: {weeksAhead} minggu ke depan (mulai hari ini WIB)</div>
+                    <div className="mt-1 font-medium text-slate-600">
+                      Estimasi:{' '}
+                      <span className="text-teal-600">{estimatedNewSlots} slot (× 30 menit)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Apply button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting || selectedDays.length === 0 || selectedSessions.length === 0}
+                  className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-300 text-white rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Menerapkan Template...
+                    </>
+                  ) : (
+                    <>
+                      <CalendarCheck size={16} />
+                      Terapkan Template Jadwal
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Danger zone: Clear slots */}
+              <div className="px-5 pb-5">
+                <div className="border-t border-slate-100 pt-4">
+                  {!showClearConfirm ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowClearConfirm(true)}
+                      className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={15} />
+                      Hapus Semua Slot Kosong (AVAILABLE)
+                    </button>
+                  ) : (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-red-700 font-semibold text-sm mb-2">
+                        <AlertTriangle size={15} />
+                        Konfirmasi Hapus Slot
+                      </div>
+                      <p className="text-xs text-red-600 mb-3">
+                        Semua slot AVAILABLE (belum dibooking) milik Anda pada 12 minggu ke depan akan dihapus. Slot yang sudah dibooking konseli tidak terpengaruh.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleClearSlots}
+                          disabled={isClearing}
+                          className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold disabled:bg-red-300 flex items-center justify-center gap-1"
+                        >
+                          {isClearing ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                          Ya, Hapus
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowClearConfirm(false)}
+                          className="flex-1 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-50"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-
-            <button
-              type="button"
-              onClick={handleAddSlot}
-              className="w-full py-2.5 rounded-2xl border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          ) : (
+            <form
+              onSubmit={handleSubmitCustom}
+              className="p-5 rounded-xl bg-white border border-slate-200 shadow-soft-xs space-y-5"
             >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Jam Sesi Lainnya</span>
-            </button>
-          </div>
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-800">🎯 Tambah Jadwal Tanggal Spesifik</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Tentukan rentang jam pada tanggal tertentu — sistem membagi ke slot 30 menit
+                </p>
+              </div>
 
-          {/* Submit Action */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-soft-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-h-[48px]"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Menyimpan Jadwal...</span>
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Simpan Ketersediaan Jadwal</span>
-              </>
-            )}
-          </button>
-        </form>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600 uppercase flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-teal-600" /> Tanggal (WIB)
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={customDate}
+                  min={todayWib}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                />
+              </div>
 
-        {/* RIGHT: UPCOMING SLOTS OVERVIEW (5 cols) */}
-        <div className="lg:col-span-5 p-6 rounded-3xl bg-white border border-slate-200 shadow-soft-sm space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600 uppercase flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-teal-600" /> Mulai (WIB)
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={customStart}
+                    onChange={(e) => setCustomStart(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600 uppercase flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-teal-600" /> Selesai (WIB)
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={customEnd}
+                    onChange={(e) => setCustomEnd(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">
+                  Metode Konseling
+                </label>
+                <select
+                  value={selectedMethod}
+                  onChange={(e) => setSelectedMethod(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+                >
+                  {METHODS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {previewCustomSlots.length > 0 ? (
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-700 mb-2">
+                    Pratinjau ({previewCustomSlots.length} slot × 30 menit):
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {previewCustomSlots.map((s, i) => (
+                      <span
+                        key={i}
+                        className="text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-md"
+                      >
+                        {s.start}–{s.end}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <p className="text-xs text-amber-800 font-semibold">
+                    Rentang jam minimal 30 menit setelah jam mulai.
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting || previewCustomSlots.length === 0}
+                className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-300 text-white rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" /> Simpan {previewCustomSlots.length} Slot Jadwal
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {(selectedMethod === 'OFFLINE' || selectedMethod === 'ALL') && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-purple-50/70 border border-purple-200 text-xs text-purple-900">
+              <MapPin className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Lokasi Offline:</strong> Ruang Layanan BK, Gedung Pusat Mahasiswa Lt. 2 Kampus.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Active Slots Grouped by Date & 3 Sessions */}
+        <div className="lg:col-span-5 p-5 rounded-xl bg-white border border-slate-200 shadow-soft-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
-              <h2 className="text-base font-black text-slate-900">Jadwal Aktif Anda</h2>
-              <p className="text-xs text-slate-500 font-medium">Slot waktu yang siap dipesan mahasiswa</p>
+              <h3 className="text-base font-bold text-slate-900">Jadwal Aktif Anda</h3>
+              <p className="text-xs text-slate-500">Slot 30 menit dikelompokkan per Pagi / Siang / Sore</p>
             </div>
             <button
               type="button"
               onClick={fetchMySlots}
               disabled={isLoadingSlots}
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-              title="Segarkan Jadwal"
+              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSlots ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
-          {/* Stats Bar */}
-          <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
-              <span className="text-lg font-black text-emerald-800 block">{totalExistingSlots}</span>
-              <span className="text-[10px] font-bold text-emerald-700 uppercase">Total Slot Dibuka</span>
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-lg font-bold text-slate-800 block">{totalSlots}</span>
+              <span className="text-[10px] font-semibold text-slate-500 uppercase">Total Slot</span>
             </div>
-            <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-100">
-              <span className="text-lg font-black text-amber-800 block">{totalBookedSlots}</span>
-              <span className="text-[10px] font-bold text-amber-700 uppercase">Sudah Dibooking</span>
+            <div className="p-2.5 rounded-xl bg-green-50 border border-green-200">
+              <span className="text-lg font-bold text-green-700 block">{totalSlots - totalBooked}</span>
+              <span className="text-[10px] font-semibold text-green-700 uppercase">Tersedia</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
+              <span className="text-lg font-bold text-blue-700 block">{totalBooked}</span>
+              <span className="text-[10px] font-semibold text-blue-700 uppercase">Dibooking</span>
             </div>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+          {/* Filter */}
+          <div className="flex items-center gap-1.5 text-xs">
             {[
               { id: 'ALL', label: 'Semua' },
-              { id: 'ONLINE', label: 'Online' },
-              { id: 'OFFLINE', label: 'Offline' },
-              { id: 'BOOKED', label: 'Dibooking' },
+              { id: 'FREE', label: '🟢 Tersedia' },
+              { id: 'BOOKED', label: '🔒 Dibooking' },
             ].map((f) => (
               <button
                 key={f.id}
                 type="button"
-                onClick={() => setFilterMethod(f.id)}
-                className={`px-3 py-1 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  filterMethod === f.id
-                    ? 'bg-slate-900 text-white shadow-xs'
+                onClick={() => setFilterStatus(f.id)}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                  filterStatus === f.id
+                    ? 'bg-slate-900 text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -548,142 +686,108 @@ export const TutorSchedule = () => {
             ))}
           </div>
 
-          {/* List of dates & slots */}
+          {/* Slot list grouped by date & session */}
           {isLoadingSlots ? (
-            <div className="py-12 text-center space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-600 mx-auto" />
-              <p className="text-xs text-slate-500 font-medium">Memuat ketersediaan jadwal...</p>
+            <div className="py-12 text-center">
+              <Loader2 className="w-6 h-6 animate-spin text-teal-600 mx-auto" />
+              <p className="text-xs text-slate-500 mt-2">Memuat jadwal...</p>
             </div>
           ) : dates.length === 0 ? (
-            <div className="py-10 text-center space-y-2">
+            <div className="py-10 text-center">
               <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-xs font-bold text-slate-700">Belum Ada Slot Jadwal Aktif</p>
-              <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-                Gunakan formulir di samping untuk menambahkan tanggal dan jam sesi konseling Anda.
+              <p className="text-xs font-bold text-slate-700 mt-2">Belum Ada Slot Jadwal</p>
+              <p className="text-[11px] text-slate-500 mt-1 max-w-xs mx-auto">
+                Gunakan template di sebelah kiri untuk membuka jadwal konseling Anda.
               </p>
             </div>
           ) : (
-            <div className="space-y-3.5 max-h-[550px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
               {dates.map((dStr) => {
                 const daySlots = existingGroupedSlots[dStr] || [];
+                const filtered = getFilteredSlots(daySlots);
+                if (filtered.length === 0) return null;
 
-                // Filter slots
-                const filteredDaySlots = daySlots.filter((s) => {
-                  if (filterMethod === 'ALL') return true;
-                  if (filterMethod === 'BOOKED') return s.status === 'BOOKED';
-                  if (filterMethod === 'ONLINE') return ['ALL', 'ONLINE', 'CHAT', 'ZOOM'].includes(s.method);
-                  if (filterMethod === 'OFFLINE') return ['ALL', 'OFFLINE'].includes(s.method);
-                  return true;
-                });
-
-                if (filteredDaySlots.length === 0) return null;
-
-                const dateObj = new Date(dStr);
-                const isToday = new Date().toISOString().split('T')[0] === dStr;
+                const isToday = dStr === todayWib;
+                const availCount = filtered.filter((s) => s.status === 'AVAILABLE').length;
+                const bookedCount = filtered.filter((s) => s.status === 'BOOKED').length;
+                const byPeriod = groupSlotsBySessionPeriod(filtered);
 
                 return (
-                  <div key={dStr} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>
-                          {dateObj.toLocaleDateString('id-ID', {
-                            weekday: 'short',
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </span>
+                  <div key={dStr} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-teal-600" />
+                        {formatYmdDate(dStr, {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </span>
-                      {isToday && (
-                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full">
-                          Hari Ini
+                      <div className="flex items-center gap-1">
+                        {isToday && (
+                          <span className="text-[10px] font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full">
+                            Hari Ini
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500">
+                          {availCount} bebas · {bookedCount} booking
                         </span>
-                      )}
+                      </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      {filteredDaySlots.map((s) => {
-                        const isBooked = s.status === 'BOOKED';
-                        const method = s.method || 'ALL';
+                    <div className="space-y-2">
+                      {SESSION_PERIODS.map((period) => {
+                        const periodSlots = byPeriod[period.id] || [];
+                        if (periodSlots.length === 0) return null;
+                        const Icon = SESSION_ICONS[period.id].icon;
+                        const iconColor = SESSION_ICONS[period.id].color;
 
                         return (
-                          <div
-                            key={s.id}
-                            className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
-                              isBooked
-                                ? 'bg-amber-50/70 border-amber-200 text-amber-950'
-                                : 'bg-white border-slate-200 hover:border-emerald-300'
-                            }`}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs font-extrabold text-slate-900">
-                                  {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)} WIB
-                                </span>
-
-                                {/* Method Badge */}
-                                {method === 'ALL' && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800">
-                                    <Globe className="w-2.5 h-2.5" />
-                                    <span>Online & Offline</span>
-                                  </span>
-                                )}
-                                {method === 'ONLINE' && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-teal-100 text-teal-800">
-                                    <Video className="w-2.5 h-2.5" />
-                                    <span>Online (Chat/Zoom)</span>
-                                  </span>
-                                )}
-                                {method === 'OFFLINE' && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-800">
-                                    <Building2 className="w-2.5 h-2.5" />
-                                    <span>Tatap Muka Kampus</span>
-                                  </span>
-                                )}
-                                {method === 'CHAT' && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-800">
-                                    <MessageSquare className="w-2.5 h-2.5" />
-                                    <span>Chat Saja</span>
-                                  </span>
-                                )}
-                                {method === 'ZOOM' && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-indigo-100 text-indigo-800">
-                                    <Video className="w-2.5 h-2.5" />
-                                    <span>Zoom Saja</span>
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                                {isBooked ? (
-                                  <span className="text-amber-800 font-bold">
-                                    🔒 Sudah dibooking oleh mahasiswa
-                                  </span>
-                                ) : (
-                                  <span className="text-emerald-700 font-medium">
-                                    🟢 Siap dipilih mahasiswa
-                                  </span>
-                                )}
-                              </div>
+                          <div key={period.id} className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                              <Icon size={11} className={iconColor} />
+                              <span>{period.label}</span>
+                              <span className="text-slate-400">({period.time} WIB)</span>
                             </div>
-
-                            {/* Delete Slot Button (only available for unbooked slots) */}
-                            {!isBooked && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSlot(s.id)}
-                                disabled={isDeletingSlotId === s.id}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
-                                title="Hapus slot ini"
-                              >
-                                {isDeletingSlotId === s.id ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                )}
-                              </button>
-                            )}
+                            <div className="flex flex-wrap gap-1.5">
+                              {periodSlots.map((s) => {
+                                const isBooked = s.status === 'BOOKED';
+                                return (
+                                  <div
+                                    key={s.id}
+                                    title={`${s.start_time} – ${s.end_time} WIB (${s.method || 'ALL'})`}
+                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-semibold ${
+                                      isBooked
+                                        ? 'bg-amber-50 border-amber-200 text-amber-800'
+                                        : 'bg-white border-slate-200 text-slate-700'
+                                    }`}
+                                  >
+                                    <span>{s.start_time.substring(0, 5)}</span>
+                                    <span className="text-[9px] text-slate-400 font-normal">
+                                      {s.method && s.method !== 'ALL' ? s.method : ''}
+                                    </span>
+                                    {isBooked ? (
+                                      <span className="text-[10px]" title="Sudah dibooking">🔒</span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteSlot(s.id)}
+                                        disabled={isDeletingSlotId === s.id}
+                                        className="text-slate-400 hover:text-rose-600 transition-colors ml-0.5"
+                                        title="Hapus slot"
+                                      >
+                                        {isDeletingSlotId === s.id ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })}
@@ -698,5 +802,3 @@ export const TutorSchedule = () => {
     </PageTransition>
   );
 };
-
-export default TutorSchedule;

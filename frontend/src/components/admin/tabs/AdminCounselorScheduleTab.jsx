@@ -127,7 +127,7 @@ function CounselorCard({ counselor, onManage, isSelected }) {
               </div>
               <span className="truncate">{sess.student?.name || 'Mahasiswa'}</span>
               <span className="text-slate-400 shrink-0">
-                {sess.start_at ? new Date(sess.start_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : ''}
+                {sess.start_at ? new Date(sess.start_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short' }) : ''}
               </span>
             </div>
           ))}
@@ -380,7 +380,10 @@ export default function AdminCounselorScheduleTab({ showSuccess, showError }) {
                     <div>📡 Metode: {METHODS.find(m => m.value === selectedMethod)?.label}</div>
                     <div>📆 Periode: {weeksAhead} minggu ke depan (mulai hari ini)</div>
                     <div className="mt-1 font-medium text-slate-600">
-                      Estimasi: <span className="text-teal-600">{selectedDays.length * weeksAhead * selectedSessions.length} slot baru</span>
+                      Estimasi:{' '}
+                      <span className="text-teal-600">
+                        {selectedDays.length * weeksAhead * selectedSessions.reduce((sum, s) => sum + (s === 'evening' ? 8 : 6), 0)} slot baru (× 30 menit)
+                      </span>
                     </div>
                   </div>
                 </div>

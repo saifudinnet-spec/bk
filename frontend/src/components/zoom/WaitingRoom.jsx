@@ -368,11 +368,11 @@ export const WaitingRoom = ({ session, onJoin, isTutor = false }) => {
           <div className="flex items-center gap-2.5 text-[11px] text-slate-500 shrink-0 font-medium">
             <div className="hidden sm:flex items-center gap-1 text-slate-600">
               <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{startDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+              <span>{startDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'short', day: 'numeric', month: 'short' })}</span>
             </div>
             <div className="flex items-center gap-1 text-slate-600">
               <Clock className="w-3.5 h-3.5 text-teal-600" />
-              <span>{startDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+              <span>{startDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB</span>
             </div>
             <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-teal-50 text-teal-800 border border-teal-200">
               {timeLeft}

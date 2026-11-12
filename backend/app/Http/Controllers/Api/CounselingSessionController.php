@@ -20,6 +20,45 @@ use Illuminate\Support\Facades\DB;
 class CounselingSessionController extends Controller
 {
     /**
+     * Pastikan rentang UTC [$startAt, $endAt] bebas dari bentrok jadwal konselor
+     * dan (jika metode ZOOM) bebas dari bentrok ruang Zoom lintas seluruh konselor.
+     * Wajib dipanggil di dalam DB::transaction().
+     */
+    public static function assertNoSlotConflicts(
+        int $tutorId,
+        Carbon $startAt,
+        Carbon $endAt,
+        string $method,
+        ?int $ignoreSessionId = null
+    ): void {
+        $baseQuery = fn () => CounselingSession::whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
+            ->whereDoesntHave('counselingCase', fn ($q) => $q->where('case_number', 'LIKE', 'TEST-%'))
+            ->when($ignoreSessionId, fn ($q) => $q->where('id', '!=', $ignoreSessionId))
+            ->where(function ($q) use ($startAt, $endAt) {
+                $q->where('start_at', '<', $endAt)
+                  ->where('end_at',   '>', $startAt);
+            });
+
+        $tutorConflict = $baseQuery()->where('tutor_id', $tutorId)->lockForUpdate()->first();
+        if ($tutorConflict) {
+            $conflictTime = Carbon::parse($tutorConflict->start_at)
+                ->timezone('Asia/Jakarta')
+                ->translatedFormat('d M Y, H:i');
+            abort(409, "Konselor sudah memiliki sesi terjadwal lain pada {$conflictTime} WIB. Silakan pilih slot waktu berbeda.");
+        }
+
+        if (strtoupper($method) === 'ZOOM') {
+            $zoomConflict = $baseQuery()->where('method', 'ZOOM')->lockForUpdate()->first();
+            if ($zoomConflict) {
+                $conflictTime = Carbon::parse($zoomConflict->start_at)
+                    ->timezone('Asia/Jakarta')
+                    ->translatedFormat('d M Y, H:i');
+                abort(409, "Slot waktu ini sudah digunakan untuk sesi Zoom lain pada {$conflictTime} WIB. Karena link Zoom dibagikan bersama, tidak boleh ada dua sesi Zoom di waktu yang sama. Silakan pilih jam yang berbeda.");
+            }
+        }
+    }
+
+    /**
      * Get sessions for current user (student/general: own sessions; tutor: tutor sessions; admin: all)
      */
     public function index(Request $request)
@@ -104,7 +143,9 @@ class CounselingSessionController extends Controller
                 ->first();
 
             if ($activeSession) {
-                $startFormatted = \Carbon\Carbon::parse($activeSession->start_at)->translatedFormat('d F Y, H:i');
+                $startFormatted = Carbon::parse($activeSession->start_at)
+                    ->timezone('Asia/Jakarta')
+                    ->translatedFormat('d F Y, H:i');
                 return response()->json([
                     'message' => 'Anda masih memiliki sesi konseling aktif yang belum selesai (dijadwalkan pada ' . $startFormatted . ' WIB). Sesi baru hanya dapat dibuat setelah konseling sebelumnya selesai.',
                     'active_session_id' => $activeSession->id,
@@ -123,22 +164,25 @@ class CounselingSessionController extends Controller
                 abort(409, 'Slot jadwal yang dipilih baru saja dipesan oleh pengguna lain. Silakan pilih slot jam lain.');
             }
 
-            $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time);
-            $endAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time);
+            $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time, 'Asia/Jakarta')->utc();
+            $endAt   = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time,   'Asia/Jakarta')->utc();
+
+            $sessionMethod = strtoupper($case->method ?: 'ZOOM');
+
+            self::assertNoSlotConflicts((int) $availability->tutor_id, $startAt, $endAt, $sessionMethod);
 
             // Mark slot as booked
             $availability->status = 'BOOKED';
             $availability->save();
 
             // Generate meeting identifiers
-            $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
+            $meetingNumber   = 'BK' . rand(100, 999) . rand(1000, 9999);
             $meetingPassword = 'bk' . rand(1000, 9999);
-            $meetingUrl = null;
-            $sessionMethod = ($case->method || 'ZOOM');
+            $meetingUrl      = null;
 
-            if (strtoupper($sessionMethod) === 'ZOOM') {
+            if ($sessionMethod === 'ZOOM') {
                 $topic = "Bimbingan Konseling: {$case->category} - " . ($case->user->name ?? 'Mahasiswa');
-                $duration = max(15, $startAt->diffInMinutes($endAt));
+                $duration = max(15, Carbon::parse($availability->start_time)->diffInMinutes(Carbon::parse($availability->end_time)));
                 $zoomResult = \App\Services\ZoomApiService::createMeeting($topic, $startAt->toIso8601String(), $duration);
 
                 $meetingNumber = $zoomResult['id'] ?? $meetingNumber;
@@ -175,7 +219,7 @@ class CounselingSessionController extends Controller
             'user_id' => $case->user_id,
             'type' => 'booking_confirmed',
             'title' => 'Jadwal Konseling Terkonfirmasi',
-            'message' => "Sesi Anda dijadwalkan pada " . $session->start_at->translatedFormat('d F Y, H:i') . " WIB.",
+            'message' => "Sesi Anda dijadwalkan pada " . $session->start_at->timezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') . " WIB.",
         ]);
 
         // Notification for tutor
@@ -183,7 +227,7 @@ class CounselingSessionController extends Controller
             'user_id' => $session->tutor_id,
             'type' => 'tutor_booking_received',
             'title' => 'Jadwal Konseling Baru',
-            'message' => "Anda memiliki sesi konseling baru pada " . $session->start_at->translatedFormat('d F Y, H:i') . " WIB.",
+            'message' => "Anda memiliki sesi konseling baru pada " . $session->start_at->timezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') . " WIB.",
         ]);
 
         AuditLogService::log('book_session', 'CounselingSession', (string)$session->id, [

@@ -54,7 +54,7 @@ class CounselingTopicController extends Controller
                 'user:id,name,email,avatar,role,status',
                 'topics',
                 'user.availabilities' => function ($q) {
-                    $q->where('date', '>=', Carbon::today())
+                    $q->whereDate('date', '>=', Carbon::today('Asia/Jakarta')->toDateString())
                       ->where('status', 'AVAILABLE')
                       ->orderBy('date')
                       ->orderBy('start_time');

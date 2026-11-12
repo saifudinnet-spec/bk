@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Check, ArrowRight, ArrowLeft, Video, ShieldCheck, Zap } from 'lucide-react';
+import { Calendar, Clock, Check, ArrowRight, ArrowLeft, Video, ShieldCheck, Zap, Sun, Sunset, Moon } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../store/ToastContext';
 import { ListSkeleton } from '../../components/common/LoadingSkeleton';
 import PageTransition from '../../components/common/PageTransition';
+import {
+  SESSION_PERIODS,
+  formatWibTime,
+  formatYmdDate,
+  groupSlotsBySessionPeriod,
+} from '../../utils/scheduleHelpers';
 
 export const BookingSchedule = () => {
   const { caseId } = useParams();
@@ -64,7 +70,7 @@ export const BookingSchedule = () => {
 
     const fetchSlots = async () => {
       try {
-        const res = await api.get(`/tutors/${selectedTutorId}/slots`);
+        const res = await api.get(`/tutors/${selectedTutorId}/slots?method=ZOOM`);
         setGroupedSlots(res.grouped_by_date || {});
 
         // Auto select first available date
@@ -161,7 +167,7 @@ export const BookingSchedule = () => {
                   Butuh Sesi / Ingin Uji Coba di Jam Sekarang?
                 </h4>
                 <p className="text-xs text-emerald-800 mt-0.5">
-                  Mulai konsultasi saat ini juga ({new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB) tanpa harus memilih slot tanggal lain.
+                  Mulai konsultasi saat ini juga ({formatWibTime(new Date())} WIB) tanpa harus memilih slot tanggal lain.
                 </p>
               </div>
             </div>
@@ -196,7 +202,6 @@ export const BookingSchedule = () => {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {dates.map((dStr) => {
-                  const dObj = new Date(dStr);
                   const isSelected = selectedDate === dStr;
                   return (
                     <button
@@ -213,10 +218,10 @@ export const BookingSchedule = () => {
                       }`}
                     >
                       <span className="text-[10px] text-mutedtext uppercase font-bold block">
-                        {dObj.toLocaleDateString('id-ID', { weekday: 'short' })}
+                        {formatYmdDate(dStr, { weekday: 'short' })}
                       </span>
                       <span className="text-xs font-bold block mt-0.5">
-                        {dObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        {formatYmdDate(dStr, { day: 'numeric', month: 'short' })}
                       </span>
                     </button>
                   );
@@ -225,46 +230,88 @@ export const BookingSchedule = () => {
             )}
           </div>
 
-          {/* Time Slot Picker */}
+          {/* Time Slot Picker (Grouped by Pagi / Siang / Sore @ 30 menit) */}
           {selectedDate && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-3"
+              className="p-5 rounded-3xl bg-white border border-softborder shadow-soft-sm space-y-4"
             >
-              <label className="block text-xs font-bold text-darktext flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-teal-600" />
-                <span>Pilih Jam Pertemuan (WIB):</span>
-              </label>
+              <div>
+                <label className="block text-xs font-bold text-darktext flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-teal-600" />
+                  <span>Pilih Jam Pertemuan Pasti per 30 Menit (WIB):</span>
+                </label>
+                <p className="text-[11px] text-mutedtext mt-0.5">
+                  Slot dikelompokkan ke sesi Pagi, Siang, dan Sore. Jadwal Zoom yang bentrok otomatis ditandai.
+                </p>
+              </div>
 
               {slotsForSelectedDate.length === 0 ? (
                 <p className="text-xs text-mutedtext py-3 text-center">
                   Slot pada tanggal ini telah penuh terisi.
                 </p>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {slotsForSelectedDate.map((slot) => {
-                    const isSelected = selectedSlot?.id === slot.id;
-                    const startTime = slot.start_time.substring(0, 5);
-                    const endTime = slot.end_time.substring(0, 5);
+                <div className="space-y-3">
+                  {(() => {
+                    const byPeriod = groupSlotsBySessionPeriod(slotsForSelectedDate);
+                    const icons = { morning: Sun, afternoon: Sunset, evening: Moon };
 
-                    return (
-                      <motion.button
-                        key={slot.id}
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all min-h-[50px] ${
-                          isSelected
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold ring-2 ring-emerald-500/20 shadow-sm'
-                            : 'border-softborder bg-white text-darktext hover:bg-gray-50 font-medium'
-                        }`}
-                      >
-                        <span className="text-xs">{startTime} - {endTime}</span>
-                        {isSelected && <Check className="w-4 h-4 text-emerald-600" />}
-                      </motion.button>
-                    );
-                  })}
+                    return SESSION_PERIODS.map((period) => {
+                      const periodSlots = byPeriod[period.id] || [];
+                      if (periodSlots.length === 0) return null;
+                      const Icon = icons[period.id];
+
+                      return (
+                        <div key={period.id} className="space-y-2">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
+                            <Icon className="w-3.5 h-3.5 text-teal-600" />
+                            <span>Sesi {period.label}</span>
+                            <span className="text-slate-400 font-normal">({period.time} WIB)</span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {periodSlots.map((slot) => {
+                              const isSelected = selectedSlot?.id === slot.id;
+                              const isZoomConflict = slot.status === 'ZOOM_CONFLICT';
+                              const isBooked = slot.status === 'BOOKED';
+                              const isDisabled = isBooked || isZoomConflict;
+                              const startTime = slot.start_time.substring(0, 5);
+                              const endTime = slot.end_time.substring(0, 5);
+
+                              return (
+                                <motion.button
+                                  key={slot.id}
+                                  whileTap={isDisabled ? {} : { scale: 0.98 }}
+                                  type="button"
+                                  disabled={isDisabled}
+                                  title={slot.conflict_reason || `${startTime} – ${endTime} WIB`}
+                                  onClick={() => setSelectedSlot(slot)}
+                                  className={`p-3 rounded-2xl border flex items-center justify-between transition-all min-h-[48px] ${
+                                    isZoomConflict
+                                      ? 'border-rose-200 bg-rose-50/70 text-rose-500 cursor-not-allowed'
+                                      : isBooked
+                                      ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-70'
+                                      : isSelected
+                                      ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold ring-2 ring-emerald-500/20 shadow-sm'
+                                      : 'border-softborder bg-white text-darktext hover:bg-gray-50 font-medium'
+                                  }`}
+                                >
+                                  <span className="text-xs">{startTime} – {endTime}</span>
+                                  {isZoomConflict ? (
+                                    <span className="text-[10px] font-bold">Zoom Penuh</span>
+                                  ) : isBooked ? (
+                                    <span className="text-[10px] font-bold">Penuh</span>
+                                  ) : (
+                                    isSelected && <Check className="w-4 h-4 text-emerald-600" />
+                                  )}
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </motion.div>

@@ -260,6 +260,7 @@ export const CaseDetail = () => {
                       <Calendar className="w-4 h-4 text-emerald-600" />
                       <span className="text-xs font-bold text-darktext">
                         {startDate.toLocaleDateString('id-ID', {
+                          timeZone: 'Asia/Jakarta',
                           weekday: 'short',
                           day: 'numeric',
                           month: 'short',
@@ -267,7 +268,7 @@ export const CaseDetail = () => {
                         })}
                       </span>
                       <span className="text-xs text-mutedtext">
-                        pukul {startDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                        pukul {startDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB
                       </span>
                     </div>
                     <StatusBadge status={s.status} />

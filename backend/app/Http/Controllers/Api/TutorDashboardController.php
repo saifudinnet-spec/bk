@@ -28,8 +28,8 @@ class TutorDashboardController extends Controller
             return response()->json(['message' => 'Akses ditolak: Hanya konselor atau admin yang dapat mengakses dashboard tutor.'], 403);
         }
 
-        $now = Carbon::now();
-        $today = Carbon::today();
+        $now      = Carbon::now('UTC');
+        $todayWib = Carbon::today('Asia/Jakarta');
 
         // 1. Database-calculated summary counts (lightweight queries)
         $waitingReviewCount = CounselingCase::whereIn('status', ['NEW', 'WAITING_REVIEW'])
@@ -51,7 +51,10 @@ class TutorDashboardController extends Controller
             ->count();
 
         $todaySessionsCount = CounselingSession::where('tutor_id', $user->id)
-            ->whereDate('start_at', $today)
+            ->whereBetween('start_at', [
+                $todayWib->copy()->startOfDay()->utc(),
+                $todayWib->copy()->endOfDay()->utc(),
+            ])
             ->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])
             ->count();
 

@@ -106,7 +106,7 @@ export const CaseReviewModal = ({ isOpen, onClose, caseItem, onUpdated }) => {
       await api.post(`/cases/${caseItem.id}/reject`, {
         reason: rejectReason.trim(),
       });
-      showSuccess('Pengajuan konseling telah ditolak.');
+      showSuccess('Pengajuan konseling ditolak & notifikasi email telah dikirim ke konseli.');
       if (onUpdated) onUpdated();
       onClose();
     } catch (err) {
@@ -223,13 +223,13 @@ export const CaseReviewModal = ({ isOpen, onClose, caseItem, onUpdated }) => {
                 <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
                   <div className="flex items-center gap-1 text-slate-600">
                     <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>{sessionDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    <span>{sessionDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
                   </div>
                   <div className="flex items-center gap-1 font-bold text-slate-800">
                     <Clock className="w-3.5 h-3.5 text-teal-700" />
                     <span>
-                      {sessionDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} –{' '}
-                      {sessionEndDate ? sessionEndDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''} WIB
+                      {sessionDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} –{' '}
+                      {sessionEndDate ? sessionEndDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) : ''} WIB
                     </span>
                   </div>
                 </div>

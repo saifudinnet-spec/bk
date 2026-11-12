@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\AuditLogService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CounselingCaseController extends Controller
 {
@@ -136,40 +137,42 @@ class CounselingCaseController extends Controller
                     abort(409, 'Slot jadwal yang dipilih baru saja dipesan oleh pengguna lain. Silakan pilih slot jam lain.');
                 }
 
+                $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time, 'Asia/Jakarta')->utc();
+                $endAt   = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time,   'Asia/Jakarta')->utc();
+
+                CounselingSessionController::assertNoSlotConflicts((int) $availability->tutor_id, $startAt, $endAt, $method);
+
                 $availability->status = 'BOOKED';
                 $availability->save();
 
-                $startAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->start_time);
-                $endAt = Carbon::parse($availability->date->format('Y-m-d') . ' ' . $availability->end_time);
-
-                $meetingNumber = 'BK' . rand(100, 999) . rand(1000, 9999);
+                $meetingNumber   = 'BK' . rand(100, 999) . rand(1000, 9999);
                 $meetingPassword = 'bk' . rand(1000, 9999);
-                $meetingUrl = null;
+                $meetingUrl      = null;
 
                 if ($method === 'ZOOM') {
                     $topic = "Bimbingan Konseling: {$case->category} - " . ($user->name ?? 'Mahasiswa');
-                    $duration = max(15, $startAt->diffInMinutes($endAt));
+                    $duration = max(15, Carbon::parse($availability->start_time)->diffInMinutes(Carbon::parse($availability->end_time)));
                     $zoomResult = \App\Services\ZoomApiService::createMeeting($topic, $startAt->toIso8601String(), $duration);
 
-                    $meetingNumber = $zoomResult['id'] ?? $meetingNumber;
+                    $meetingNumber   = $zoomResult['id'] ?? $meetingNumber;
                     $meetingPassword = $zoomResult['password'] ?? $meetingPassword;
-                    $meetingUrl = $zoomResult['join_url'] ?? null;
+                    $meetingUrl      = $zoomResult['join_url'] ?? null;
                 }
 
                 $session = CounselingSession::create([
                     'counseling_case_id' => $case->id,
-                    'user_id' => $user->id,
-                    'tutor_id' => $availability->tutor_id,
-                    'start_at' => $startAt,
-                    'end_at' => $endAt,
-                    'method' => $method,
-                    'location' => $location,
-                    'status' => 'SCHEDULED',
-                    'meeting_provider' => 'zoom',
-                    'meeting_number' => $meetingNumber,
-                    'meeting_password' => $meetingPassword,
-                    'meeting_url' => $meetingUrl,
-                    'zoom_meeting_id' => $meetingNumber,
+                    'user_id'            => $user->id,
+                    'tutor_id'           => $availability->tutor_id,
+                    'start_at'           => $startAt,
+                    'end_at'             => $endAt,
+                    'method'             => $method,
+                    'location'           => $location,
+                    'status'             => 'SCHEDULED',
+                    'meeting_provider'   => 'zoom',
+                    'meeting_number'     => $meetingNumber,
+                    'meeting_password'   => $meetingPassword,
+                    'meeting_url'        => $meetingUrl,
+                    'zoom_meeting_id'    => $meetingNumber,
                 ]);
 
                 // Ensure tutor on case is set
@@ -340,10 +343,11 @@ class CounselingCaseController extends Controller
             $s->status = 'CANCELLED';
             $s->save();
 
-            // Release slot if availability matches
+            // Release slot in WIB (tutor_availabilities menyimpan tanggal & jam dalam Asia/Jakarta)
+            $startWib = Carbon::parse($s->start_at)->timezone('Asia/Jakarta');
             TutorAvailability::where('tutor_id', $s->tutor_id)
-                ->where('date', $s->start_at->format('Y-m-d'))
-                ->where('start_time', $s->start_at->format('H:i:s'))
+                ->whereDate('date', $startWib->format('Y-m-d'))
+                ->whereIn('start_time', [$startWib->format('H:i:s'), $startWib->format('H:i')])
                 ->update(['status' => 'AVAILABLE']);
         }
 
@@ -355,6 +359,14 @@ class CounselingCaseController extends Controller
             'title' => 'Pembaruan Pengajuan Konseling',
             'message' => "Pengajuan konseling ({$case->case_number}) belum dapat disetujui oleh konselor. Catatan: {$reason}",
         ]);
+
+        // ── [5] Kirim email notifikasi penolakan ke konseli ──────────────
+        $case->loadMissing('user');
+        try {
+            \App\Services\CounselingMailService::sendRejectionEmail($case, $reason, $user->name);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("[reject] Gagal kirim email penolakan ke konseli: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Pengajuan konseling telah ditolak.',
@@ -424,29 +436,49 @@ class CounselingCaseController extends Controller
         $action = $request->input('action');
 
         if ($action === 'accept' && $case->suggested_method) {
-            $case->method = $case->suggested_method;
-            $case->suggested_method_status = 'ACCEPTED';
+            DB::transaction(function () use ($case, $user) {
+                $newMethod = strtoupper($case->suggested_method);
 
-            if ($case->method === 'OFFLINE') {
-                $case->location = 'Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2, Kampus Siber UINSSC';
-            }
-
-            foreach ($case->sessions as $s) {
-                $s->method = $case->suggested_method;
-                if ($case->method === 'OFFLINE') {
-                    $s->location = $case->location;
+                if ($newMethod === 'ZOOM') {
+                    foreach ($case->sessions as $s) {
+                        if ($s->tutor_id && in_array($s->status, ['SCHEDULED', 'READY', 'IN_PROGRESS'], true)) {
+                            CounselingSessionController::assertNoSlotConflicts(
+                                (int) $s->tutor_id,
+                                Carbon::parse($s->start_at)->utc(),
+                                Carbon::parse($s->end_at)->utc(),
+                                'ZOOM',
+                                (int) $s->id
+                            );
+                        }
+                    }
                 }
-                $s->save();
-            }
 
-            if ($case->tutor_id) {
-                Notification::create([
-                    'user_id' => $case->tutor_id,
-                    'type' => 'method_suggestion_accepted',
-                    'title' => 'Saran Perubahan Metode Disetujui',
-                    'message' => "Mahasiswa {$user->name} menyetujui saran perubahan metode konseling ({$case->case_number}) menjadi {$case->method}.",
-                ]);
-            }
+                $case->method = $newMethod;
+                $case->suggested_method_status = 'ACCEPTED';
+
+                if ($case->method === 'OFFLINE') {
+                    $case->location = 'Ruang Layanan BK Gedung Pusat Mahasiswa Lt. 2, Kampus Siber UINSSC';
+                }
+
+                foreach ($case->sessions as $s) {
+                    $s->method = $newMethod;
+                    if ($case->method === 'OFFLINE') {
+                        $s->location = $case->location;
+                    }
+                    $s->save();
+                }
+
+                if ($case->tutor_id) {
+                    Notification::create([
+                        'user_id' => $case->tutor_id,
+                        'type' => 'method_suggestion_accepted',
+                        'title' => 'Saran Perubahan Metode Disetujui',
+                        'message' => "Mahasiswa {$user->name} menyetujui saran perubahan metode konseling ({$case->case_number}) menjadi {$case->method}.",
+                    ]);
+                }
+
+                $case->save();
+            });
         } else {
             $case->suggested_method_status = 'REJECTED';
 

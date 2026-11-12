@@ -18,7 +18,10 @@ import {
   MapPin,
   Loader2,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  Sun,
+  Sunset,
+  Moon
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
@@ -26,6 +29,7 @@ import { useCounselingFlow } from '../../store/CounselingFlowContext';
 import { useToast } from '../../store/ToastContext';
 import PageTransition from '../../components/common/PageTransition';
 import GuidedAssessment from '../../components/counseling/GuidedAssessment';
+import { SESSION_PERIODS, groupSlotsBySessionPeriod } from '../../utils/scheduleHelpers';
 
 const steps = [
   { id: 1, title: 'Asesmen Awal', short: 'Asesmen' },
@@ -880,7 +884,7 @@ export const CounselingWizard = () => {
                     {availableDates.map((dateStr) => {
                       const isSelected = selectedDate === dateStr;
                       const dateMeta = formatSlotDateBadge(dateStr);
-                      const slotCount = groupedSlots[dateStr]?.length || 0;
+                      const slotCount = (groupedSlots[dateStr] || []).filter((s) => s.status === 'AVAILABLE').length;
                       return (
                         <button
                           key={dateStr}
@@ -915,52 +919,110 @@ export const CounselingWizard = () => {
                 {/* Divider */}
                 <div className="border-t border-slate-100" />
 
-                {/* Time Slots Area */}
-                <div className="space-y-2">
+                {/* Time Slots Area — Dikelompokkan per 3 Sesi (Pagi / Siang / Sore) @ 30 menit */}
+                <div className="space-y-3">
                   <div className="flex items-center justify-between px-0.5">
-                    <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-600 uppercase tracking-wider">
-                      <Clock className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>
-                        Jam Pertemuan Tersedia ({selectedDate ? formatSlotDateBadge(selectedDate).fullDate : ''})
-                      </span>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-600 uppercase tracking-wider">
+                        <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>
+                          Jam Pertemuan ({selectedDate ? formatSlotDateBadge(selectedDate).fullDate : ''})
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Pilih jam pasti per 30 menit (WIB) dari sesi Pagi, Siang, atau Sore
+                      </p>
                     </div>
                     {selectedSlot && (
-                      <span className="hidden sm:inline-flex text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                      <span className="hidden sm:inline-flex text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/80">
                         Dipilih: {selectedSlot.start_time?.substring(0, 5)} – {selectedSlot.end_time?.substring(0, 5)} WIB
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-2.5">
-                    {slotsForActiveDate.map((slot) => {
-                      const isSelected = selectedSlot?.id === slot.id;
-                      const isBooked = slot.status === 'BOOKED';
-                      return (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          disabled={isBooked}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border text-center transition-all cursor-pointer ${
-                            isBooked
-                              ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-                              : isSelected
-                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs ring-2 ring-emerald-600/30'
-                              : 'bg-white border-slate-200/90 text-slate-800 hover:border-emerald-500 hover:bg-emerald-50/20'
-                          }`}
-                        >
-                          <div className="text-xs sm:text-sm font-black tracking-tight">
-                            {slot.start_time?.substring(0, 5)} – {slot.end_time?.substring(0, 5)}
-                          </div>
-                          <div className={`text-[10px] mt-0.5 font-bold ${
-                            isSelected ? 'text-emerald-100' : isBooked ? 'text-slate-400' : 'text-emerald-600'
-                          }`}>
-                            {isBooked ? 'Penuh' : isSelected ? '✓ Terpilih' : 'Tersedia'}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {(() => {
+                    const byPeriod = groupSlotsBySessionPeriod(slotsForActiveDate);
+                    const periodIcons = {
+                      morning: { icon: Sun, color: 'text-amber-500', headerBg: 'bg-amber-50/70 border-amber-200/80 text-amber-900' },
+                      afternoon: { icon: Sunset, color: 'text-orange-500', headerBg: 'bg-orange-50/70 border-orange-200/80 text-orange-900' },
+                      evening: { icon: Moon, color: 'text-indigo-500', headerBg: 'bg-indigo-50/70 border-indigo-200/80 text-indigo-900' },
+                    };
+
+                    return (
+                      <div className="space-y-3.5">
+                        {SESSION_PERIODS.map((period) => {
+                          const periodSlots = byPeriod[period.id] || [];
+                          if (periodSlots.length === 0) return null;
+                          const Icon = periodIcons[period.id].icon;
+                          const availInPeriod = periodSlots.filter((s) => s.status === 'AVAILABLE').length;
+
+                          return (
+                            <div key={period.id} className="space-y-2">
+                              <div className={`flex items-center justify-between px-3 py-1.5 rounded-xl border text-xs font-bold ${periodIcons[period.id].headerBg}`}>
+                                <span className="flex items-center gap-1.5">
+                                  <Icon className={`w-3.5 h-3.5 ${periodIcons[period.id].color}`} />
+                                  <span>Sesi {period.label}</span>
+                                  <span className="font-normal opacity-75">({period.time} WIB)</span>
+                                </span>
+                                <span className="text-[11px] font-semibold">
+                                  {availInPeriod} slot tersedia
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                                {periodSlots.map((slot) => {
+                                  const isSelected = selectedSlot?.id === slot.id;
+                                  const isZoomConflict = slot.status === 'ZOOM_CONFLICT';
+                                  const isBooked = slot.status === 'BOOKED';
+                                  const isDisabled = isBooked || isZoomConflict;
+
+                                  return (
+                                    <button
+                                      key={slot.id}
+                                      type="button"
+                                      disabled={isDisabled}
+                                      title={slot.conflict_reason || `${slot.start_time} – ${slot.end_time} WIB`}
+                                      onClick={() => setSelectedSlot(slot)}
+                                      className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border text-center transition-all ${
+                                        isZoomConflict
+                                          ? 'bg-rose-50/60 text-rose-400 border-rose-200 cursor-not-allowed opacity-75'
+                                          : isBooked
+                                          ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                                          : isSelected
+                                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-soft-xs ring-2 ring-emerald-600/30 cursor-pointer'
+                                          : 'bg-white border-slate-200/90 text-slate-800 hover:border-emerald-500 hover:bg-emerald-50/20 cursor-pointer'
+                                      }`}
+                                    >
+                                      <div className="text-xs sm:text-sm font-black tracking-tight">
+                                        {slot.start_time?.substring(0, 5)} – {slot.end_time?.substring(0, 5)}
+                                      </div>
+                                      <div className={`text-[10px] mt-0.5 font-bold ${
+                                        isSelected
+                                          ? 'text-emerald-100'
+                                          : isZoomConflict
+                                          ? 'text-rose-500'
+                                          : isBooked
+                                          ? 'text-slate-400'
+                                          : 'text-emerald-600'
+                                      }`}>
+                                        {isZoomConflict
+                                          ? 'Zoom Penuh'
+                                          : isBooked
+                                          ? 'Penuh'
+                                          : isSelected
+                                          ? '✓ Terpilih'
+                                          : '30 mnt · Tersedia'}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
