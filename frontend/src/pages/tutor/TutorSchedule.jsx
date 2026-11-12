@@ -14,6 +14,7 @@ import {
   Sun,
   Sunset,
   Moon,
+  UserCheck,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
@@ -86,15 +87,15 @@ function CheckboxGroup({ label, options, selected, onChange }) {
               onClick={() => toggle(opt.value)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
                 checked
-                  ? 'bg-teal-600 text-white border-teal-600 shadow-sm shadow-teal-200'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-teal-300 hover:bg-teal-50'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
               }`}
             >
               {checked ? <CheckSquare size={15} /> : <Square size={15} />}
               {Icon && <Icon size={14} className={checked ? 'text-white' : opt.color} />}
               <span>{opt.short || opt.label}</span>
               {opt.time && (
-                <span className={`text-xs ml-1 ${checked ? 'text-teal-100' : 'text-slate-400'}`}>
+                <span className={`text-xs ml-1 ${checked ? 'text-indigo-200' : 'text-slate-400'}`}>
                   {opt.time}
                 </span>
               )}
@@ -275,22 +276,25 @@ export const TutorSchedule = () => {
 
   return (
     <PageTransition className="space-y-6 pb-12">
-      {/* Header */}
+      {/* Header — mirip tampilan Admin Atur Jadwal Konselor */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Kelola Jadwal Konseling</h2>
-          <p className="text-xs text-slate-500">
-            Atur ketersediaan sesi per 30 menit (WIB) untuk Pagi, Siang, dan Sore
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <CalendarCheck className="text-teal-600" size={22} />
+            Atur Jadwal Konselor
+          </h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Tentukan hari &amp; sesi aktif (Pagi/Siang/Sore), lalu terapkan template slot 30 menit WIB secara otomatis
           </p>
         </div>
         <button
           type="button"
           onClick={fetchMySlots}
           disabled={isLoadingSlots}
-          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition-colors text-xs font-semibold flex items-center gap-1.5 self-start sm:self-auto"
+          className="flex items-center gap-2 px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-sm font-medium transition-colors self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSlots ? 'animate-spin' : ''}`} />
-          Segarkan Jadwal
+          <RefreshCw size={15} className={isLoadingSlots ? 'animate-spin' : ''} />
+          Refresh
         </button>
       </div>
 
@@ -321,14 +325,19 @@ export const TutorSchedule = () => {
 
           {mode === 'template' ? (
             <div className="bg-white border border-slate-200 rounded-xl shadow-soft-xs">
-              <div className="flex items-center justify-between p-5 border-b border-slate-100">
-                <div>
-                  <div className="font-bold text-slate-800">🗓️ Template Jadwal Konselor</div>
-                  <div className="text-xs text-slate-500">
-                    Pilih hari aktif dan sesi waktu — sistem memecah setiap sesi menjadi slot 30 menit otomatis
+              <div className="flex items-center gap-3 p-5 border-b border-slate-100">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
+                    <UserCheck size={18} className="text-teal-600" />
                   </div>
+                )}
+                <div className="min-w-0">
+                  <div className="font-bold text-slate-800 truncate">{user?.name || 'Konselor'}</div>
+                  <div className="text-xs text-slate-500 truncate">{user?.email}</div>
                 </div>
-                <div className="hidden sm:flex items-center gap-2 text-xs">
+                <div className="ml-auto flex items-center gap-2 text-xs shrink-0">
                   <span className="bg-green-50 text-green-700 px-2 py-1 rounded-full border border-green-200">
                     {totalSlots - totalBooked} tersedia
                   </span>
@@ -339,6 +348,7 @@ export const TutorSchedule = () => {
               </div>
 
               <form onSubmit={handleApplyTemplate} className="p-5 space-y-5">
+                <div className="text-sm font-bold text-slate-700">🗓️ Template Jadwal Konselor</div>
                 {/* Day selector */}
                 <CheckboxGroup
                   label="Hari Aktif"
@@ -802,3 +812,5 @@ export const TutorSchedule = () => {
     </PageTransition>
   );
 };
+
+export default TutorSchedule;
