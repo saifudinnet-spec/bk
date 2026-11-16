@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CounselingActionPlan;
 use App\Models\CounselingCase;
 use App\Models\CounselingSession;
+use App\Models\SystemSetting;
 use App\Models\TutorAvailability;
 use App\Models\User;
 use Carbon\Carbon;
@@ -313,6 +314,80 @@ class BusinessLogicAuditTest extends TestCase
         Sanctum::actingAs($tutor);
         $this->getJson('/api/tutor/dashboard')->assertStatus(200);
         $this->getJson('/api/tutor/ratings')->assertStatus(200);
+    }
+
+    public function test_zoom_signature_jwt_generation_matches_sdk_6_specification(): void
+    {
+        SystemSetting::set('zoom_sdk_key', 'test_client_id_key');
+        SystemSetting::set('zoom_sdk_secret', 'test_client_secret_xyz');
+        SystemSetting::set('zoom_permanent_meeting_id', '8492019481');
+        SystemSetting::set('zoom_permanent_meeting_password', 'bk1234');
+
+        $tutor = User::factory()->create(['role' => 'TUTOR', 'status' => 'active', 'name' => 'Konselor Test']);
+        $student = User::factory()->create(['role' => 'STUDENT', 'status' => 'active', 'name' => 'Siswa Test']);
+
+        $case = CounselingCase::create([
+            'user_id' => $student->id,
+            'tutor_id' => $tutor->id,
+            'category' => 'Pribadi',
+            'method' => 'ZOOM',
+            'initial_reason' => 'Konseling Zoom',
+            'status' => 'SCHEDULED',
+        ]);
+
+        $session = CounselingSession::create([
+            'counseling_case_id' => $case->id,
+            'user_id' => $student->id,
+            'tutor_id' => $tutor->id,
+            'start_at' => Carbon::now()->subMinutes(5),
+            'end_at' => Carbon::now()->addMinutes(40),
+            'method' => 'ZOOM',
+            'status' => 'SCHEDULED',
+            'meeting_number' => '8492019481',
+            'meeting_password' => 'bk1234',
+        ]);
+
+        Sanctum::actingAs($student);
+        $response = $this->postJson('/api/zoom/signature', [
+            'session_id' => $session->id,
+        ]);
+
+        $response->assertStatus(200);
+        $data = $response->json('data');
+
+        $this->assertNotEmpty($data['signature']);
+        $this->assertEquals('8492019481', $data['meeting_number']);
+        $this->assertEquals('bk1234', $data['password']);
+        $this->assertEquals(0, $data['role']);
+
+        // Verify JWT format: header.payload.signature
+        $jwtParts = explode('.', $data['signature']);
+        $this->assertCount(3, $jwtParts);
+
+        // Decode payload
+        $payloadJson = base64_decode(str_replace(['-', '_'], ['+', '/'], $jwtParts[1]));
+        $payload = json_decode($payloadJson, true);
+
+        // Crucial Zoom SDK 6.x claims:
+        // 1. appKey must be present (Client ID)
+        $this->assertEquals('test_client_id_key', $payload['appKey']);
+        // 2. sdkKey must NOT be in payload (deprecated and triggers warnings)
+        $this->assertArrayNotHasKey('sdkKey', $payload);
+        // 3. meeting number 'mn'
+        $this->assertEquals('8492019481', $payload['mn']);
+        // 4. role
+        $this->assertEquals(0, $payload['role']);
+        // 5. timestamps
+        $this->assertArrayHasKey('iat', $payload);
+        $this->assertArrayHasKey('exp', $payload);
+        $this->assertArrayHasKey('tokenExp', $payload);
+        $this->assertEquals($payload['exp'], $payload['tokenExp']);
+
+        // Verify HMAC SHA256 signature
+        $expectedSig = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(
+            hash_hmac('sha256', "{$jwtParts[0]}.{$jwtParts[1]}", 'test_client_secret_xyz', true)
+        ));
+        $this->assertEquals($expectedSig, $jwtParts[2]);
     }
 }
 
