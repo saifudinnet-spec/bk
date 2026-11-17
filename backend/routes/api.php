@@ -172,6 +172,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Deploy Logs (Admin Panel)
         Route::get('/deploy/logs', [DeployController::class, 'logs']);
         Route::get('/deploy/status', [DeployController::class, 'status']);
+        Route::get('/deploy/progress', [DeployController::class, 'progress']);
         Route::post('/deploy/run', [DeployController::class, 'runManual']);
     });
 });

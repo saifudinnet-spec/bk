@@ -143,28 +143,79 @@ function ConsolePanel({ output, status }) {
 
 // ─── Panel Aksi Deploy ────────────────────────────────────────
 function DeployActionPanel({ onDeployDone }) {
-  const [running, setRunning]   = useState(false);
-  const [output, setOutput]     = useState('');
+  const [running, setRunning]           = useState(false);
+  const [output, setOutput]             = useState('');
   const [deployStatus, setDeployStatus] = useState(null); // null | 'running' | 'success' | 'failed'
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed]       = useState(false);
+  const pollTimerRef                    = useRef(null);
+
+  // Bersihkan interval saat unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  const startPolling = useCallback((logId) => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const prog = await api.get(`/admin/deploy/progress?log_id=${logId}`);
+        if (prog && prog.output) {
+          setOutput(prog.output);
+        }
+
+        if (prog.finished || prog.status === 'success' || prog.status === 'failed') {
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          setDeployStatus(prog.status);
+          setRunning(false);
+          setConfirmed(false);
+          if (onDeployDone) onDeployDone();
+        }
+      } catch (pollErr) {
+        console.warn('Deploy poll check:', pollErr);
+      }
+    }, 1500);
+  }, [onDeployDone]);
+
+  // Cek apakah ada deployment yang sedang berjalan saat panel dimuat
+  useEffect(() => {
+    let isMounted = true;
+    const checkRunningDeploy = async () => {
+      try {
+        const prog = await api.get('/admin/deploy/progress');
+        if (!isMounted) return;
+        if (prog && prog.status === 'running') {
+          setRunning(true);
+          setDeployStatus('running');
+          setOutput(prog.output || 'Deployment sedang berjalan di latar belakang...\n');
+          startPolling(prog.log_id);
+        }
+      } catch {}
+    };
+    checkRunningDeploy();
+    return () => { isMounted = false; };
+  }, [startPolling]);
 
   const handleDeploy = async () => {
     setRunning(true);
     setDeployStatus('running');
-    setOutput('Menghubungi server...\nMemulai proses deploy...\n\n');
+    setOutput('Menghubungi server...\nMemulai proses deploy di latar belakang...\n\n');
 
     try {
       const data = await api.post('/admin/deploy/run');
 
-      setOutput(data.output || '(Tidak ada output)');
-      setDeployStatus(data.success ? 'success' : 'failed');
-      setConfirmed(false);
-
-      if (onDeployDone) onDeployDone();
+      if (data.log_id) {
+        startPolling(data.log_id);
+      } else {
+        setOutput(data.output || data.message || 'Gagal memulai deployment.');
+        setDeployStatus(data.success ? 'success' : 'failed');
+        setRunning(false);
+      }
     } catch (err) {
       setOutput(`ERROR: Gagal menghubungi server.\n${err.message || 'Terjadi kesalahan sistem'}`);
       setDeployStatus('failed');
-    } finally {
       setRunning(false);
     }
   };
