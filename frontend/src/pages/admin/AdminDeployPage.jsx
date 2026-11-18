@@ -76,6 +76,19 @@ function ServerStatusCard({ status, loading, onRefresh }) {
           </div>
         )}
       </div>
+      {status.can_exec === false && (
+        <div className="mt-4 bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-800 space-y-1">
+          <p className="font-bold">⚠️ Eksekusi Shell PHP Dinonaktifkan di Server</p>
+          <p>
+            Fungsi PHP ({(status.disabled_functions || []).join(', ') || 'exec, shell_exec'}) diblokir di{' '}
+            <code className="bg-white px-1 rounded">php.ini</code> sehingga tombol Pull &amp; Update otomatis tidak dapat berjalan.
+          </p>
+          <p className="text-rose-700">
+            Solusi di aaPanel: <strong>App Store → PHP → Settings → Disabled functions</strong>, hapus{' '}
+            <code className="bg-white px-1 rounded">exec</code> atau <code className="bg-white px-1 rounded">shell_exec</code>, lalu restart PHP.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -159,9 +172,13 @@ function DeployActionPanel({ onDeployDone }) {
   const startPolling = useCallback((logId) => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
 
-    pollTimerRef.current = setInterval(async () => {
+    let consecutiveErrors = 0;
+
+    const pollOnce = async () => {
       try {
         const prog = await api.get(`/admin/deploy/progress?log_id=${logId}`);
+        consecutiveErrors = 0;
+
         if (prog && prog.output) {
           setOutput(prog.output);
         }
@@ -174,9 +191,24 @@ function DeployActionPanel({ onDeployDone }) {
           if (onDeployDone) onDeployDone();
         }
       } catch (pollErr) {
-        console.warn('Deploy poll check:', pollErr);
+        consecutiveErrors += 1;
+        const statusCode = pollErr?.status;
+        const isFatal = statusCode === 404 || statusCode === 403 || statusCode === 401;
+
+        if (isFatal || consecutiveErrors >= 3) {
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          const hint = statusCode === 404
+            ? '\n\nKemungkinan route cache Laravel di server masih lama (endpoint /admin/deploy/progress belum terdaftar). Jalankan di terminal server: cd backend && php artisan optimize:clear'
+            : '';
+          setOutput((prev) => `${prev}\n\nERROR Polling (${statusCode || 'network'}): ${pollErr.message || 'Gagal memantau progress deploy.'}${hint}`);
+          setDeployStatus('failed');
+          setRunning(false);
+        }
       }
-    }, 1500);
+    };
+
+    pollOnce();
+    pollTimerRef.current = setInterval(pollOnce, 1500);
   }, [onDeployDone]);
 
   // Cek apakah ada deployment yang sedang berjalan saat panel dimuat
@@ -186,7 +218,7 @@ function DeployActionPanel({ onDeployDone }) {
       try {
         const prog = await api.get('/admin/deploy/progress');
         if (!isMounted) return;
-        if (prog && prog.status === 'running') {
+        if (prog && prog.status === 'running' && prog.log_id) {
           setRunning(true);
           setDeployStatus('running');
           setOutput(prog.output || 'Deployment sedang berjalan di latar belakang...\n');
@@ -206,6 +238,18 @@ function DeployActionPanel({ onDeployDone }) {
     try {
       const data = await api.post('/admin/deploy/run');
 
+      if (data.output) {
+        setOutput(data.output);
+      }
+
+      if (data.finished || data.status === 'success' || data.status === 'failed') {
+        setDeployStatus(data.status === 'success' || data.success ? 'success' : 'failed');
+        setRunning(false);
+        setConfirmed(false);
+        if (onDeployDone) onDeployDone();
+        return;
+      }
+
       if (data.log_id) {
         startPolling(data.log_id);
       } else {
@@ -214,7 +258,8 @@ function DeployActionPanel({ onDeployDone }) {
         setRunning(false);
       }
     } catch (err) {
-      setOutput(`ERROR: Gagal menghubungi server.\n${err.message || 'Terjadi kesalahan sistem'}`);
+      const detail = err?.data?.output || err?.data?.message || err.message || 'Terjadi kesalahan sistem';
+      setOutput(`ERROR: Gagal menjalankan deploy.\n${detail}`);
       setDeployStatus('failed');
       setRunning(false);
     }
@@ -390,11 +435,10 @@ export default function AdminDeployPage() {
     fetchStatus();
   }, []);
 
-  const handleDeployDone = () => {
+  const handleDeployDone = useCallback(() => {
     fetchLogs();
     fetchStatus();
-    setActiveTab('history');
-  };
+  }, [fetchLogs, fetchStatus]);
 
   const tabs = [
     { id: 'action',  label: '🚀 Pull & Update' },
