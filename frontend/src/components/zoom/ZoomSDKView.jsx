@@ -37,7 +37,7 @@ export const ZoomSDKView = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoActive, setIsVideoActive] = useState(true);
-  const [participantCount, setParticipantCount] = useState(1); // Mulai dari 1 (diri sendiri), naik saat user lain join
+  const [participantCount, setParticipantCount] = useState(0); // Diisi dari Zoom SDK event (jumlah sebenarnya)
 
   const iframeRef = useRef(null);
   const containerRef = useRef(null);
@@ -163,9 +163,21 @@ export const ZoomSDKView = ({
         setIsVideoActive(Boolean(msg.isVideoOn));
       } else if (msg.type === 'ZOOM_USER_ADDED') {
         setRemoteUserJoined(true);
-        setParticipantCount((prev) => prev + 1);
+        // Gunakan jumlah peserta real dari payload Zoom SDK, bukan counter manual
+        if (typeof msg.participantCount === 'number') {
+          setParticipantCount(msg.participantCount);
+        } else {
+          setParticipantCount((prev) => prev + 1);
+        }
       } else if (msg.type === 'ZOOM_USER_REMOVED') {
-        setParticipantCount((prev) => Math.max(1, prev - 1));
+        if (typeof msg.participantCount === 'number') {
+          setParticipantCount(msg.participantCount);
+        } else {
+          setParticipantCount((prev) => Math.max(1, prev - 1));
+        }
+      } else if (msg.type === 'ZOOM_PARTICIPANT_COUNT') {
+        // Pesan sinkronisasi jumlah peserta real dari iframe
+        setParticipantCount(msg.count);
       } else if (msg.type === 'ZOOM_MEETING_LEAVE') {
         onLeaveSession();
       }

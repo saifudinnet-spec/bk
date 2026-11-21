@@ -283,6 +283,36 @@
       z-index: 1000000 !important;
     }
 
+    /* ============================================================
+       SEMBUNYIKAN tombol pilihan tampilan (Ribbon, Speaker, Gallery, dsb)
+       di pojok kanan atas Zoom SDK. Tombol ini memiliki bug dimana
+       setelah diganti tampilan, tidak bisa kembali ke tampilan awal.
+       ============================================================ */
+    [class*="view-control"],
+    [class*="view-switcher"],
+    .meeting-app__video-control-bar,
+    [class*="video-layout-switcher"],
+    [class*="layout-switcher"],
+    [class*="active-view-dropdown"],
+    [class*="active-view-button"],
+    [class*="view-mode-switcher"],
+    [class*="gallery-video-layout"],
+    [aria-label*="View"],
+    [aria-label*="view"],
+    [title*="Speaker View"],
+    [title*="Gallery View"],
+    [title*="Ribbon"],
+    [title*="Tampilan"] {
+      display: none !important;
+      visibility: hidden !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+      pointer-events: none !important;
+      position: absolute !important;
+      opacity: 0 !important;
+    }
+
     /* Video Helper Tip Pill */
     .video-tip {
       position: absolute;
@@ -547,6 +577,55 @@
       // Interval fallback for dynamic layout adjustments
       setInterval(enforceToolbarAndLayout, 400);
 
+      // Fungsi untuk menyembunyikan tombol view switcher (ribbon, speaker, gallery, dsb)
+      // yang muncul secara dinamis di Zoom SDK setelah peserta join
+      function hideViewSwitcherButtons() {
+        try {
+          // Sembunyikan tombol layout di pojok kanan atas area video Zoom SDK
+          const selectors = [
+            '[class*="view-control"]',
+            '[class*="view-switcher"]',
+            '[class*="layout-switcher"]',
+            '[class*="view-mode"]',
+            '[class*="active-view"]',
+            '[class*="gallery-video-layout"]',
+          ];
+          selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+              el.style.setProperty('display', 'none', 'important');
+              el.style.setProperty('visibility', 'hidden', 'important');
+              el.style.setProperty('pointer-events', 'none', 'important');
+              el.style.setProperty('opacity', '0', 'important');
+            });
+          });
+
+          // Juga cari tombol berdasarkan aria-label/title
+          const allButtons = document.querySelectorAll('button, [role="button"]');
+          allButtons.forEach(btn => {
+            const label = (btn.getAttribute('aria-label') || btn.getAttribute('title') || '').toLowerCase();
+            if (
+              label.includes('speaker view') ||
+              label.includes('gallery view') ||
+              label.includes('ribbon') ||
+              label.includes('tampilan pembicara') ||
+              label.includes('tampilan galeri') ||
+              label.includes('tampilan ribon') ||
+              label.includes('standard') ||
+              label.includes('side-by-side')
+            ) {
+              btn.style.setProperty('display', 'none', 'important');
+              btn.style.setProperty('visibility', 'hidden', 'important');
+              btn.style.setProperty('pointer-events', 'none', 'important');
+            }
+          });
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // Panggil periodik untuk menyembunyikan view switcher yang muncul dinamis
+      setInterval(hideViewSwitcherButtons, 500);
+
       // Parse parameters from query string or wait for parent message
       function getQueryParams() {
         const params = new URLSearchParams(window.location.search);
@@ -615,13 +694,11 @@
             video: {
               isResizable: true,
               defaultViewType: 'gallery',
+              // Hanya gunakan tampilan gallery (default). Semua pilihan view lain
+              // (ribbon, speaker, dsb) disembunyikan karena bug kembali ke tampilan awal.
               viewSizes: {
                 default: {
                   width: targetWidth,
-                  height: targetHeight
-                },
-                ribbon: {
-                  width: 320,
                   height: targetHeight
                 }
               }
@@ -637,8 +714,7 @@
               if (client && typeof client.updateVideoOptions === 'function') {
                 client.updateVideoOptions({
                   viewSizes: {
-                    default: { width: nw, height: nh },
-                    ribbon: { width: 320, height: nh }
+                    default: { width: nw, height: nh }
                   }
                 });
               }
@@ -662,14 +738,43 @@
           });
 
           // 2. Safe to register events AFTER init (when internal event registry is populated)
+          // Helper: hitung jumlah peserta sesungguhnya dari Zoom SDK
+          function getActualParticipantCount() {
+            try {
+              if (client && typeof client.getAttendeeslist === 'function') {
+                const list = client.getAttendeeslist();
+                return Array.isArray(list) ? list.length : null;
+              }
+              if (client && typeof client.getAttendeesList === 'function') {
+                const list = client.getAttendeesList();
+                return Array.isArray(list) ? list.length : null;
+              }
+            } catch (e) {}
+            return null;
+          }
+
+          function sendParticipantCount() {
+            const count = getActualParticipantCount();
+            if (count !== null) {
+              window.parent.postMessage({ type: 'ZOOM_PARTICIPANT_COUNT', count }, '*');
+            }
+          }
+
           try {
             client.on('user-added', (payload) => {
-              window.parent.postMessage({ type: 'ZOOM_USER_ADDED', payload }, '*');
+              const count = getActualParticipantCount();
+              window.parent.postMessage({ type: 'ZOOM_USER_ADDED', payload, participantCount: count }, '*');
               enforceToolbarAndLayout();
+              // Sembunyikan tombol view layout yang mungkin baru muncul setelah user join
+              hideViewSwitcherButtons();
             });
             client.on('user-removed', (payload) => {
-              window.parent.postMessage({ type: 'ZOOM_USER_REMOVED', payload }, '*');
+              const count = getActualParticipantCount();
+              window.parent.postMessage({ type: 'ZOOM_USER_REMOVED', payload, participantCount: count }, '*');
               enforceToolbarAndLayout();
+            });
+            client.on('user-updated', () => {
+              sendParticipantCount();
             });
           } catch (evtErr) {
             console.warn('Notice: event registration skipped', evtErr);
@@ -696,6 +801,17 @@
           window.parent.postMessage({ type: 'ZOOM_JOIN_SUCCESS', payload: joinResult }, '*');
 
           enforceToolbarAndLayout();
+          hideViewSwitcherButtons();
+
+          // Kirim jumlah peserta sebenarnya setelah join berhasil
+          setTimeout(() => {
+            sendParticipantCount();
+            hideViewSwitcherButtons();
+          }, 2000);
+          setTimeout(() => {
+            sendParticipantCount();
+            hideViewSwitcherButtons();
+          }, 5000);
 
           // ── FIX AUDIO: Zoom SDK tidak otomatis join audio. ──
           // Harus dipanggil eksplisit agar mikrofon aktif & suara terdengar lawan bicara.
