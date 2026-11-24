@@ -179,11 +179,11 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
         },
         {
           id: 'reports',
-          label: 'Laporan & Akreditasi',
+          label: 'Ekspor Laporan',
           icon: FileSpreadsheet,
           iconColor: 'text-emerald-600 bg-emerald-50 border-emerald-200/70',
-          badge: 'Baru',
-          description: 'Ekspor Excel, PDF & statistik',
+          badge: null,
+          description: 'Nomor kasus, konseli & ulasan',
         },
         {
           id: 'zoom_settings',

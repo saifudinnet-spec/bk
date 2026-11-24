@@ -806,7 +806,7 @@ class AdminController extends Controller
             $casesQuery->where('method', strtoupper($method));
         }
 
-        $allCases = $casesQuery->with(['user:id,name,email,role', 'tutor:id,name,email', 'sessions'])->get();
+        $allCases = $casesQuery->with(['user:id,name,email,role', 'tutor:id,name,email', 'sessions.feedback'])->get();
 
         // 2. Sessions Query
         $sessionsQuery = CounselingSession::whereBetween('start_at', [$fromUtc, $toUtc]);
@@ -919,6 +919,9 @@ class AdminController extends Controller
 
         // Cases list
         $casesList = $allCases->map(function ($c) {
+            $lastSession = $c->sessions ? $c->sessions->sortByDesc('start_at')->first() : null;
+            $feedback = $lastSession?->feedback;
+
             return [
                 'id' => $c->id,
                 'case_number' => $c->case_number,
@@ -929,6 +932,8 @@ class AdminController extends Controller
                 'method' => $c->method,
                 'tutor_name' => $c->tutor?->name ?? 'Belum Ditugaskan',
                 'status' => $c->status,
+                'rating' => $feedback?->rating,
+                'review' => $feedback?->comment,
                 'created_at' => $c->created_at->timezone('Asia/Jakarta')->format('Y-m-d H:i'),
                 'closed_at' => $c->closed_at ? $c->closed_at->timezone('Asia/Jakarta')->format('Y-m-d H:i') : null,
                 'sessions_count' => $c->sessions ? $c->sessions->count() : 0,
@@ -1018,31 +1023,28 @@ class AdminController extends Controller
             // UTF-8 BOM for Microsoft Excel compatibility
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            // Institutional Header
-            fputcsv($handle, ['LAPORAN LAYANAN BIMBINGAN DAN KONSELING MAHASISWA & CIVITAS']);
-            fputcsv($handle, ['PUSAT BIMBINGAN DAN KONSELING - UIN SIBER SYEKH NURJATI CIREBON (UINSSC)']);
+            // Clean Header
+            fputcsv($handle, ['LAPORAN DATA KONSELING']);
             fputcsv($handle, ['Periode:', $from . ' s/d ' . $to]);
-            fputcsv($handle, ['Tanggal Ditarik:', Carbon::now('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB']);
+            fputcsv($handle, ['Tanggal Ditarik:', Carbon::now('Asia/Jakarta')->format('d/m/Y H:i') . ' WIB']);
             fputcsv($handle, ['Total Kasus:', $cases->count()]);
             fputcsv($handle, []);
 
-            // Column Headers
+            // Column Headers: nomor kasus, data konseli, topik, konselor, metode, skor rating, dan ulasan
             fputcsv($handle, [
                 'No.',
                 'Nomor Kasus',
-                'Tanggal Masuk (WIB)',
+                'Tanggal',
                 'Nama Konseli',
                 'Jenis Pengguna',
                 'Email Konseli',
-                'Kategori Permasalahan',
-                'Metode Konseling',
-                'Konselor Pendamping',
-                'Status Kasus',
+                'Topik Permasalahan',
+                'Konselor',
+                'Metode',
+                'Status',
                 'Jumlah Sesi',
-                'Status Sesi Terakhir',
-                'Skor Kepuasan (Rating)',
-                'Komentar Ulasan Konseli',
-                'Tanggal Penutupan (WIB)',
+                'Skor Rating (1-5)',
+                'Ulasan Konseli',
             ]);
 
             $no = 1;
@@ -1076,14 +1078,12 @@ class AdminController extends Controller
                     $case->user?->role === 'STUDENT' ? 'Mahasiswa' : 'Umum',
                     $case->user?->email ?? '-',
                     $case->category,
-                    $methodLabel,
                     $case->tutor?->name ?? 'Belum Ditugaskan',
+                    $methodLabel,
                     $statusLabel,
                     $case->sessions->count(),
-                    $lastSession ? $lastSession->status : 'Belum Ada Sesi',
                     $feedback ? "{$feedback->rating}/5" : '-',
                     $feedback?->comment ?? '-',
-                    $case->closed_at ? $case->closed_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-',
                 ]);
             }
 
