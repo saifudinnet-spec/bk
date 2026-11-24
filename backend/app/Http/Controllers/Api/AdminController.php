@@ -184,6 +184,35 @@ class AdminController extends Controller
     }
 
     /**
+     * Reset or update user password by Admin
+     */
+    public function resetUserPassword(Request $request, $id)
+    {
+        $this->ensureAdmin($request);
+
+        $request->validate([
+            'password' => 'required|string|min:6',
+        ], [
+            'password.required' => 'Kata sandi baru wajib diisi.',
+            'password.min' => 'Kata sandi baru minimal 6 karakter.',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        AuditLogService::log('admin_reset_password', 'User', (string)$user->id, [
+            'target_name' => $user->name,
+            'target_email' => $user->email,
+            'target_role' => $user->role,
+        ], $request->user()->id);
+
+        return response()->json([
+            'message' => "Kata sandi untuk pengguna {$user->name} berhasil diperbarui.",
+        ]);
+    }
+
+    /**
      * Get Audit Logs
      */
     public function getAuditLogs(Request $request)

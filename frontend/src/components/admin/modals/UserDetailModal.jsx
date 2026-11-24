@@ -1,15 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   Users,
   GraduationCap,
   Globe,
   ShieldCheck,
-  Power
+  Power,
+  KeyRound,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
+import api from '../../../services/api';
 
 export const UserDetailModal = ({ user, onClose, onToggleStatus }) => {
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState({ type: '', text: '' });
+
   if (!user) return null;
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetMsg({ type: '', text: '' });
+
+    if (newPassword.length < 6) {
+      setResetMsg({ type: 'error', text: 'Kata sandi baru minimal 6 karakter.' });
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const res = await api.put(`/admin/users/${user.id}/password`, {
+        password: newPassword,
+      });
+      setResetMsg({ type: 'success', text: res?.message || 'Kata sandi berhasil diubah.' });
+      setNewPassword('');
+      setTimeout(() => {
+        setShowResetPassword(false);
+        setResetMsg({ type: '', text: '' });
+      }, 2000);
+    } catch (err) {
+      setResetMsg({
+        type: 'error',
+        text: err?.data?.message || err?.message || 'Gagal mengubah kata sandi.',
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -234,6 +273,76 @@ export const UserDetailModal = ({ user, onClose, onToggleStatus }) => {
               </p>
             </div>
           )}
+
+          {/* Reset Password Section for Admin */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-darktext flex items-center gap-2 text-xs">
+                <KeyRound className="w-4 h-4 text-amber-600" />
+                Keamanan &amp; Kata Sandi
+              </h4>
+              {!showResetPassword && (
+                <button
+                  type="button"
+                  onClick={() => setShowResetPassword(true)}
+                  className="px-3 py-1 rounded-xl text-[11px] font-bold border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors"
+                >
+                  Ubah Kata Sandi Akun Ini
+                </button>
+              )}
+            </div>
+
+            {showResetPassword && (
+              <form onSubmit={handleResetPassword} className="space-y-2.5 pt-1">
+                {resetMsg.text && (
+                  <div
+                    className={`p-2.5 rounded-xl border text-[11px] flex items-center gap-2 ${
+                      resetMsg.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
+                    }`}
+                  >
+                    {resetMsg.type === 'success' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    )}
+                    <span>{resetMsg.text}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Masukkan kata sandi baru (min 6 karakter)"
+                    required
+                    minLength={6}
+                    className="flex-1 px-3 py-2 rounded-xl border border-softborder text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                  />
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50 shrink-0"
+                  >
+                    {resetLoading ? 'Menyimpan...' : 'Simpan Sandi Baru'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowResetPassword(false);
+                      setNewPassword('');
+                      setResetMsg({ type: '', text: '' });
+                    }}
+                    className="px-3 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-darktext text-xs font-bold transition-all shrink-0"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
 
         {/* Modal Footer */}

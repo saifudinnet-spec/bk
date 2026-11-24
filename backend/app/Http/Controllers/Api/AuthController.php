@@ -308,6 +308,51 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Change current authenticated user's password
+     */
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6|confirmed',
+        ], [
+            'current_password.required' => 'Kata sandi saat ini wajib diisi.',
+            'new_password.required' => 'Kata sandi baru wajib diisi.',
+            'new_password.min' => 'Kata sandi baru minimal 6 karakter.',
+            'new_password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            return response()->json([
+                'message' => 'Kata sandi saat ini yang Anda masukkan salah.',
+                'errors' => [
+                    'current_password' => ['Kata sandi saat ini yang Anda masukkan salah.'],
+                ],
+            ], 422);
+        }
+
+        $user->password = Hash::make($request->input('new_password'));
+        $user->save();
+
+        AuditLogService::log('change_password', 'User', (string)$user->id, [
+            'email' => $user->email,
+        ], $user->id);
+
+        return response()->json([
+            'message' => 'Kata sandi berhasil diperbarui.',
+        ]);
+    }
+
     private function formatUserResponse(User $user): array
     {
         $user->loadMissing(['studentProfile', 'generalProfile', 'tutorProfile']);

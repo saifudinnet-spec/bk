@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth & User
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
 
     // Fast Aggregated Student & Tutor Dashboards
     Route::get('/student/dashboard', [StudentDashboardController::class, 'getDashboardSummary']);
@@ -143,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users', [AdminController::class, 'getUsers']);
         Route::post('/users', [AdminController::class, 'createUser']);
         Route::put('/users/{id}/toggle-status', [AdminController::class, 'toggleUserStatus']);
+        Route::put('/users/{id}/password', [AdminController::class, 'resetUserPassword']);
         Route::get('/audit-logs', [AdminController::class, 'getAuditLogs']);
         Route::get('/settings', [AdminController::class, 'getSettings']);
         Route::put('/settings', [AdminController::class, 'updateSettings']);

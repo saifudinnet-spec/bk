@@ -26,8 +26,10 @@ import {
   CalendarDays,
   CalendarCheck,
   Rocket,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
+import ChangePasswordModal from '../common/ChangePasswordModal';
 
 export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
   const { user, logout } = useAuth();
@@ -36,6 +38,7 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCmsSubMenuCollapsed, setIsCmsSubMenuCollapsed] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // Determine active tab from URL search param or route path
   const currentTab = (() => {
@@ -382,13 +385,27 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Keluar Sistem</span>
-        </button>
+        <div className="mt-2.5 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setIsChangePasswordOpen(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-softborder bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+            title="Ubah kata sandi akun administrator"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+            <span>Ganti Sandi</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors"
+            title="Keluar dari sistem"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Keluar</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -446,6 +463,12 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
       <aside className="hidden md:flex flex-col w-64 lg:w-72 h-screen sticky top-0 bg-white border-r border-softborder shrink-0 z-20">
         {sidebarContent}
       </aside>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </>
   );
 };
