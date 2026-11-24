@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FolderHeart, Calendar, Clock, Video, FileText, ArrowLeft, ChevronRight, CheckCircle2, Star, Sparkles, MessageSquare, Plus } from 'lucide-react';
+import { FolderHeart, Calendar, Clock, Video, FileText, ArrowLeft, ChevronRight, CheckCircle2, Star, Sparkles, MessageSquare, Plus, XCircle, AlertCircle } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -10,6 +10,7 @@ import PageTransition from '../../components/common/PageTransition';
 import ActionPlanSection from '../../components/counseling/ActionPlanSection';
 import SessionFeedbackModal from '../../components/counseling/SessionFeedbackModal';
 import CounseleeDiagnosticCard from '../../components/counseling/CounseleeDiagnosticCard';
+import CancellationConfirmModal from '../../components/common/CancellationConfirmModal';
 
 const MOOD_LABELS = {
   MUCH_BETTER: 'Jauh Lebih Tenang',
@@ -26,6 +27,10 @@ export const CaseDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('action_plans'); // 'action_plans' | 'sessions'
   const [feedbackSession, setFeedbackSession] = useState(null);
+  const [isCancelCaseModalOpen, setIsCancelCaseModalOpen] = useState(false);
+  const [isCancellingCase, setIsCancellingCase] = useState(false);
+  const [cancellingSession, setCancellingSession] = useState(null);
+  const [isCancellingSession, setIsCancellingSession] = useState(false);
 
   const fetchCase = async () => {
     try {
@@ -83,8 +88,39 @@ export const CaseDetail = () => {
             Konseling: {caseItem.category}
           </h2>
         </div>
-        <StatusBadge status={caseItem.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={caseItem.status} />
+          {/* Tombol Batalkan Pengajuan (jika masih pending / belum mulai) */}
+          {(caseItem.status === 'WAITING_REVIEW' || caseItem.status === 'REVIEWED') && (isStudent || isAdmin) && (
+            <button
+              type="button"
+              onClick={() => setIsCancelCaseModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-700 bg-rose-50/80 hover:bg-rose-100 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+            >
+              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+              <span>Batalkan</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Banner Jika Kasus Dibatalkan */}
+      {caseItem.status === 'CANCELLED' && (
+        <div className="p-4 rounded-3xl bg-rose-50/90 border border-rose-200/90 text-rose-950 text-xs flex items-start gap-3 shadow-2xs">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-sm text-rose-900">Pengajuan Konseling Ini Telah Dibatalkan</p>
+            <p className="text-rose-800 leading-relaxed">
+              Kasus ini ditutup atas permintaan pembatalan. Seluruh slot dan jadwal sesi telah dibebaskan.
+              {caseItem.assessment_answers?.cancellation_reason && (
+                <span className="block font-semibold mt-1 text-slate-800">
+                  Alasan pembatalan: "{caseItem.assessment_answers.cancellation_reason}"
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* If Counselor / Admin: Render Rich Counselee Diagnostic Card */}
       {(isTutor || isAdmin) && caseItem.user ? (
@@ -338,7 +374,18 @@ export const CaseDetail = () => {
                     </div>
                   ) : null}
 
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-100">
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                    {(s.status === 'SCHEDULED' || s.status === 'READY') ? (
+                      <button
+                        type="button"
+                        onClick={() => setCancellingSession(s)}
+                        className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 min-h-[36px]"
+                      >
+                        <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Batalkan Jadwal</span>
+                      </button>
+                    ) : <span />}
+
                     <button
                       onClick={() => navigate(`/counseling/session/${s.id}`)}
                       className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1 min-h-[36px]"
@@ -361,6 +408,66 @@ export const CaseDetail = () => {
           onClose={() => setFeedbackSession(null)}
           session={feedbackSession}
           onSubmitted={fetchCase}
+        />
+      )}
+
+      {/* Case Cancellation Modal */}
+      {isCancelCaseModalOpen && (
+        <CancellationConfirmModal
+          isOpen={isCancelCaseModalOpen}
+          onClose={() => setIsCancelCaseModalOpen(false)}
+          isLoading={isCancellingCase}
+          title="Batalkan Pengajuan Konseling"
+          description="Apakah Anda yakin ingin membatalkan pengajuan konseling ini? Pengajuan akan ditutup dan jadwal sesi yang terhubung akan dibatalkan."
+          presets={[
+            'Permasalahan sudah teratasi secara mandiri',
+            'Jadwal dan kesibukan perkuliahan belum memungkinkan',
+            'Salah mengisi data atau topik permasalahan',
+            'Lainnya',
+          ]}
+          confirmButtonText="Ya, Batalkan Kasus"
+          onConfirm={async (reason) => {
+            setIsCancellingCase(true);
+            try {
+              await api.post(`/cases/${caseItem.id}/cancel`, { reason });
+              setIsCancelCaseModalOpen(false);
+              await fetchCase();
+            } catch (err) {
+              alert(err.response?.data?.message || err.message || 'Gagal membatalkan kasus.');
+            } finally {
+              setIsCancellingCase(false);
+            }
+          }}
+        />
+      )}
+
+      {/* Session Cancellation Modal */}
+      {cancellingSession && (
+        <CancellationConfirmModal
+          isOpen={!!cancellingSession}
+          onClose={() => setCancellingSession(null)}
+          isLoading={isCancellingSession}
+          title="Batalkan Sesi Konseling"
+          description="Membatalkan sesi ini akan membebaskan slot jadwal konselor sehingga dapat dipilih kembali. Kasus Anda tetap aktif untuk penjadwalan ulang."
+          presets={[
+            'Jadwal bentrok dengan jam perkuliahan',
+            'Ada halangan / kondisi darurat mendadak',
+            'Kondisi kesehatan sedang tidak memungkinkan',
+            'Lainnya',
+          ]}
+          confirmButtonText="Ya, Batalkan Sesi"
+          onConfirm={async (reason) => {
+            setIsCancellingSession(true);
+            try {
+              await api.post(`/sessions/${cancellingSession.id}/cancel`, { reason });
+              setCancellingSession(null);
+              await fetchCase();
+            } catch (err) {
+              alert(err.response?.data?.message || err.message || 'Gagal membatalkan sesi.');
+            } finally {
+              setIsCancellingSession(false);
+            }
+          }}
         />
       )}
     </PageTransition>

@@ -87,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/cases/{id}/status', [CounselingCaseController::class, 'updateStatus']);
     Route::post('/cases/{id}/approve', [CounselingCaseController::class, 'approve']);
     Route::post('/cases/{id}/reject', [CounselingCaseController::class, 'reject']);
+    Route::post('/cases/{id}/cancel', [CounselingCaseController::class, 'cancel']);
     Route::post('/cases/{id}/suggest-method', [CounselingCaseController::class, 'suggestMethod']);
     Route::post('/cases/{id}/respond-method-suggestion', [CounselingCaseController::class, 'respondMethodSuggestion']);
 
@@ -109,6 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/sessions/book', [CounselingSessionController::class, 'book']);
     Route::post('/sessions/instant', [CounselingSessionController::class, 'createInstantSession']);
     Route::get('/sessions/{id}', [CounselingSessionController::class, 'show']);
+    Route::post('/sessions/{id}/cancel', [CounselingSessionController::class, 'cancel']);
     Route::get('/sessions/{sessionId}/messages', [CounselingChatController::class, 'getMessages']);
     Route::post('/sessions/{sessionId}/messages', [CounselingChatController::class, 'sendMessage']);
 
@@ -170,6 +172,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/counselor-schedules', [AdminController::class, 'getCounselorSchedules']);
         Route::post('/counselor-schedules/template', [AdminController::class, 'setScheduleTemplate']);
         Route::delete('/counselor-schedules/{tutorId}/slots', [AdminController::class, 'clearCounselorSlots']);
+
+        // Admin Reports & Accreditation
+        Route::get('/reports/stats', [AdminController::class, 'getReportStats']);
+        Route::get('/reports/export', [AdminController::class, 'exportReport']);
 
         // Deploy Logs (Admin Panel)
         Route::get('/deploy/logs', [DeployController::class, 'logs']);

@@ -10,6 +10,7 @@ use App\Models\Question;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use App\Models\QuestionOption;
+use App\Models\SessionFeedback;
 use App\Models\SystemSetting;
 use App\Models\Tutor;
 use App\Models\TutorAvailability;
@@ -775,5 +776,320 @@ class AdminController extends Controller
             'message' => "{$deleted} slot jadwal yang belum dibooking berhasil dihapus.",
             'deleted' => $deleted,
         ]);
+    }
+
+    /**
+     * Admin: Get comprehensive counseling statistics & metrics for institutional reporting and accreditation
+     */
+    public function getReportStats(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $from = $request->query('from', Carbon::now('Asia/Jakarta')->subMonths(6)->startOfMonth()->toDateString());
+        $to = $request->query('to', Carbon::now('Asia/Jakarta')->toDateString());
+        $tutorId = $request->query('tutor_id');
+        $category = $request->query('category');
+        $method = $request->query('method');
+
+        $fromUtc = Carbon::parse($from, 'Asia/Jakarta')->startOfDay()->utc();
+        $toUtc = Carbon::parse($to, 'Asia/Jakarta')->endOfDay()->utc();
+
+        // 1. Cases Query
+        $casesQuery = CounselingCase::whereBetween('created_at', [$fromUtc, $toUtc]);
+        if ($tutorId) {
+            $casesQuery->where('tutor_id', $tutorId);
+        }
+        if ($category) {
+            $casesQuery->where('category', $category);
+        }
+        if ($method) {
+            $casesQuery->where('method', strtoupper($method));
+        }
+
+        $allCases = $casesQuery->with(['user:id,name,email,role', 'tutor:id,name,email', 'sessions'])->get();
+
+        // 2. Sessions Query
+        $sessionsQuery = CounselingSession::whereBetween('start_at', [$fromUtc, $toUtc]);
+        if ($tutorId) {
+            $sessionsQuery->where('tutor_id', $tutorId);
+        }
+        if ($method) {
+            $sessionsQuery->where('method', strtoupper($method));
+        }
+        $allSessions = $sessionsQuery->get();
+
+        // 3. Status Breakdown
+        $totalCases = $allCases->count();
+        $completedCases = $allCases->whereIn('status', ['COMPLETED', 'CLOSED'])->count();
+        $activeCases = $allCases->whereIn('status', ['REVIEWED', 'SCHEDULED', 'IN_PROGRESS'])->count();
+        $waitingCases = $allCases->where('status', 'WAITING_REVIEW')->count();
+        $cancelledCases = $allCases->where('status', 'CANCELLED')->count();
+
+        $totalSessions = $allSessions->count();
+        $completedSessions = $allSessions->where('status', 'COMPLETED')->count();
+        $cancelledSessions = $allSessions->where('status', 'CANCELLED')->count();
+        $scheduledSessions = $allSessions->whereIn('status', ['SCHEDULED', 'READY', 'IN_PROGRESS'])->count();
+
+        // 4. Unique Counselees
+        $uniqueCounseleesCount = $allCases->pluck('user_id')->unique()->count();
+
+        // 5. Category Breakdown
+        $categoryBreakdown = $allCases->groupBy('category')->map(function ($group, $cat) use ($totalCases) {
+            $count = $group->count();
+            return [
+                'category' => $cat ?: 'Lainnya',
+                'count' => $count,
+                'percentage' => $totalCases > 0 ? round(($count / $totalCases) * 100, 1) : 0,
+            ];
+        })->values()->sortByDesc('count')->values();
+
+        // 6. Method Breakdown
+        $methodBreakdown = $allCases->groupBy('method')->map(function ($group, $met) use ($totalCases) {
+            $count = $group->count();
+            return [
+                'method' => $met ?: 'ZOOM',
+                'count' => $count,
+                'percentage' => $totalCases > 0 ? round(($count / $totalCases) * 100, 1) : 0,
+            ];
+        })->values()->sortByDesc('count')->values();
+
+        // 7. Screening Risk Level Breakdown in this period
+        $screeningResponses = QuestionnaireResponse::whereBetween('created_at', [$fromUtc, $toUtc])->get();
+        $totalScreenings = $screeningResponses->count();
+        $riskLevels = [
+            'RENDAH' => $screeningResponses->filter(fn($r) => in_array(strtoupper($r->risk_level ?? ''), ['LOW', 'RENDAH']))->count(),
+            'SEDANG' => $screeningResponses->filter(fn($r) => in_array(strtoupper($r->risk_level ?? ''), ['MODERATE', 'SEDANG', 'MEDIUM']))->count(),
+            'TINGGI' => $screeningResponses->filter(fn($r) => in_array(strtoupper($r->risk_level ?? ''), ['HIGH', 'TINGGI', 'SEVERE']))->count(),
+            'KRISIS' => $screeningResponses->where('has_crisis_flag', true)->count(),
+        ];
+
+        // 8. Feedback Ratings & Satisfaction
+        $feedbacks = SessionFeedback::whereBetween('created_at', [$fromUtc, $toUtc])
+            ->when($tutorId, fn($q) => $q->where('tutor_id', $tutorId))
+            ->get();
+        $avgRating = $feedbacks->count() > 0 ? round((float)$feedbacks->avg('rating'), 1) : 5.0;
+        $ratingDistribution = [
+            'bintang_5' => $feedbacks->where('rating', 5)->count(),
+            'bintang_4' => $feedbacks->where('rating', 4)->count(),
+            'bintang_3' => $feedbacks->where('rating', 3)->count(),
+            'bintang_2' => $feedbacks->where('rating', 2)->count(),
+            'bintang_1' => $feedbacks->where('rating', 1)->count(),
+        ];
+
+        // 9. Counselor Performance Summary
+        $tutors = User::where('role', 'TUTOR')->with('tutorProfile')->get()->map(function ($tutor) use ($allCases, $allSessions, $feedbacks) {
+            $tutorCases = $allCases->where('tutor_id', $tutor->id);
+            $tutorSessions = $allSessions->where('tutor_id', $tutor->id);
+            $tutorFeedbacks = $feedbacks->where('tutor_id', $tutor->id);
+
+            return [
+                'id' => $tutor->id,
+                'name' => $tutor->name,
+                'nip' => $tutor->tutorProfile?->nip ?? '-',
+                'specialization' => $tutor->tutorProfile?->specialization ?? 'Konselor',
+                'total_cases' => $tutorCases->count(),
+                'completed_cases' => $tutorCases->whereIn('status', ['COMPLETED', 'CLOSED'])->count(),
+                'total_sessions' => $tutorSessions->count(),
+                'completed_sessions' => $tutorSessions->where('status', 'COMPLETED')->count(),
+                'avg_rating' => $tutorFeedbacks->count() > 0 ? round((float)$tutorFeedbacks->avg('rating'), 1) : 5.0,
+            ];
+        });
+
+        // 10. Monthly Trend
+        $monthlyTrend = [];
+        $cursor = Carbon::parse($from, 'Asia/Jakarta')->startOfMonth();
+        $endCursor = Carbon::parse($to, 'Asia/Jakarta')->endOfMonth();
+        while ($cursor->lte($endCursor)) {
+            $monthKey = $cursor->format('Y-m');
+            $monthLabel = $cursor->translatedFormat('F Y');
+            $mStart = $cursor->copy()->startOfMonth()->utc();
+            $mEnd = $cursor->copy()->endOfMonth()->utc();
+
+            $monthCases = CounselingCase::whereBetween('created_at', [$mStart, $mEnd])->count();
+            $monthSessions = CounselingSession::whereBetween('start_at', [$mStart, $mEnd])->count();
+
+            $monthlyTrend[] = [
+                'key' => $monthKey,
+                'label' => $monthLabel,
+                'cases' => $monthCases,
+                'sessions' => $monthSessions,
+            ];
+            $cursor->addMonth();
+        }
+
+        // Cases list
+        $casesList = $allCases->map(function ($c) {
+            return [
+                'id' => $c->id,
+                'case_number' => $c->case_number,
+                'counselee_name' => $c->user?->name ?? 'Anonim',
+                'counselee_email' => $c->user?->email ?? '-',
+                'counselee_type' => $c->user?->role === 'STUDENT' ? 'Mahasiswa' : 'Umum',
+                'category' => $c->category,
+                'method' => $c->method,
+                'tutor_name' => $c->tutor?->name ?? 'Belum Ditugaskan',
+                'status' => $c->status,
+                'created_at' => $c->created_at->timezone('Asia/Jakarta')->format('Y-m-d H:i'),
+                'closed_at' => $c->closed_at ? $c->closed_at->timezone('Asia/Jakarta')->format('Y-m-d H:i') : null,
+                'sessions_count' => $c->sessions ? $c->sessions->count() : 0,
+            ];
+        });
+
+        return response()->json([
+            'meta' => [
+                'institution' => 'Pusat Bimbingan & Konseling UIN Siber Syekh Nurjati Cirebon (UINSSC)',
+                'generated_at' => Carbon::now('Asia/Jakarta')->format('d F Y, H:i') . ' WIB',
+                'period_from' => $from,
+                'period_to' => $to,
+            ],
+            'summary' => [
+                'total_cases' => $totalCases,
+                'completed_cases' => $completedCases,
+                'active_cases' => $activeCases,
+                'waiting_cases' => $waitingCases,
+                'cancelled_cases' => $cancelledCases,
+                'completion_rate' => $totalCases > 0 ? round(($completedCases / $totalCases) * 100, 1) : 0,
+                'total_sessions' => $totalSessions,
+                'completed_sessions' => $completedSessions,
+                'cancelled_sessions' => $cancelledSessions,
+                'scheduled_sessions' => $scheduledSessions,
+                'unique_counselees' => $uniqueCounseleesCount,
+                'avg_satisfaction_rating' => $avgRating,
+                'total_feedbacks' => $feedbacks->count(),
+                'total_screenings' => $totalScreenings,
+            ],
+            'category_breakdown' => $categoryBreakdown,
+            'method_breakdown' => $methodBreakdown,
+            'risk_level_breakdown' => $riskLevels,
+            'rating_distribution' => $ratingDistribution,
+            'counselor_performance' => $tutors,
+            'monthly_trend' => $monthlyTrend,
+            'cases_list' => $casesList,
+        ]);
+    }
+
+    /**
+     * Admin: Export counseling report into CSV/Excel format
+     */
+    public function exportReport(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $from = $request->query('from', Carbon::now('Asia/Jakarta')->subMonths(6)->startOfMonth()->toDateString());
+        $to = $request->query('to', Carbon::now('Asia/Jakarta')->toDateString());
+        $tutorId = $request->query('tutor_id');
+        $category = $request->query('category');
+        $method = $request->query('method');
+
+        $fromUtc = Carbon::parse($from, 'Asia/Jakarta')->startOfDay()->utc();
+        $toUtc = Carbon::parse($to, 'Asia/Jakarta')->endOfDay()->utc();
+
+        $query = CounselingCase::with([
+            'user:id,name,email,role',
+            'tutor:id,name,email',
+            'sessions.feedback',
+        ])->whereBetween('created_at', [$fromUtc, $toUtc]);
+
+        if ($tutorId) {
+            $query->where('tutor_id', $tutorId);
+        }
+        if ($category) {
+            $query->where('category', $category);
+        }
+        if ($method) {
+            $query->where('method', strtoupper($method));
+        }
+
+        $cases = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = "laporan-konseling-bk-{$from}-sd-{$to}.csv";
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($cases, $from, $to) {
+            $handle = fopen('php://output', 'w');
+
+            // UTF-8 BOM for Microsoft Excel compatibility
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Institutional Header
+            fputcsv($handle, ['LAPORAN LAYANAN BIMBINGAN DAN KONSELING MAHASISWA & CIVITAS']);
+            fputcsv($handle, ['PUSAT BIMBINGAN DAN KONSELING - UIN SIBER SYEKH NURJATI CIREBON (UINSSC)']);
+            fputcsv($handle, ['Periode:', $from . ' s/d ' . $to]);
+            fputcsv($handle, ['Tanggal Ditarik:', Carbon::now('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB']);
+            fputcsv($handle, ['Total Kasus:', $cases->count()]);
+            fputcsv($handle, []);
+
+            // Column Headers
+            fputcsv($handle, [
+                'No.',
+                'Nomor Kasus',
+                'Tanggal Masuk (WIB)',
+                'Nama Konseli',
+                'Jenis Pengguna',
+                'Email Konseli',
+                'Kategori Permasalahan',
+                'Metode Konseling',
+                'Konselor Pendamping',
+                'Status Kasus',
+                'Jumlah Sesi',
+                'Status Sesi Terakhir',
+                'Skor Kepuasan (Rating)',
+                'Komentar Ulasan Konseli',
+                'Tanggal Penutupan (WIB)',
+            ]);
+
+            $no = 1;
+            foreach ($cases as $case) {
+                $lastSession = $case->sessions->sortByDesc('start_at')->first();
+                $feedback = $lastSession?->feedback;
+
+                $statusLabel = match ($case->status) {
+                    'WAITING_REVIEW' => 'Menunggu Review',
+                    'REVIEWED' => 'Ditinjau (Siap Booking)',
+                    'SCHEDULED' => 'Terjadwal',
+                    'IN_PROGRESS' => 'Sedang Berjalan',
+                    'COMPLETED' => 'Selesai',
+                    'CLOSED' => 'Ditutup',
+                    'CANCELLED' => 'Dibatalkan',
+                    default => $case->status,
+                };
+
+                $methodLabel = match ($case->method) {
+                    'ZOOM' => 'Video (Zoom)',
+                    'CHAT' => 'Online Chat',
+                    'OFFLINE' => 'Tatap Muka Langsung',
+                    default => $case->method,
+                };
+
+                fputcsv($handle, [
+                    $no++,
+                    $case->case_number,
+                    $case->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i'),
+                    $case->user?->name ?? 'Anonim',
+                    $case->user?->role === 'STUDENT' ? 'Mahasiswa' : 'Umum',
+                    $case->user?->email ?? '-',
+                    $case->category,
+                    $methodLabel,
+                    $case->tutor?->name ?? 'Belum Ditugaskan',
+                    $statusLabel,
+                    $case->sessions->count(),
+                    $lastSession ? $lastSession->status : 'Belum Ada Sesi',
+                    $feedback ? "{$feedback->rating}/5" : '-',
+                    $feedback?->comment ?? '-',
+                    $case->closed_at ? $case->closed_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-',
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

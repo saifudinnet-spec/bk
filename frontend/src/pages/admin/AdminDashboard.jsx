@@ -16,6 +16,7 @@ import AdminSettingsTab from '../../components/admin/tabs/AdminSettingsTab';
 import AdminZoomTab from '../../components/admin/tabs/AdminZoomTab';
 import AdminScheduleTab from '../../components/admin/tabs/AdminScheduleTab';
 import AdminCounselorScheduleTab from '../../components/admin/tabs/AdminCounselorScheduleTab';
+import AdminReportsTab from '../../components/admin/tabs/AdminReportsTab';
 
 export const AdminDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -488,6 +489,14 @@ export const AdminDashboard = () => {
       {/* 9. Pengaturan Jadwal Konselor (Template) */}
       {activeTab === 'counselor_schedule' && (
         <AdminCounselorScheduleTab
+          showSuccess={showSuccess}
+          showError={showError}
+        />
+      )}
+
+      {/* 10. Laporan & Rekapitulasi Akreditasi */}
+      {activeTab === 'reports' && (
+        <AdminReportsTab
           showSuccess={showSuccess}
           showError={showError}
         />

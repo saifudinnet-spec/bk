@@ -11,15 +11,20 @@ import {
   User,
   Star,
   MapPin,
-  FileText
+  FileText,
+  XCircle,
 } from 'lucide-react';
+import api from '../../services/api';
 import StatusBadge from '../common/StatusBadge';
 import SessionFeedbackModal from '../counseling/SessionFeedbackModal';
+import CancellationConfirmModal from '../common/CancellationConfirmModal';
 
-export const AppointmentCard = ({ session, isTutor = false }) => {
+export const AppointmentCard = ({ session, isTutor = false, onUpdated }) => {
   const navigate = useNavigate();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [currentFeedback, setCurrentFeedback] = useState(session.feedback || null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const startDate = new Date(session.start_at);
   const endDate = new Date(session.end_at);
@@ -168,7 +173,58 @@ export const AppointmentCard = ({ session, isTutor = false }) => {
             <span>Beri Ulasan Pasca Konseling</span>
           </button>
         )}
+
+        {/* Batalkan Jadwal Sesi (Bagi Mahasiswa atau Konselor) */}
+        {!isTerminal && (session.status === 'SCHEDULED' || session.status === 'READY') && (
+          <button
+            type="button"
+            onClick={() => setIsCancelModalOpen(true)}
+            className="w-full py-2 px-3 rounded-xl border border-rose-200/90 text-rose-700 hover:bg-rose-50 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 active:bg-rose-100"
+          >
+            <XCircle className="w-3.5 h-3.5 text-rose-500" />
+            <span>Batalkan Jadwal & Bebaskan Slot</span>
+          </button>
+        )}
       </div>
+
+      {/* Cancellation Modal */}
+      {isCancelModalOpen && (
+        <CancellationConfirmModal
+          isOpen={isCancelModalOpen}
+          onClose={() => setIsCancelModalOpen(false)}
+          isLoading={isCancelling}
+          title="Batalkan Jadwal Konseling"
+          description={
+            isTutor
+              ? 'Membatalkan jadwal sesi ini akan membebaskan slot kembali menjadi TERSEDIA dan konseli akan menerima pemberitahuan untuk memilih jadwal baru.'
+              : 'Membatalkan jadwal sesi ini akan membebaskan slot jadwal konselor sehingga konseli lain dapat memanfaatkannya. Kasus Anda tetap aktif dan dapat dijadwalkan ulang.'
+          }
+          presets={[
+            'Jadwal bentrok dengan perkuliahan / tugas',
+            'Ada keperluan darurat mendadak',
+            'Kondisi kesehatan sedang tidak memungkinkan',
+            'Ingin menjadwalkan ulang di hari lain',
+            'Lainnya',
+          ]}
+          confirmButtonText="Ya, Batalkan Jadwal"
+          onConfirm={async (reason) => {
+            setIsCancelling(true);
+            try {
+              await api.post(`/sessions/${session.id}/cancel`, { reason });
+              setIsCancelModalOpen(false);
+              if (onUpdated) {
+                onUpdated();
+              } else {
+                window.location.reload();
+              }
+            } catch (err) {
+              alert(err.response?.data?.message || err.message || 'Gagal membatalkan sesi.');
+            } finally {
+              setIsCancelling(false);
+            }
+          }}
+        />
+      )}
 
       {/* Feedback Modal for Student */}
       {isFeedbackOpen && (

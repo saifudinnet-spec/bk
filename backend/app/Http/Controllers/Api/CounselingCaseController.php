@@ -467,6 +467,61 @@ class CounselingCaseController extends Controller
     }
 
     /**
+     * Counselee (or Admin) cancels a pending/active counseling case request
+     */
+    public function cancel(Request $request, $id)
+    {
+        $user = $request->user();
+        $case = CounselingCase::with('sessions')->findOrFail($id);
+
+        // Only the case owner (student/general) or admin can cancel the case
+        if (!$user->isAdmin() && $case->user_id !== $user->id) {
+            return response()->json(['message' => 'Akses ditolak: Anda bukan pemilik kasus ini.'], 403);
+        }
+
+        // Cannot cancel if already closed or cancelled
+        if (in_array($case->status, ['CLOSED', 'CANCELLED'], true)) {
+            return response()->json([
+                'message' => 'Kasus ini sudah ditutup atau dibatalkan sebelumnya.',
+            ], 422);
+        }
+
+        $reason = $request->input('reason', 'Dibatalkan atas permintaan konseli.');
+
+        DB::transaction(function () use ($case, $reason) {
+            $case->status = 'CANCELLED';
+            $case->closed_at = now();
+            $answers = is_array($case->assessment_answers) ? $case->assessment_answers : [];
+            $answers['cancellation_reason'] = $reason;
+            $answers['cancelled_at'] = now()->toIso8601String();
+            $case->assessment_answers = $answers;
+            $case->save();
+
+            $this->cancelActiveSessionsAndReleaseSlots($case);
+        });
+
+        // Notify assigned tutor if any
+        if ($case->tutor_id) {
+            Notification::create([
+                'user_id' => $case->tutor_id,
+                'type' => 'case_cancelled',
+                'title' => 'Pengajuan Konseling Dibatalkan',
+                'message' => "Konseli telah membatalkan kasus ({$case->case_number}). Alasan: {$reason}",
+            ]);
+        }
+
+        AuditLogService::log('cancel_case', 'CounselingCase', (string)$case->id, [
+            'case_number' => $case->case_number,
+            'reason' => $reason,
+        ], $user->id);
+
+        return response()->json([
+            'message' => 'Pengajuan konseling berhasil dibatalkan dan slot jadwal telah dibebaskan.',
+            'data' => $case,
+        ]);
+    }
+
+    /**
      * Tutor suggests alternative method (e.g. Chat -> Zoom)
      */
     public function suggestMethod(Request $request, $id)

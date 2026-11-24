@@ -555,4 +555,73 @@ class CounselingSessionController extends Controller
             'is_in_time_window' => $now->lte($endTime) || $allowForceBypass,
         ]);
     }
+
+    /**
+     * Cancel an active/scheduled counseling session (by student, tutor, or admin)
+     */
+    public function cancel(Request $request, $id)
+    {
+        $user = $request->user();
+        $session = CounselingSession::with(['counselingCase', 'user', 'tutor'])->findOrFail($id);
+
+        // Authorization: student owner, assigned tutor, or admin
+        $isOwner = $session->user_id === $user->id;
+        $isTutor = $session->tutor_id === $user->id;
+        if (!$isOwner && !$isTutor && !$user->isAdmin()) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        if (in_array($session->status, ['COMPLETED', 'CANCELLED'], true)) {
+            return response()->json([
+                'message' => 'Sesi ini sudah selesai atau telah dibatalkan sebelumnya.',
+            ], 422);
+        }
+
+        $reason = $request->input('reason', 'Dibatalkan oleh ' . ($isOwner ? 'konseli' : ($isTutor ? 'konselor' : 'admin')));
+
+        DB::transaction(function () use ($session, $reason) {
+            $session->status = 'CANCELLED';
+            $session->save();
+
+            // Release slot in WIB
+            $startWib = Carbon::parse($session->start_at)->timezone('Asia/Jakarta');
+            TutorAvailability::where('tutor_id', $session->tutor_id)
+                ->whereDate('date', $startWib->format('Y-m-d'))
+                ->whereIn('start_time', [$startWib->format('H:i:s'), $startWib->format('H:i')])
+                ->update(['status' => 'AVAILABLE']);
+
+            // Update case status so student can re-book or case remains reviewed
+            if ($session->counselingCase && $session->counselingCase->status === 'SCHEDULED') {
+                $session->counselingCase->status = 'REVIEWED';
+                $session->counselingCase->save();
+            }
+        });
+
+        // Notifications
+        if ($isOwner && $session->tutor_id) {
+            Notification::create([
+                'user_id' => $session->tutor_id,
+                'type' => 'session_cancelled',
+                'title' => 'Sesi Konseling Dibatalkan',
+                'message' => "Konseli ({$session->user?->name}) membatalkan janji temu sesi konseling. Alasan: {$reason}",
+            ]);
+        } elseif ($isTutor && $session->user_id) {
+            Notification::create([
+                'user_id' => $session->user_id,
+                'type' => 'session_cancelled',
+                'title' => 'Sesi Konseling Dibatalkan Konselor',
+                'message' => "Konselor ({$session->tutor?->name}) membatalkan janji temu sesi konseling. Alasan: {$reason}. Silakan pilih slot jadwal baru.",
+            ]);
+        }
+
+        AuditLogService::log('cancel_session', 'CounselingSession', (string)$session->id, [
+            'reason' => $reason,
+            'cancelled_by' => $user->name,
+        ], $user->id);
+
+        return response()->json([
+            'message' => 'Sesi konseling berhasil dibatalkan dan slot jadwal telah dibebaskan kembali.',
+            'data' => $session,
+        ]);
+    }
 }

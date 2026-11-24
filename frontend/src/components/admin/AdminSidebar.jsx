@@ -27,6 +27,7 @@ import {
   CalendarCheck,
   Rocket,
   KeyRound,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import ChangePasswordModal from '../common/ChangePasswordModal';
@@ -175,6 +176,14 @@ export const AdminSidebar = ({ zoomConfigured = false, totalUsers = null }) => {
           iconColor: 'text-teal-600 bg-teal-50 border-teal-200/70',
           badge: null,
           description: 'Template hari & sesi konselor',
+        },
+        {
+          id: 'reports',
+          label: 'Laporan & Akreditasi',
+          icon: FileSpreadsheet,
+          iconColor: 'text-emerald-600 bg-emerald-50 border-emerald-200/70',
+          badge: 'Baru',
+          description: 'Ekspor Excel, PDF & statistik',
         },
         {
           id: 'zoom_settings',

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alur Presentasi Ruang BK - Mahasiswa & Tutor</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Mermaid JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      .page-break { page-break-before: always; }
+    }
+    .mermaid svg {
+      max-width: 100% !important;
+      height: auto !important;
+      background-color: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen">
+
+  <!-- Header Banner -->
+  <header class="bg-gradient-to-r from-teal-700 via-teal-600 to-indigo-700 text-white py-8 px-6 shadow-md">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>
+        <div class="inline-block bg-teal-800 text-teal-200 text-xs font-semibold px-3 py-1 rounded-full mb-2">Bahan Presentasi & Panduan Alur Sistem</div>
+        <h1 class="text-3xl font-extrabold tracking-tight">Ruang BK (BK Online)</h1>
+        <p class="text-teal-100 text-sm mt-1">Alur Kerja Terpadu Mahasiswa (Konseli) & Tutor (Konselor)</p>
+      </div>
+      <div class="flex gap-3 no-print">
+        <button onclick="window.print()" class="bg-white text-teal-800 hover:bg-teal-50 font-semibold px-4 py-2.5 rounded-lg shadow transition flex items-center gap-2 text-sm">
+          🖨️ Cetak / Simpan PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Quick Action Bar -->
+  <div class="bg-white border-b border-slate-200 py-3 px-6 shadow-sm no-print sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs md:text-sm">
+      <span class="font-bold text-slate-700">⚡ Unduh Cepat Diagram:</span>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="downloadDiagramAsPNG('mahasiswa-flow', 'flowchart_mahasiswa_ruang_bk.png')" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-md font-medium shadow-sm transition">
+          📥 PNG Alur Mahasiswa
+        </button>
+        <button onclick="downloadDiagramAsSVG('mahasiswa-flow', 'flowchart_mahasiswa_ruang_bk.svg')" class="bg-teal-100 hover:bg-teal-200 text-teal-800 px-3 py-1.5 rounded-md font-medium transition">
+          📥 SVG Alur Mahasiswa
+        </button>
+        <button onclick="downloadDiagramAsPNG('tutor-flow', 'flowchart_tutor_ruang_bk.png')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md font-medium shadow-sm transition">
+          📥 PNG Alur Tutor
+        </button>
+        <button onclick="downloadDiagramAsSVG('tutor-flow', 'flowchart_tutor_ruang_bk.svg')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-1.5 rounded-md font-medium transition">
+          📥 SVG Alur Tutor
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <main class="max-w-6xl mx-auto py-10 px-6 space-y-12">
+
+    <!-- Section 1: Overview -->
+    <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+      <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+        <span class="bg-teal-100 text-teal-700 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">1</span>
+        Ringkasan Eksekutif & Karakteristik Platform
+      </h2>
+      <p class="text-slate-600 leading-relaxed mb-6">
+        Platform <strong>Ruang BK (BK Online)</strong> memfasilitasi layanan konseling psikologis dan bimbingan akademik perguruan tinggi secara digital, aman, dan berkesinambungan. Sistem dirancang untuk menghapus stigma konseling melalui fitur skrining mandiri, fleksibilitas metode, serta transparansi jadwal.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-4 rounded-xl bg-teal-50 border border-teal-100">
+          <div class="text-2xl mb-2">🎥</div>
+          <h3 class="font-bold text-teal-900 text-sm mb-1">3 Metode Fleksibel</h3>
+          <p class="text-xs text-teal-700">Video call via Zoom Web SDK v6.10 tersemat langsung, live chat real-time, atau tatap muka kampus.</p>
+        </div>
+        <div class="p-4 rounded-xl bg-indigo-50 border border-indigo-100">
+          <div class="text-2xl mb-2">📊</div>
+          <h3 class="font-bold text-indigo-900 text-sm mb-1">Skrining Baku Otomatis</h3>
+          <p class="text-xs text-indigo-700">4 instrumen klinis: SRQ-20, DASS-21, PHQ-9, dan GAD-7 dengan klasifikasi keparahan instan.</p>
+        </div>
+        <div class="p-4 rounded-xl bg-amber-50 border border-amber-100">
+          <div class="text-2xl mb-2">⏱️</div>
+          <h3 class="font-bold text-amber-900 text-sm mb-1">Slot Waktu 30 Menit</h3>
+          <p class="text-xs text-amber-700">Penjadwalan presisi zona WIB berbasis pencegahan bentrok lintas konselor.</p>
+        </div>
+        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+          <div class="text-2xl mb-2">🎯</div>
+          <h3 class="font-bold text-emerald-900 text-sm mb-1">Action Plan & Mood</h3>
+          <p class="text-xs text-emerald-700">Penugasan tugas terapeutik pasca-sesi serta pemantauan emosi harian konseli.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Flow Mahasiswa -->
+    <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 page-break">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+            <span class="bg-teal-100 text-teal-700 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">2</span>
+            Alur Penggunaan Mahasiswa (Konseli Journey)
+          </h2>
+          <p class="text-slate-500 text-sm mt-1">Perjalanan konseli mulai dari pendaftaran, skrining mandiri, sesi konseling, hingga evaluasi.</p>
+        </div>
+        <div class="flex gap-2 no-print">
+          <button onclick="downloadDiagramAsPNG('mahasiswa-flow', 'flowchart_mahasiswa_ruang_bk.png')" class="bg-teal-600 hover:bg-teal-700 text-white text-xs px-3 py-2 rounded-lg font-semibold shadow transition">
+            Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+
+      <!-- Rendered Mermaid Flowchart Mahasiswa -->
+      <div id="mahasiswa-flow" class="overflow-x-auto my-6 bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+        <div class="mermaid">
+flowchart TD
+    A["Mulai: Akses Ruang BK"] --> B["Registrasi / Login Mahasiswa"]
+    B --> C["Dashboard Mahasiswa"]
+    
+    C --> D{"Apakah Sudah Skrining?"}
+    D -- "Belum / Ingin Evaluasi" --> E["Isi Kuesioner Skrining Psikologis<br/>(DASS-21 / PHQ-9 / GAD-7 / SRQ-20)"]
+    E --> F["Hasil Skrining & Kategori Risiko"]
+    F --> G["Ajukan Kasus Konseling (Counseling Wizard)"]
+    D -- "Sudah / Langsung Konseling" --> G
+    
+    G --> H["Pilih Topik Keluhan, Metode, & Konselor"]
+    H --> I["Pilih Slot Jadwal Ketersediaan (30 Menit)"]
+    I --> J["Kirim Pengajuan Kasus<br/>(Status: WAITING_REVIEW)"]
+    
+    J --> K{"Respon Konselor"}
+    K -- "Saran Ganti Metode" --> L["Review Saran Konselor: Terima / Tolak"]
+    L --> K
+    K -- "Ditolak" --> M["Notifikasi Penolakan & Alasan Konselor"]
+    K -- "Disetujui" --> N["Kasus Terjadwal<br/>(Status: SCHEDULED)"]
+    
+    N --> O["Masuk Ruang Sesi (Session Room)"]
+    O --> P{"Metode Konseling"}
+    P -- "ZOOM" --> Q["Konseling Video Embedded Zoom SDK<br/>(Tanpa Install Aplikasi)"]
+    P -- "CHAT" --> R["Konseling Real-time Chat Room Aman"]
+    P -- "OFFLINE" --> S["Sesi Tatap Muka di Ruang Konseling Kampus"]
+    
+    Q --> T["Sesi Selesai (Status: COMPLETED)"]
+    R --> T
+    S --> T
+    
+    T --> U["Beri Rating & Ulasan Konselor (1-5 Bintang)"]
+    T --> V["Jalankan Rencana Aksi (Action Plans / To-Do List)"]
+    T --> W["Check-in Mood Harian (Mood Tracker)"]
+    
+    V --> X{"Perlu Sesi Lanjutan? (Follow-up)"}
+    X -- "Ya (Status: FOLLOW_UP)" --> Y["Booking Sesi Berikutnya pada Kasus Sama"]
+    Y --> N
+    X -- "Tidak (Status: CLOSED)" --> Z["Kasus Selesai Ditutup"]
+        </div>
+      </div>
+
+      <!-- Detail Tahapan Mahasiswa -->
+      <div class="mt-8 space-y-4">
+        <h3 class="font-bold text-slate-800 text-lg">Poin Penjelasan Alur Mahasiswa (Untuk Slide Presentasi):</h3>
+        <ol class="list-decimal list-inside space-y-2 text-slate-600 text-sm leading-relaxed">
+          <li><strong>Autentikasi Aman:</strong> Registrasi menggunakan NIM & email kampus dengan validasi keamanan token <em>Laravel Sanctum</em>.</li>
+          <li><strong>Skrining Mandiri Psikologis:</strong> Mengakses 4 instrumen baku (DASS-21, PHQ-9, GAD-7, SRQ-20). Skor dan kategori keparahan dihitung otomatis oleh sistem.</li>
+          <li><strong>Counseling Wizard (Pengajuan Terpandu):</strong> Mahasiswa memilih topik konseling, memilih konselor yang cocok, memilih metode (Zoom / Chat / Offline), dan menentukan tanggal serta slot waktu 30 menit.</li>
+          <li><strong>Penjadwalan & Persetujuan:</strong> Kasus berstatus <code>WAITING_REVIEW</code> hingga konselor menyetujui. Mahasiswa dapat menerima atau menolak jika konselor menyarankan ganti metode.</li>
+          <li><strong>Ruang Konseling Interaktif:</strong> Sesi video langsung berjalan di browser dengan <em>Zoom Web SDK v6.10</em> tanpa instalasi aplikasi luar, atau via live chat privat.</li>
+          <li><strong>Pendampingan Berkelanjutan:</strong> Pasca-sesi, mahasiswa mengerjakan tugas <em>Action Plan</em> yang diberikan konselor, mengisi ulasan bintang (1-5), dan mencatat suasana hati di <em>Mood Tracker</em> harian.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Section 3: Flow Tutor -->
+    <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 page-break">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+            <span class="bg-indigo-100 text-indigo-700 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
+            Alur Penggunaan Tutor / Konselor (Counselor Journey)
+          </h2>
+          <p class="text-slate-500 text-sm mt-1">Manajemen ketersediaan jadwal, triase kasus konseli, pelaksanaan sesi, dan rekam medis konseling.</p>
+        </div>
+        <div class="flex gap-2 no-print">
+          <button onclick="downloadDiagramAsPNG('tutor-flow', 'flowchart_tutor_ruang_bk.png')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded-lg font-semibold shadow transition">
+            Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+
+      <!-- Rendered Mermaid Flowchart Tutor -->
+      <div id="tutor-flow" class="overflow-x-auto my-6 bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+        <div class="mermaid">
+flowchart TD
+    A["Mulai: Login Tutor / Konselor"] --> B["Dashboard Tutor (TutorDashboard)"]
+    
+    B --> C["Kelola Ketersediaan Slot Jadwal (TutorSchedule)"]
+    C --> D["Tentukan Hari Kerja & Slot Jam Konseling (30 Menit WIB)"]
+    D --> E["Sistem Memvalidasi Ketersediaan (Anti-Bentrok)"]
+    
+    B --> F["Tinjau Pengajuan Kasus Baru (WAITING_REVIEW)"]
+    F --> G["Buka Modal Review Kasus (CaseReviewModal)"]
+    G --> H["Pelajari Profil & Hasil Skrining Klinis (SRQ/DASS/PHQ/GAD)"]
+    
+    H --> I{"Keputusan Konselor"}
+    I -- "Tolak" --> J["Isi Alasan Penolakan -> Slot Dibebaskan -> Notifikasi Konseli"]
+    I -- "Saran Ganti Metode" --> K["Kirim Rekomendasi Metode Baru (Misal: Chat ke Zoom)"]
+    K --> L["Menunggu Persetujuan Konseli"]
+    I -- "Setujui Kasus" --> M["Kasus Disetujui (Status: SCHEDULED)"]
+    
+    M --> N["Masuk Ruang Konseling Sesuai Jadwal (SessionRoom)"]
+    N --> O["Pimpin Sesi Konseling (Zoom / Chat / Offline)"]
+    O --> P["Akses Drawer Ringkasan Diagnostik Selama Sesi Berjalan"]
+    
+    O --> Q["Akhiri Sesi Konseling (End Session)"]
+    Q --> R["Masuk Halaman Rangkuman Sesi (SessionSummary)"]
+    
+    R --> S["Tulis Catatan Rekam Konseling (Keluhan, Observasi, Intervensi)"]
+    R --> T["Buat Daftar Rencana Aksi (Action Plans) untuk Mahasiswa"]
+    R --> U{"Apakah Butuh Sesi Lanjutan?"}
+    U -- "Ya (follow_up_required = true)" --> V["Status Kasus: FOLLOW_UP (Konseli Dapat Booking Sesi Lanjut)"]
+    U -- "Tidak (follow_up_required = false)" --> W["Status Kasus: CLOSED (Kasus Selesai)"]
+    
+    V --> X["Pantau Progres Action Plan Mahasiswa di TutorStudents"]
+    W --> X
+    X --> Y["Lihat Rekap Rating & Ulasan Mahasiswa"]
+        </div>
+      </div>
+
+      <!-- Detail Tahapan Tutor -->
+      <div class="mt-8 space-y-4">
+        <h3 class="font-bold text-slate-800 text-lg">Poin Penjelasan Alur Tutor (Untuk Slide Presentasi):</h3>
+        <ol class="list-decimal list-inside space-y-2 text-slate-600 text-sm leading-relaxed">
+          <li><strong>Manajemen Slot Ketersediaan:</strong> Konselor mengatur hari dan jam ketersediaan dalam interval 30 menit. Sistem otomatis mencegah jadwal tumpang tindih.</li>
+          <li><strong>Triase Berbasis Data Klinis:</strong> Saat kasus masuk, konselor dapat langsung memeriksa riwayat tes psikologis mahasiswa untuk memahami tingkat stres, kecemasan, atau indikasi krisis sebelum sesi dimulai.</li>
+          <li><strong>Fleksibilitas Penanganan Kasus:</strong> Konselor memiliki opsi menyetujui, menolak dengan alasan jelas, atau merekomendasikan pergantian metode jika kasus membutuhkan perhatian visual tatap muka.</li>
+          <li><strong>Pelaksanaan Sesi Interaktif:</strong> Konselor dapat membuka catatan diagnostik mahasiswa saat panggilan video atau chat sedang berlangsung tanpa menutup ruangan sesi.</li>
+          <li><strong>Dokumentasi SOAP Terstruktur:</strong> Konselor mencatat keluhan, hasil observasi, dan intervensi yang diberikan, merumuskan tugas <em>Action Plan</em> untuk konseli, serta menentukan apakah kasus selesai (<code>CLOSED</code>) atau perlu tindak lanjut (<code>FOLLOW_UP</code>).</li>
+          <li><strong>Monitoring & Evaluasi:</strong> Konselor memantau kepatuhan konseli dalam mengerjakan <em>Action Plan</em> dan melihat rekap rating ulasan dari konseli untuk peningkatan kualitas layanan.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Section 4: Sequence Diagram -->
+    <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 page-break">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+            <span class="bg-amber-100 text-amber-700 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">4</span>
+            Diagram Interaksi Dua Arah (Mahasiswa & Tutor)
+          </h2>
+          <p class="text-slate-500 text-sm mt-1">Interaksi sinkron antara Mahasiswa, Server Ruang BK, dan Konselor.</p>
+        </div>
+        <div class="flex gap-2 no-print">
+          <button onclick="downloadDiagramAsPNG('sequence-flow', 'sequence_diagram_ruang_bk.png')" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-2 rounded-lg font-semibold shadow transition">
+            Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+
+      <div id="sequence-flow" class="overflow-x-auto my-6 bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor M as Mahasiswa (Konseli)
+    participant SYS as Sistem Ruang BK (App & API)
+    actor T as Tutor (Konselor)
+
+    Note over T,SYS: 1. Penjadwalan
+    T->>SYS: Atur Slot Ketersediaan (30 Menit WIB)
+    SYS-->>T: Slot Aktif & Bebas Bentrok
+
+    Note over M,SYS: 2. Skrining & Pengajuan
+    M->>SYS: Isi Skrining (DASS-21 / PHQ-9)
+    SYS-->>M: Hasil Skor & Kategori Risiko
+    M->>SYS: Ajukan Kasus Baru + Pilih Metode & Slot
+    SYS-->>M: Status Kasus: WAITING_REVIEW
+
+    Note over T,SYS: 3. Triase Kasus
+    SYS->>T: Notifikasi Kasus Baru
+    T->>SYS: Periksa Profil & Hasil Skrining
+    T->>SYS: Setujui Kasus (Approve)
+    SYS-->>M: Notifikasi Disetujui (SCHEDULED)
+
+    Note over M,T: 4. Sesi Konseling
+    M->>SYS: Gabung Ruang Sesi
+    T->>SYS: Gabung Ruang Sesi
+    SYS->>SYS: Aktifkan Embedded Zoom SDK / Chat
+    M->>T: Konseling Interaktif Berjalan
+    T->>SYS: Akhiri Sesi (End Session)
+
+    Note over M,T: 5. Catatan & Evaluasi
+    T->>SYS: Input Rekam Sesi & Action Plan
+    T->>SYS: Set Status: CLOSED / FOLLOW_UP
+    SYS-->>M: Tugas Action Plan Aktif
+    M->>SYS: Beri Rating & Review Sesi
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-slate-900 text-slate-400 py-6 px-6 text-center text-xs border-t border-slate-800">
+    <p>© 2026 Ruang BK (BK Online) - Dokumen Panduan & Materi Presentasi Sistem Konseling Digital.</p>
+  </footer>
+
+  <!-- Script to download Mermaid SVGs and PNGs -->
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose',
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+    });
+
+    function downloadDiagramAsSVG(containerId, filename) {
+      const container = document.getElementById(containerId);
+      const svg = container.querySelector('svg');
+      if (!svg) {
+        alert('Diagram sedang dimuat, silakan coba sesaat lagi.');
+        return;
+      }
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadDiagramAsPNG(containerId, filename) {
+      const container = document.getElementById(containerId);
+      const svg = container.querySelector('svg');
+      if (!svg) {
+        alert('Diagram sedang dimuat, silakan coba sesaat lagi.');
+        return;
+      }
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const URLObj = window.URL || window.webkitURL || window;
+      const blobURL = URLObj.createObjectURL(svgBlob);
+
+      img.onload = function() {
+        const scale = 2; // High-resolution export for slides
+        const rect = svg.getBoundingClientRect();
+        canvas.width = (rect.width || 1200) * scale;
+        canvas.height = (rect.height || 800) * scale;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        URLObj.revokeObjectURL(blobURL);
+        const pngURL = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = pngURL;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+      img.src = blobURL;
+    }
+  </script>
+</body>
+</html>
