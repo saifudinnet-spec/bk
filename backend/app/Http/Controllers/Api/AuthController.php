@@ -332,6 +332,12 @@ class AuthController extends Controller
 
         $user = $request->user();
 
+        if ($user->isStudent()) {
+            return response()->json([
+                'message' => 'Kata sandi akun mahasiswa terhubung langsung dengan Portal Kampus UINSSC. Silakan lakukan pengubahan kata sandi melalui portal resmi kampus (SIAKAD).',
+            ], 403);
+        }
+
         if (!Hash::check($request->input('current_password'), $user->password)) {
             return response()->json([
                 'message' => 'Kata sandi saat ini yang Anda masukkan salah.',

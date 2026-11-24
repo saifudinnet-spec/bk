@@ -24,13 +24,15 @@ import {
   AlertCircle,
   LogOut,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  KeyRound
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import PageTransition from '../../components/common/PageTransition';
 import Modal from '../../components/common/Modal';
+import ChangePasswordModal from '../../components/common/ChangePasswordModal';
 import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 
 const TOPIC_ICONS = {
@@ -74,6 +76,7 @@ export const TutorProfile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   // Profile Form States
   const [name, setName] = useState('');
@@ -643,14 +646,25 @@ export const TutorProfile = () => {
 
         {/* Action Buttons Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-          <button
-            type="button"
-            onClick={() => setShowLogoutModal(true)}
-            className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100/60 text-rose-700 text-xs font-bold flex items-center justify-center gap-2 transition-colors min-h-[46px]"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Keluar Akun</span>
-          </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setShowChangePasswordModal(true)}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-colors min-h-[46px] shadow-2xs"
+            >
+              <KeyRound className="w-4 h-4 text-amber-600" />
+              <span>Ganti Kata Sandi</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowLogoutModal(true)}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100/60 text-rose-700 text-xs font-bold flex items-center justify-center gap-2 transition-colors min-h-[46px]"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Keluar Akun</span>
+            </button>
+          </div>
 
           <motion.button
             whileTap={{ scale: 0.98 }}
@@ -801,6 +815,12 @@ export const TutorProfile = () => {
           </button>
         </div>
       </Modal>
+
+      {/* 5. Change Password Modal for Counselor */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+      />
     </PageTransition>
   );
 };

@@ -34,9 +34,62 @@ class PasswordManagementTest extends TestCase
         $this->assertTrue(Hash::check('newSecret999', $user->password));
     }
 
+    public function test_tutor_and_general_can_change_own_password()
+    {
+        $tutor = User::factory()->create([
+            'role' => 'TUTOR',
+            'password' => Hash::make('tutorOldPass'),
+        ]);
+
+        $resTutor = $this->actingAs($tutor)->putJson('/api/auth/change-password', [
+            'current_password' => 'tutorOldPass',
+            'new_password' => 'tutorNewPass123',
+            'new_password_confirmation' => 'tutorNewPass123',
+        ]);
+
+        $resTutor->assertStatus(200);
+        $tutor->refresh();
+        $this->assertTrue(Hash::check('tutorNewPass123', $tutor->password));
+
+        $general = User::factory()->create([
+            'role' => 'GENERAL',
+            'password' => Hash::make('generalOldPass'),
+        ]);
+
+        $resGeneral = $this->actingAs($general)->putJson('/api/auth/change-password', [
+            'current_password' => 'generalOldPass',
+            'new_password' => 'generalNewPass123',
+            'new_password_confirmation' => 'generalNewPass123',
+        ]);
+
+        $resGeneral->assertStatus(200);
+        $general->refresh();
+        $this->assertTrue(Hash::check('generalNewPass123', $general->password));
+    }
+
+    public function test_student_cannot_change_password_directly_due_to_campus_sso()
+    {
+        $student = User::factory()->create([
+            'role' => 'STUDENT',
+            'password' => Hash::make('studentPass123'),
+        ]);
+
+        $response = $this->actingAs($student)->putJson('/api/auth/change-password', [
+            'current_password' => 'studentPass123',
+            'new_password' => 'newSecret999',
+            'new_password_confirmation' => 'newSecret999',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'message' => 'Kata sandi akun mahasiswa terhubung langsung dengan Portal Kampus UINSSC. Silakan lakukan pengubahan kata sandi melalui portal resmi kampus (SIAKAD).',
+            ]);
+    }
+
     public function test_change_password_fails_if_current_password_wrong()
     {
         $user = User::factory()->create([
+            'role' => 'GENERAL',
             'password' => Hash::make('password123'),
         ]);
 

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, GraduationCap, Mail, Phone, MapPin, ShieldCheck, LogOut, Sparkles, CheckCircle2 } from 'lucide-react';
+import { User, GraduationCap, Mail, Phone, MapPin, ShieldCheck, LogOut, Sparkles, CheckCircle2, KeyRound, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import Modal from '../../components/common/Modal';
+import ChangePasswordModal from '../../components/common/ChangePasswordModal';
 import PageTransition from '../../components/common/PageTransition';
 
 export const Profile = () => {
   const { user, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   return (
     <PageTransition className="max-w-6xl mx-auto space-y-3 sm:space-y-3.5">
@@ -47,15 +49,28 @@ export const Profile = () => {
           </div>
         </div>
 
-        {/* Quick Logout Button */}
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => setShowLogoutModal(true)}
-          className="px-4 py-2 rounded-xl border border-rose-200 text-rose-700 bg-rose-50/70 hover:bg-rose-100/80 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 w-full sm:w-auto justify-center"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Keluar dari Akun</span>
-        </motion.button>
+        {/* Header Action Buttons */}
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
+          {user?.role === 'GENERAL' && (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowChangePasswordModal(true)}
+              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs justify-center flex-1 sm:flex-initial"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+              <span>Ganti Kata Sandi</span>
+            </motion.button>
+          )}
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setShowLogoutModal(true)}
+            className="px-4 py-2 rounded-xl border border-rose-200 text-rose-700 bg-rose-50/70 hover:bg-rose-100/80 font-bold text-xs flex items-center gap-1.5 transition-all justify-center flex-1 sm:flex-initial"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Keluar dari Akun</span>
+          </motion.button>
+        </div>
       </div>
 
       {/* Main Content: 2-Column Responsive Bento Layout */}
@@ -96,9 +111,22 @@ export const Profile = () => {
           <div className="p-3 rounded-2xl bg-teal-50/70 border border-teal-100/90 text-teal-950 flex items-start gap-2.5 mt-2">
             <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
             <p className="text-[11px] leading-snug font-medium text-teal-900">
-              Data pribadi & rekam konseling Anda terlindungi dengan standar kerahasiaan institusi.
+              Data pribadi &amp; rekam konseling Anda terlindungi dengan standar kerahasiaan institusi.
             </p>
           </div>
+
+          {/* SSO Portal Info for Student */}
+          {user?.role === 'STUDENT' && (
+            <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-950 flex items-start gap-2.5 mt-2">
+              <KeyRound className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-[11px] leading-relaxed">
+                <span className="font-bold block text-amber-900">Kata Sandi Terhubung SSO Kampus</span>
+                <p className="text-amber-800 mt-0.5">
+                  Kata sandi akun Anda dikelola terpusat oleh <strong>Portal Mahasiswa UINSSC</strong>. Untuk mengubah kata sandi, silakan akses melalui portal resmi kampus.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Personal & Contact Details (8 of 12 cols) */}
@@ -187,6 +215,11 @@ export const Profile = () => {
           </button>
         </div>
       </Modal>
+      {/* Change Password Modal for General User */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+      />
     </PageTransition>
   );
 };
