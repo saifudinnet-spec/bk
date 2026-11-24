@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../../../services/api';
 import {
   Globe,
   SlidersHorizontal,
@@ -22,7 +23,9 @@ import {
   Info,
   Bell,
   RefreshCw,
-  CalendarCheck
+  CalendarCheck,
+  Database,
+  Download,
 } from 'lucide-react';
 
 export const AdminSettingsTab = ({
@@ -41,6 +44,39 @@ export const AdminSettingsTab = ({
 
   const [isTriggeringReminders, setIsTriggeringReminders] = useState(false);
   const [triggerRemindersResult, setTriggerRemindersResult] = useState(null);
+
+  const [isDownloadingBackup, setIsDownloadingBackup] = useState(false);
+  const [backupMessage, setBackupMessage] = useState(null);
+
+  const handleDownloadBackup = async () => {
+    setIsDownloadingBackup(true);
+    setBackupMessage(null);
+    try {
+      const response = await api.get('/admin/database/backup', {
+        responseType: 'blob',
+      });
+      const today = new Date().toISOString().split('T')[0];
+      const blob = new Blob([response.data || response], { type: 'application/sql' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `backup-bk-online-${today}.sql`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setBackupMessage({
+        type: 'success',
+        text: 'File backup database (.sql) berhasil diunduh ke komputer Anda.',
+      });
+    } catch (err) {
+      setBackupMessage({
+        type: 'error',
+        text: 'Gagal mengunduh backup database. Silakan coba kembali.',
+      });
+    } finally {
+      setIsDownloadingBackup(false);
+    }
+  };
 
   const handleRunEmailTest = async () => {
     if (!onTestEmail) return;
@@ -879,6 +915,66 @@ export const AdminSettingsTab = ({
                 }`}>
                   {settings.zoom_is_configured ? '🟢 OAuth API Terverifikasi' : '🟡 Belum Terhubung'}
                 </span>
+              </div>
+            </div>
+
+            {/* Card: 💾 Backup database */}
+            <div className="p-5 rounded-3xl bg-slate-50 border border-slate-200/90 space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                    <Database className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                      <span>💾 Backup database</span>
+                    </h4>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                      Unduh salinan database bimbingan konseling dalam format .sql.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadBackup}
+                  disabled={isDownloadingBackup}
+                  className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all shrink-0 disabled:opacity-50 min-h-[42px]"
+                >
+                  {isDownloadingBackup ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sedang Mengunduh...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span>Unduh Backup Database (.sql)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {backupMessage && (
+                <div
+                  className={`p-3 rounded-2xl text-xs font-medium flex items-center gap-2 ${
+                    backupMessage.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {backupMessage.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{backupMessage.text}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500">
+                <span className="font-semibold text-slate-700">Catatan Pemulihan (Restore):</span>
+                <span>File .sql ini dapat di-import sewaktu-waktu melalui menu Database di aaPanel atau phpMyAdmin.</span>
               </div>
             </div>
 

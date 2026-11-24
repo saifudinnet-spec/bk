@@ -177,6 +177,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/stats', [AdminController::class, 'getReportStats']);
         Route::get('/reports/export', [AdminController::class, 'exportReport']);
 
+        // Database Backup
+        Route::get('/database/backup', [AdminController::class, 'backupDatabase']);
+
         // Deploy Logs (Admin Panel)
         Route::get('/deploy/logs', [DeployController::class, 'logs']);
         Route::get('/deploy/status', [DeployController::class, 'status']);

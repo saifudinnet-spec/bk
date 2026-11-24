@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\AuditLogService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
@@ -1089,6 +1090,131 @@ class AdminController extends Controller
 
             fclose($handle);
         };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Admin: Export complete database backup as a downloadable .sql file
+     */
+    public function backupDatabase(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $connection = DB::connection();
+        $driver = $connection->getDriverName();
+        $dbName = $connection->getDatabaseName();
+        $timestamp = Carbon::now('Asia/Jakarta')->format('Y-m-d_H-i-s');
+        $filename = "backup-bk-online-{$timestamp}.sql";
+
+        $headers = [
+            'Content-Type' => 'application/sql; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($connection, $driver, $dbName, $request) {
+            $handle = fopen('php://output', 'w');
+
+            // Header metadata
+            fwrite($handle, "-- ============================================================\n");
+            fwrite($handle, "-- RUANG BK — BACKUP DATABASE SISTEM\n");
+            fwrite($handle, "-- Tanggal Pembuatan: " . Carbon::now('Asia/Jakarta')->format('d F Y, H:i:s') . " WIB\n");
+            fwrite($handle, "-- Driver Database  : {$driver}\n");
+            fwrite($handle, "-- Basis Data       : {$dbName}\n");
+            fwrite($handle, "-- Diunduh Oleh     : {$request->user()->name} ({$request->user()->email})\n");
+            fwrite($handle, "-- ============================================================\n\n");
+            fwrite($handle, "SET FOREIGN_KEY_CHECKS=0;\n");
+            fwrite($handle, "SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";\n");
+            fwrite($handle, "SET time_zone = \"+07:00\";\n\n");
+
+            if ($driver === 'sqlite') {
+                $tables = $connection->select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';");
+                foreach ($tables as $t) {
+                    $tableName = $t->name;
+                    $createRow = $connection->select("SELECT sql FROM sqlite_master WHERE type='table' AND name = ?", [$tableName]);
+                    if (!empty($createRow[0]->sql)) {
+                        fwrite($handle, "-- ------------------------------------------------------------\n");
+                        fwrite($handle, "-- Struktur Tabel `{$tableName}`\n");
+                        fwrite($handle, "-- ------------------------------------------------------------\n");
+                        fwrite($handle, "DROP TABLE IF EXISTS `{$tableName}`;\n");
+                        fwrite($handle, $createRow[0]->sql . ";\n\n");
+                    }
+
+                    // Dump Rows
+                    $rows = $connection->table($tableName)->get();
+                    if ($rows->isNotEmpty()) {
+                        fwrite($handle, "-- Data untuk Tabel `{$tableName}`\n");
+                        foreach ($rows as $row) {
+                            $rowArray = (array) $row;
+                            $columns = array_map(fn($col) => "`{$col}`", array_keys($rowArray));
+                            $values = array_map(function ($val) use ($connection) {
+                                if (is_null($val)) return 'NULL';
+                                if (is_numeric($val) && !is_string($val)) return $val;
+                                return $connection->getPdo()->quote((string) $val);
+                            }, array_values($rowArray));
+
+                            $sql = "INSERT INTO `{$tableName}` (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ");\n";
+                            fwrite($handle, $sql);
+                        }
+                        fwrite($handle, "\n");
+                    }
+                }
+            } else {
+                // MySQL / MariaDB (aaPanel production)
+                $tables = $connection->select('SHOW TABLES');
+                foreach ($tables as $t) {
+                    $propArray = (array) $t;
+                    $tableName = reset($propArray);
+
+                    // SHOW CREATE TABLE
+                    $createTableObj = $connection->select("SHOW CREATE TABLE `{$tableName}`");
+                    $createTableArray = (array) ($createTableObj[0] ?? []);
+                    $createTableSql = $createTableArray['Create Table'] ?? null;
+
+                    fwrite($handle, "-- ------------------------------------------------------------\n");
+                    fwrite($handle, "-- Struktur Tabel `{$tableName}`\n");
+                    fwrite($handle, "-- ------------------------------------------------------------\n");
+                    fwrite($handle, "DROP TABLE IF EXISTS `{$tableName}`;\n");
+                    if ($createTableSql) {
+                        fwrite($handle, "{$createTableSql};\n\n");
+                    }
+
+                    // Dump Rows in chunks
+                    fwrite($handle, "-- Data untuk Tabel `{$tableName}`\n");
+                    $connection->table($tableName)->orderByRaw('1')->chunk(200, function ($rows) use ($handle, $tableName, $connection) {
+                        foreach ($rows as $row) {
+                            $rowArray = (array) $row;
+                            $columns = array_map(fn($col) => "`{$col}`", array_keys($rowArray));
+                            $values = array_map(function ($val) use ($connection) {
+                                if (is_null($val)) return 'NULL';
+                                if (is_numeric($val) && !is_string($val)) return $val;
+                                return $connection->getPdo()->quote((string) $val);
+                            }, array_values($rowArray));
+
+                            $sql = "INSERT INTO `{$tableName}` (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ");\n";
+                            fwrite($handle, $sql);
+                        }
+                    });
+                    fwrite($handle, "\n");
+                }
+            }
+
+            fwrite($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
+            fwrite($handle, "-- ============================================================\n");
+            fwrite($handle, "-- BACKUP SELESAI\n");
+            fwrite($handle, "-- ============================================================\n");
+
+            fclose($handle);
+        };
+
+        AuditLogService::log('backup_database', 'Database', (string)$dbName, [
+            'driver' => $driver,
+            'downloaded_by' => $request->user()->name,
+            'ip' => $request->ip(),
+        ], $request->user()->id);
 
         return response()->stream($callback, 200, $headers);
     }
